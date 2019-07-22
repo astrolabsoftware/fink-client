@@ -14,7 +14,7 @@ addons:
 
 script:
   # For sonar to run correctly
-  - git fetch --unshallow --quiet
+  # - git fetch --unshallow --quiet
 
   # Do nothing for the moment
   - python -c "import fink_client; print(fink_client.__version__)"
