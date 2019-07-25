@@ -15,7 +15,6 @@
 # limitations under the License.
 import io
 import os
-import time
 import json
 import confluent_kafka
 import fastavro
@@ -35,9 +34,9 @@ class AlertConsumer:
         config: dict
             Dictionary of configurations
             
-            api_user: str
+            username: str
                 username for API access
-            api_secret: str
+            password: str
                 password for API access
             group_id: str
                 group.id for Kafka consumer
@@ -55,14 +54,14 @@ class AlertConsumer:
         
         self._parsed_schema = _get_alert_schema()
         
-    def poll(self, timeout=None):
+    def poll(self, timeout: float=-1) -> (str, dict):
         """Consume messages from Fink server
         
         Parameters
         ----------
         timeout: float
             maximum time to block waiting for a message
-            if not set default is None i.e. wait infinitely
+            if not set default is None i.e. wait indefinitely
         
         Returns
         ----------
@@ -78,6 +77,36 @@ class AlertConsumer:
         alert = _decode_avro_alert(avro_alert, self._parsed_schema)
         
         return topic, alert
+        
+    def consume(self, num_messages: int=1, timeout: float=-1) -> list:
+        """Consume and return list of messages
+        
+        Parameters
+        ----------
+        num_messages: int
+            maximum number of messages to return
+            
+        timeout: float
+            maximum time to block waiting for messages
+            if not set default is None i.e. wait indefinitely 
+        
+        Returns
+        ----------
+        list: [tuple(str, dict)]
+            list of topic, alert 
+            returns an empty list on timeout
+        """
+        alerts = []
+        msg_list = self._consumer.consume(num_messages, timeout)
+        
+        for msg in msg_list:
+            topic = msg.topic()
+            avro_alert = io.BytesIO(msg.value())
+            alert = _decode_avro_alert(avro_alert, self._parsed_schema)
+            
+            alerts.append((topic, alert))
+        
+        return alerts
         
         
 def _get_kafka_config(servers, config):
@@ -117,7 +146,7 @@ def _get_kafka_config(servers, config):
 
 def _get_alert_schema():
     schema_path = os.path.abspath(os.path.join(
-        os.pardir, 'schema/fink_alert_schema.avsc'))
+        os.path.dirname(__file__), 'fink_alert_schema.avsc'))
     
     with open(schema_path) as f:
         schema = json.load(f)
@@ -128,3 +157,4 @@ def _get_alert_schema():
 def _decode_avro_alert(avro_alert, schema):
     avro_alert.seek(0)
     return fastavro.schemaless_reader(avro_alert, schema)
+
