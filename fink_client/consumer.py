@@ -108,6 +108,10 @@ class AlertConsumer:
         
         return alerts
         
+    def close(self):
+        """Close connection to Fink broker"""
+        self._consumer.close()
+    
         
 def _get_kafka_config(servers, config):
     
