@@ -12,4 +12,34 @@ TBD
 
 ## Documentation
 
-TBD
+**Fink's distribution stream**
+
+Fink distributes alerts via kafka topics based on classification  by cross-match services. See [Fink's re-distribution](https://fink-broker.readthedocs.io/en/latest/user_guide/streaming-out/). For more details on how the alerts are classified, see Fink's tutorial on [processing alerts](https://fink-broker.readthedocs.io/en/latest/tutorials/processing_alerts/).
+
+You can connect to one or more of these topics using fink-client's APIs and receive Fink's stream of alerts.
+To obtain security credentials for API access and authorization on kafka topics contact Fink's admins.
+
+**Connecting to Fink's stream of alerts**
+
+Once you have the security credentials for accessing the API, import and instantiate an alert consumer.
+
+```python
+from fink_client.consumer import AlertConsumer
+consumer = AlertConsumer{
+  topics = ["RRlyr", "AMHer"],
+  username = "********"
+  password = "********"
+  group_id = "client_group"
+}
+```
+A single alert can be received using the `poll()` method of `AlertConsumer`. The alerts are received as tuple of (topic, alert) of type (str, dict).
+
+```python
+topic, alert = consumer.poll(5)
+if topic is not None:
+  print("topic: ", topic)
+
+  # Print alert information
+  for key, value in alert.items():
+    print("key: {}\t value: {}".format(key, value))
+```
