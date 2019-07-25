@@ -48,11 +48,15 @@ class AlertConsumer:
         ]
         self._topics = topics
         self._kafka_config = _get_kafka_config(_FINK_SERVERS, config)
+        self._parsed_schema = _get_alert_schema()
         
+    def __enter__(self):
         self._consumer = confluent_kafka.Consumer(self._kafka_config)
         self._consumer.subscribe(self._topics)
-        
-        self._parsed_schema = _get_alert_schema()
+        return self
+    
+    def __exit__(self, type, value, traceback):
+        self._consumer.close()
         
     def poll(self, timeout: float=-1) -> (str, dict):
         """Consume messages from Fink server
