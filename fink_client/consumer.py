@@ -82,7 +82,7 @@ class AlertConsumer:
         
         return topic, alert
         
-    def consume(self, num_messages: int=1, timeout: float=-1) -> list:
+    def consume(self, num_alerts: int=1, timeout: float=-1) -> list:
         """Consume and return list of messages
         
         Parameters
@@ -101,7 +101,7 @@ class AlertConsumer:
             returns an empty list on timeout
         """
         alerts = []
-        msg_list = self._consumer.consume(num_messages, timeout)
+        msg_list = self._consumer.consume(num_alerts, timeout)
         
         for msg in msg_list:
             topic = msg.topic()

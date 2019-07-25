@@ -21,25 +21,58 @@ To obtain security credentials for API access and authorization on kafka topics 
 
 **Connecting to Fink's stream of alerts**
 
-Once you have the security credentials for accessing the API, import and instantiate an alert consumer.
+Once you have the security credentials for accessing the API, import and instantiate an `AlertConsumer`.
 
 ```python
 from fink_client.consumer import AlertConsumer
+
 consumer = AlertConsumer{
-  topics = ["RRlyr", "AMHer"],
-  username = "********"
-  password = "********"
-  group_id = "client_group"
+    topics = ["RRlyr", "AMHer"],
+    username = "********"
+    password = "********"
+    group_id = "client_group"
 }
 ```
 A single alert can be received using the `poll()` method of `AlertConsumer`. The alerts are received as tuple of (topic, alert) of type (str, dict).
 
 ```python
-topic, alert = consumer.poll(5)
-if topic is not None:
-  print("topic: ", topic)
+topic, alert = consumer.poll(timeout=5)
 
-  # Print alert information
-  for key, value in alert.items():
-    print("key: {}\t value: {}".format(key, value))
+if alert is not None:
+    print("topic: ", topic)
+    for key, value in alert.items():
+        print("key: {}\t value: {}".format(key, value))
+else:
+    print(f"no alerts received in {timeout} seconds")
+```
+
+Multiple alerts can be received using the `consume()` method. The method returns a list of tuples (topic, alert) with maximum `num_alerts` number of alerts.
+```python
+alerts = counsumer.consume(num_alerts=10, timeout=30)
+
+for alert in alerts:
+    print("topic: ", topic)
+    print("alert:\n", alert)
+```
+To consume the alerts in real time one can use the `poll` method in a loop:
+```python
+# receive alerts in a loop
+while True:
+    topic, alert = consumer.poll(2)
+    print("topic: {}, alert:\n {}".format(topic, alert))
+```
+Make sure you close the connection or you could use the context manager:
+```python
+# Close the connection explicitly
+consumer = AlertConsumer(topics, config)
+try:
+    topic, alert = consumer.poll(5)
+    print("topic: {}, alert:\n {}".format(topic, alert))
+finally:
+    consumer.close()
+
+# Or use context manager
+with AlertConsumer(topics, config) as consumer:
+    topic, alert = consumer.poll(5)
+    print("topic: {}, alert:\n {}".format(topic, alert))
 ```
