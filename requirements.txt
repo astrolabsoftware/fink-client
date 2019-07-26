@@ -1,5 +1,5 @@
 coverage>=4.2
 coveralls
 codecov
-confluent_kafka
+confluent-kafka
 fastavro
