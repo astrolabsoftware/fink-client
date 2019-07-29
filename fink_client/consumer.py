@@ -124,31 +124,17 @@ def _get_kafka_config(servers, config):
     default_config = {
         "bootstrap.servers": "{}".format(",".join(servers)),
         "auto.offset.reset": "earliest",
-        "security.protocol": "sasl_plaintext",
-        "sasl.mechanism": "SCRAM-SHA-512"
     }
-
-    invalid_config = False
-    if 'username' not in config:
-        print("please set username in config")
-        invalid_config = True
-
-    if 'password' not in config:
-        print("please set password in config")
-        invalid_config = True
-
-    if 'group_id' not in config:
-        print("please set group_id in config")
-        invalid_config = True
-
-    if invalid_config:
-        return None
-
-    kafka_config.update(default_config)
-
-    kafka_config["sasl.username"] = config["username"]
-    kafka_config["sasl.password"] = config["password"]
+    
+    if 'username' in config and 'password' in config:
+        kafka_config["security.protocol"] = "sasl_plaintext"
+        kafka_config["sasl.mechanism"] = "SCRAM-SHA-512"
+        kafka_config["sasl.username"] = config["username"]
+        kafka_config["sasl.password"] = config["password"]
+    
     kafka_config["group.id"] = config["group_id"]
+    
+    kafka_config.update(default_config)
 
     return kafka_config
 
