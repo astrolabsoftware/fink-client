@@ -155,7 +155,7 @@ def _get_kafka_config(servers, config):
 
 def _get_alert_schema():
     schema_path = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), 'fink_alert_schema.avsc'))
+        os.path.dirname(__file__), '../schema/fink_alert_schema.avsc'))
 
     with open(schema_path) as f:
         schema = json.load(f)
