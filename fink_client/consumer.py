@@ -135,6 +135,10 @@ def _get_kafka_config(servers, config):
     kafka_config["group.id"] = config["group_id"]
     
     kafka_config.update(default_config)
+    
+    # overwrite servers if given (used in tests)
+    if 'bootstrap.servers' in config:
+        kafka_config["bootstrap.servers"] = config["bootstrap.servers"]
 
     return kafka_config
 
