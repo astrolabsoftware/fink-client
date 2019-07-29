@@ -50,7 +50,7 @@ Multiple alerts can be received using the `consume()` method. The method returns
 ```python
 alerts = counsumer.consume(num_alerts=10, timeout=30)
 
-for alert in alerts:
+for topic, alert in alerts:
     print("topic: ", topic)
     print("alert:\n", alert)
 ```
@@ -61,7 +61,7 @@ while True:
     topic, alert = consumer.poll(2)
     print("topic: {}, alert:\n {}".format(topic, alert))
 ```
-Make sure you close the connection or you could use the context manager:
+Make sure you close the connection, or you can also use the context manager:
 ```python
 # Close the connection explicitly
 consumer = AlertConsumer(topics, config)
