@@ -21,7 +21,7 @@ with open("README.md", "r") as fh:
 setuptools.setup(
     name="fink-client",
     version=fink_client.__version__,
-    author="JulienPeloton",
+    author="AstroLab Software",
     author_email="peloton@lal.in2p3.fr",
     description="Light-weight client to manipulate alerts from Fink",
     long_description=long_description,
