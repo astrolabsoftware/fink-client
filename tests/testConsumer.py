@@ -16,9 +16,9 @@
 
 import time
 from pprint import pprint as pp
+from fink_client.consumer import AlertConsumer
 
 def main():
-    from fink_client.consumer import AlertConsumer
     
     mytopics = ['rrlyr', 'ebwuma', 'unknown']
     test_servers = 'localhost:9093,localhost:9094,localhost:9095'
