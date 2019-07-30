@@ -17,8 +17,6 @@
 # This is a simple integration test
 set -e
 
-cd ..
-
 # start Kafka in docker container
 docker-compose -p integration_test -f docker-compose-kafka.yml up -d
 
