@@ -15,6 +15,7 @@
 # limitations under the License.
 
 # This is a simple integration test
+set -e
 
 cd ..
 
