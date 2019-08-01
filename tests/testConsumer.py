@@ -20,14 +20,15 @@ from fink_client.consumer import AlertConsumer
 
 def main():
     
-    mytopics = ['rrlyr', 'ebwuma', 'unknown']
-    test_servers = 'localhost:9093,localhost:9094,localhost:9095'
+    mytopics = ["rrlyr", "ebwuma", "unknown"]
+    test_servers = "localhost:9093,localhost:9094,localhost:9095"
+    test_schema = "tests/test_schema.avsc"
     
     myconfig = {
             'bootstrap.servers': test_servers,
             'group_id': 'test_group'}
     
-    consumer = AlertConsumer(mytopics, myconfig)
+    consumer = AlertConsumer(mytopics, myconfig, schema=test_schema)
     
     # listent to alert stream for some time
     t_end = time.time() + 40
@@ -39,6 +40,8 @@ def main():
             print("Alert received on: ",topic)
             pp(alert)
             print("---" * 10)
+    
+    consumer.close()
 
 
 if __name__ == "__main__":

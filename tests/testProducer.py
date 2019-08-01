@@ -42,7 +42,7 @@ def read_avro_alerts(data_path: str) -> Iterable[dict]:
 
 def encode_into_avro(alert: dict):
     schema_file = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), '../schema/fink_alert_schema.avsc'))
+        os.path.dirname(__file__), '../tests/test_schema.avsc'))
     
     with open(schema_file) as f:
         schema = json.load(f)
