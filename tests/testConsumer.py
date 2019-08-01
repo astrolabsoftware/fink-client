@@ -22,7 +22,7 @@ def main():
     
     mytopics = ["rrlyr", "ebwuma", "unknown"]
     test_servers = "localhost:9093,localhost:9094,localhost:9095"
-    test_schema = "tests/test_schema.avsc"
+    test_schema = "test_schema.avsc"
     
     myconfig = {
             'bootstrap.servers': test_servers,

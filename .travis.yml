@@ -19,7 +19,7 @@ install:
   # Python deps
   - pip install --upgrade pip setuptools wheel
   - pip install -r requirements.txt
-  - export PYTHONPATH="${FINK_CLIENT_HOME}:$PYTHONPATH"
+  - pip install -e .
 
 script:
   # For sonar to run correctly
@@ -29,7 +29,8 @@ script:
   - python -c "import fink_client; print(fink_client.__version__)"
 
   # simple integration test
-  - tests/integration_test.sh
+  - cd tests
+  - ./integration_test.sh
 
   # Scan with sonarqube only if internal PR (i.e. no fork)
   # Note: this is unsatisfactory...
