@@ -18,14 +18,14 @@ import os
 import json
 import confluent_kafka
 import fastavro
-
+import urllib.request
 
 class AlertConsumer:
     """
     High level Kafka consumer to receive alerts from Fink broker
     """
 
-    def __init__(self, topics, config):
+    def __init__(self, topics, config, schema=None):
         """Creates an instance of `AlertConsumer`
 
         Parameters
@@ -49,7 +49,7 @@ class AlertConsumer:
         ]
         self._topics = topics
         self._kafka_config = _get_kafka_config(_FINK_SERVERS, config)
-        self._parsed_schema = _get_alert_schema()
+        self._parsed_schema = _get_alert_schema(schema_path=schema)
         self._consumer = confluent_kafka.Consumer(self._kafka_config)
         self._consumer.subscribe(self._topics)
 
@@ -143,9 +143,14 @@ def _get_kafka_config(servers, config):
     return kafka_config
 
 
-def _get_alert_schema():
-    schema_path = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), '../schema/fink_alert_schema.avsc'))
+def _get_alert_schema(schema_path=None):
+    if schema_path is None:
+        schema_url = "https://raw.github.com/astrolabsoftware/fink-broker/master/schemas/distribution_schema.avsc"
+        os.makedirs("schema", exist_ok=True)
+        urllib.request.urlretrieve(schema_url, "schema/fink_alert_schema.avsc")
+    
+        schema_path = os.path.abspath(os.path.join(
+                os.path.dirname(__file__), '../schema/fink_alert_schema.avsc'))
 
     with open(schema_path) as f:
         schema = json.load(f)
