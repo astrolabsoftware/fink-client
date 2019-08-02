@@ -18,7 +18,6 @@ before-install:
 install:
   # Python deps
   - pip install --upgrade pip setuptools wheel
-  - pip install -r requirements.txt
   - pip install -e .
 
 script:

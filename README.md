@@ -8,7 +8,31 @@
 
 ## Installation
 
-TBD
+Clone the GitHub repository
+```bash
+git clone https://github.com/astrolabsoftware/fink-client.git
+cd fink-client
+```
+For testing purposes, use a python virtual environement (`virtualenv`)
+```bash
+virtualenv myenv
+source myenv/bin/activate
+```
+Install `fink_client` and it's dependencies
+```bash
+pip install --upgrade pip setuptools wheel
+pip install -e .
+```
+Run integration test to verify the working.
+```bash
+cd tests
+./integration_test.sh
+```
+If you don't see any error and can see alert data being printed on screen, you have
+installed it correctly.
+
+*Note:
+This is a work in progress and we will soon provide a PyPI based installation.*
 
 ## Documentation
 
