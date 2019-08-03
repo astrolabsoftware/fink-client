@@ -18,7 +18,7 @@ import os
 import json
 import confluent_kafka
 import fastavro
-import urllib.request
+import requests
 
 class AlertConsumer:
     """
@@ -145,13 +145,22 @@ def _get_kafka_config(servers, config):
 
 def _get_alert_schema(schema_path=None):
     if schema_path is None:
-        schema_url = "https://raw.github.com/astrolabsoftware/fink-broker/master/schemas/distribution_schema.avsc"
-        os.makedirs("schema", exist_ok=True)
-        urllib.request.urlretrieve(schema_url, "schema/fink_alert_schema.avsc")
-    
-        schema_path = os.path.abspath(os.path.join(
+        # get schema from fink-broker
+        try:
+            print("Getting schema from fink servers...")
+            schema_url = "https://raw.github.com/astrolabsoftware/fink-broker/master/schemas/distribution_schema.avsc"
+            r = requests.get(schema_url)
+            os.makedirs("schema", exist_ok=True)
+            with open("schema/fink_alert_schema.avsc", "w") as f:
+                f.write(r.text)
+            schema_path = os.path.abspath('schema/fink_alert_schema.avsc')
+        except:
+            schema_path = os.path.abspath(os.path.join(
                 os.path.dirname(__file__), '../schema/fink_alert_schema.avsc'))
-
+            m = ("Could not obtain schema from fink servers\n" 
+                "Using default schema available at: {}").format(schema_path)
+            print(m)
+            
     with open(schema_path) as f:
         schema = json.load(f)
 
