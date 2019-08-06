@@ -20,7 +20,7 @@ import confluent_kafka
 import fastavro
 import requests
 from confluent_kafka import KafkaError
-
+from requests.exceptions import RequestException
 
 class AlertError(Exception):
     pass
@@ -163,12 +163,12 @@ def _get_alert_schema(schema_path=None):
         try:
             print("Getting schema from fink servers...")
             schema_url = "https://raw.github.com/astrolabsoftware/fink-broker/master/schemas/distribution_schema.avsc"
-            r = requests.get(schema_url)
+            r = requests.get(schema_url, timeout=1)
             os.makedirs("schema", exist_ok=True)
             with open("schema/fink_alert_schema.avsc", "w") as f:
                 f.write(r.text)
             schema_path = os.path.abspath('schema/fink_alert_schema.avsc')
-        except:
+        except RequestException:
             schema_path = os.path.abspath(os.path.join(
                 os.path.dirname(__file__), '../schema/fink_alert_schema.avsc'))
             m = ("Could not obtain schema from fink servers\n" 
