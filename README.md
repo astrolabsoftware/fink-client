@@ -38,36 +38,41 @@ This is a work in progress and we will soon provide a PyPI based installation.*
 
 **Fink's distribution stream**
 
-Fink distributes alerts via kafka topics based on classification  by cross-match services. See [Fink's re-distribution](https://fink-broker.readthedocs.io/en/latest/user_guide/streaming-out/). For more details on how the alerts are classified, see Fink's tutorial on [processing alerts](https://fink-broker.readthedocs.io/en/latest/tutorials/processing_alerts/).
+Fink distributes alerts via Kafka topics based on one or several of the alert properties (label, classification, flux, ...).
+See [Fink's re-distribution](https://fink-broker.readthedocs.io/en/latest/user_guide/streaming-out/).
+For more details on how the alerts are classified, see Fink's tutorial on [processing alerts](https://fink-broker.readthedocs.io/en/latest/tutorials/processing_alerts/).
+If you would like to create a new stream, contact Fink's admins or raise a new issue describing the alert properties and thresholds of interest.
 
 You can connect to one or more of these topics using fink-client's APIs and receive Fink's stream of alerts.
 To obtain security credentials for API access and authorization on kafka topics contact Fink's admins.
 
 **Connecting to Fink's stream of alerts**
 
-Once you have the security credentials for accessing the API, import and instantiate an `AlertConsumer`.
+Once you have the security credentials for accessing the API, import and instantiate an `AlertConsumer`. The mandatory configurations are `topics`, the security credentials (`username` and `password`) and the `group_id` for which read offsets are stored. You can also pass the optional configuration: `bootstrap.servers`. If not given the default fink servers will be used.
 
 ```python
 from fink_client.consumer import AlertConsumer
-
-consumer = AlertConsumer{
-    topics = ["RRlyr", "AMHer"],
-    username = "********"
-    password = "********"
-    group_id = "client_group"
+config = {
+  "topics": ["RRlyr", "AMHer"],
+  "username": "********",
+  "password": "********",
+  "group_id": "client_group"
 }
+
+consumer = AlertConsumer(config)
 ```
 A single alert can be received using the `poll()` method of `AlertConsumer`. The alerts are received as tuple of (topic, alert) of type (str, dict).
 
 ```python
-topic, alert = consumer.poll(timeout=5)
+ts = 5  # timeout (seconds)
+topic, alert = consumer.poll(timeout=ts)
 
 if alert is not None:
     print("topic: ", topic)
     for key, value in alert.items():
         print("key: {}\t value: {}".format(key, value))
 else:
-    print(f"no alerts received in {timeout} seconds")
+    print(f"no alerts received in {ts} seconds")
 ```
 
 Multiple alerts can be received using the `consume()` method. The method returns a list of tuples (topic, alert) with maximum `num_alerts` number of alerts.
