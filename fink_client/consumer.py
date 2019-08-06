@@ -19,6 +19,12 @@ import json
 import confluent_kafka
 import fastavro
 import requests
+from confluent_kafka import KafkaError
+
+
+class AlertError(Exception):
+    pass
+
 
 class AlertConsumer:
     """
@@ -76,7 +82,15 @@ class AlertConsumer:
         msg = self._consumer.poll(timeout)
         if msg is None:
             return None, None
-
+        
+        # msg.error() returns None or KafkaError
+        if msg.error():
+            error_message = ("Error: {}\n" 
+                "topic: {}[{}] at offset: {} with key: {}").format(
+                msg.error, msg.topic(), msg.partition(), msg.offset(),
+                str(msg.key))
+            raise AlertError(error_message)
+        
         topic = msg.topic()
         avro_alert = io.BytesIO(msg.value())
         alert = _decode_avro_alert(avro_alert, self._parsed_schema)

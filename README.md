@@ -92,11 +92,14 @@ while True:
 ```
 Make sure you close the connection, or you can also use the context manager:
 ```python
+from fink_client.consumer import AlertConsumer, AlertError
 # Close the connection explicitly
 consumer = AlertConsumer(topics, config)
 try:
     topic, alert = consumer.poll(5)
     print("topic: {}, alert:\n {}".format(topic, alert))
+except AlertError as e:
+    print(e)
 finally:
     consumer.close()
 
