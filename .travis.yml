@@ -12,9 +12,6 @@ addons:
     token:
       secure: "PGDuKZKbU7snM1Mwwci38IBfVWIYWldvByVrCj5oLJ5NKUq/b0KGiPVUR1qnFwW3+AqeLIbBoIMuZ8e935xmCeiTXAUcSRhniFsXZEN9uJO/+5I4RwWZdh6eSddqey81H7pAVJQ98K7Wh0iYYgwFhIjTK+Pu8+w6cqiwnConA+GQgosTZTDU/c7KQZzHLlVoBL5ZiV47br66pINeQ8uPyEmspqXjEkyn2lf44VludouCj4cTcO14dgMI6ahcwdtD+EFV5XLlPWayMzE7/kyhkrt2ZGNcF1ADeeBWVDAjVAhbeP2Zem6rvCJS4ZbZCsB35fhJLbd/VaYrycwZAeTizwICitpP/Jkg20x7yo3vWYVVhoGzx+8hyRyCrpNOH+kWYIco6nltIcoocLJPX4FHlWeDnE0SJfbB9EeqhDnvShkCtHZCeyPQGow/w8pwTpZOAJ5WYJNl1fHRMLikXwOrdifOvNrEH5RaWS6con1vGQugf+7DWioW7ClXyeJNQXt0XeI2i/4jddvkQml6Za8jAqjvqVpk4XL3JY0R6AfKZcOXh8Vq87dObAvVzZKHBl43Ss68m4vpITktaZ8kYUN3ukey4AwmvQHpmXPmOMUGaOs6Zcv+Jkey35VFk8SydGTL7LXtXKY00BLqI7mdvF/LU0qDfMU11ujsYtiKo44mYdg="
 
-before-install:
-  - export FINK_CLIENT_HOME="/home/travis/build/${TRAVIS_REPO_SLUG}"
-
 install:
   # Python deps
   - pip install --upgrade pip setuptools wheel
