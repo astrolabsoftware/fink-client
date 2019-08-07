@@ -21,6 +21,7 @@ import fastavro
 import requests
 from confluent_kafka import KafkaError
 from requests.exceptions import RequestException
+from typing import Any
 
 class AlertError(Exception):
     pass
@@ -31,7 +32,7 @@ class AlertConsumer:
     High level Kafka consumer to receive alerts from Fink broker
     """
 
-    def __init__(self, topics, config, schema=None):
+    def __init__(self, topics: list, config: dict, schema=None):
         """Creates an instance of `AlertConsumer`
 
         Parameters
@@ -48,13 +49,8 @@ class AlertConsumer:
             group_id: str
                 group.id for Kafka consumer
         """
-        _FINK_SERVERS = [
-            "localhost:9093",
-            "localhost:9094",
-            "localhost:9095"
-        ]
         self._topics = topics
-        self._kafka_config = _get_kafka_config(_FINK_SERVERS, config)
+        self._kafka_config = _get_kafka_config(config)
         self._parsed_schema = _get_alert_schema(schema_path=schema)
         self._consumer = confluent_kafka.Consumer(self._kafka_config)
         self._consumer.subscribe(self._topics)
@@ -82,15 +78,15 @@ class AlertConsumer:
         msg = self._consumer.poll(timeout)
         if msg is None:
             return None, None
-        
+
         # msg.error() returns None or KafkaError
         if msg.error():
-            error_message = ("Error: {}\n" 
+            error_message = ("Error: {}\n"
                 "topic: {}[{}] at offset: {} with key: {}").format(
                 msg.error, msg.topic(), msg.partition(), msg.offset(),
                 str(msg.key))
             raise AlertError(error_message)
-        
+
         topic = msg.topic()
         avro_alert = io.BytesIO(msg.value())
         alert = _decode_avro_alert(avro_alert, self._parsed_schema)
@@ -132,32 +128,68 @@ class AlertConsumer:
         self._consumer.close()
 
 
-def _get_kafka_config(servers, config):
+def _get_kafka_config(config: dict) -> dict:
+    """Returns configurations for a consumer instance
 
+    Parameters
+    ----------
+    config: dict
+        Dictionary of configurations
+
+    Returns
+    ----------
+    kafka_config: dict
+        Dictionary with configurations for creating an instance of
+        a secured Kafka consumer
+    """
     kafka_config = {}
     default_config = {
-        "bootstrap.servers": "{}".format(",".join(servers)),
-        "auto.offset.reset": "earliest",
+        "auto.offset.reset": "earliest"
     }
-    
+
     if 'username' in config and 'password' in config:
         kafka_config["security.protocol"] = "sasl_plaintext"
         kafka_config["sasl.mechanism"] = "SCRAM-SHA-512"
         kafka_config["sasl.username"] = config["username"]
         kafka_config["sasl.password"] = config["password"]
-    
+
     kafka_config["group.id"] = config["group_id"]
-    
+
     kafka_config.update(default_config)
-    
-    # overwrite servers if given (used in tests)
+
+    # use servers if given
     if 'bootstrap.servers' in config:
         kafka_config["bootstrap.servers"] = config["bootstrap.servers"]
+    else:
+        # use default fink_servers
+        fink_servers = [
+                "localhost:9093",
+                "localhost:9094",
+                "localhost:9095"
+        ]
+        kafka_config["bootstrap.servers"] = "{}".format(",".join(fink_servers))
 
     return kafka_config
 
 
-def _get_alert_schema(schema_path=None):
+def _get_alert_schema(schema_path: str = None):
+    """Returns schema for decoding avro alert
+
+    This method downloads the latest schema available on the fink servers
+    or falls back to using a default schema located in dir 'schemas'/
+
+    Parameters
+    ----------
+    schema_path: str, optional
+        a local path where to look for schema,
+        Note that schema doesn't get downloaded from fink servers if schema_path
+        is given
+
+    Returns
+    ----------
+    parsed_schema: dict
+        Dictionary of json format schema for decoding avro alerts from fink
+    """
     if schema_path is None:
         # get schema from fink-broker
         try:
@@ -171,16 +203,31 @@ def _get_alert_schema(schema_path=None):
         except RequestException:
             schema_path = os.path.abspath(os.path.join(
                 os.path.dirname(__file__), '../schemas/fink_alert_schema.avsc'))
-            m = ("Could not obtain schema from fink servers\n" 
+            m = ("Could not obtain schema from fink servers\n"
                 "Using default schema available at: {}").format(schema_path)
             print(m)
-            
+
     with open(schema_path) as f:
         schema = json.load(f)
 
     return fastavro.parse_schema(schema)
 
 
-def _decode_avro_alert(avro_alert, schema):
+def _decode_avro_alert(avro_alert: io.IOBase, schema: dict) -> Any:
+    """Decodes a file-like stream of avro data
+    
+    Parameters
+    ----------
+    avro_alert: io.IOBase
+        a file-like stream with avro encoded data
+    
+    schema: dict
+        Dictionary of json format schema to decode avro data
+    
+    Returns
+    ----------
+    record: Any
+        Record obtained after decoding avro data (typically, dict)
+    """
     avro_alert.seek(0)
     return fastavro.schemaless_reader(avro_alert, schema)

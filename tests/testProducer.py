@@ -20,12 +20,23 @@ import json
 import glob
 import time
 import fastavro
-from pprint import pprint as pp
 from typing import Iterable
 
 def read_avro_alerts(data_path: str) -> Iterable[dict]:
-    """ read avro alert files and return an interable 
-    with dicts of alert data"""
+    """ Read avro alert files and return an interable 
+    with dicts of alert data
+    
+    Parameters
+    ----------
+    data_path: str
+        a directory path where to look for avro alert files
+        
+    Returns
+    ----------
+    record: Iterable
+        a generator that yields records(dict) after reading avro files
+        in the given directory
+    """
     avro_files = glob.glob(data_path + '/*.avro')
     
     for avro_file in avro_files:
@@ -40,7 +51,19 @@ def read_avro_alerts(data_path: str) -> Iterable[dict]:
         yield record
 
 
-def encode_into_avro(alert: dict):
+def encode_into_avro(alert: dict) -> str:
+    """Encode a dict record into avro bytes
+    
+    Parameters
+    ----------
+    alert: dict
+        A Dictionary of alert data
+    
+    Returns
+    ----------
+    value: str
+        a bytes string with avro encoded alert data
+    """
     schema_file = os.path.abspath(os.path.join(
         os.path.dirname(__file__), 'test_schema.avsc'))
     
@@ -55,8 +78,24 @@ def encode_into_avro(alert: dict):
 
 
 def get_legal_topic_name(topic: str) -> str:
-    """Special characters are not allowed in the name 
-    of a Kafka topic. Returns a legal topic name"""
+    """Returns a legal Kafka topic name
+    
+    Special characters are not allowed in the name 
+    of a Kafka topic. This method returns a legal name
+    after removing special characters and converting each
+    letter to lowercase
+    
+    Parameters
+    ----------
+    topic: str
+        topic name, essentially an alert parameter which is to be used
+        to create a topic
+    
+    Returns
+    ----------
+    legal_topic: str
+        A topic name that can be used as a Kafka topic
+    """
     legal_topic = ''.join(a.lower() for a in topic if a.isalpha())
     return legal_topic
     
@@ -65,9 +104,6 @@ def main():
     
     data_path = os.path.abspath(os.path.join(
             os.path.dirname(__file__), 'data'))
-    
-    # for debug
-    print("datapath is :", data_path)
     
     alert_reader = read_avro_alerts(data_path)
     

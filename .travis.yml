@@ -22,7 +22,7 @@ script:
   # - git fetch --unshallow --quiet
 
   # Print current version
-  - python -c "import fink_client; print(fink_client.__version__)"
+  - python -c "import fink_client; print('Fink client version: {}'.format(fink_client.__version__))"
 
   # simple integration test
   - cd tests
