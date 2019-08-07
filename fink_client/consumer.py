@@ -48,6 +48,8 @@ class AlertConsumer:
                 password for API access
             group_id: str
                 group.id for Kafka consumer
+            bootstrap.servers: str, optional
+                Kafka servers to connect to
         """
         self._topics = topics
         self._kafka_config = _get_kafka_config(config)
@@ -215,15 +217,15 @@ def _get_alert_schema(schema_path: str = None):
 
 def _decode_avro_alert(avro_alert: io.IOBase, schema: dict) -> Any:
     """Decodes a file-like stream of avro data
-    
+
     Parameters
     ----------
     avro_alert: io.IOBase
         a file-like stream with avro encoded data
-    
+
     schema: dict
         Dictionary of json format schema to decode avro data
-    
+
     Returns
     ----------
     record: Any
