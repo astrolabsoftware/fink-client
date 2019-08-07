@@ -18,6 +18,10 @@ import fink_client
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
+requirements = []
+with open("requirements.txt", "r") as fr:
+    requirements = fr.read().splitlines()
+
 setuptools.setup(
     name="fink-client",
     version=fink_client.__version__,
@@ -27,6 +31,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://fink-broker.readthedocs.io/en/latest/",
+    install_requires=requirements,
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3.6",
