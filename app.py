@@ -51,7 +51,7 @@ DATA_PATH = BASE_PATH.joinpath("data").resolve()
 
 # To put in a configuration file
 testmode = True # Allow to overwrite alerts and loop over a subset of inputs
-maxtimeout = 1  # timeout (seconds)
+maxtimeout = 2  # timeout (seconds)
 mytopics = ["rrlyr", "ebwuma", "unknown"]
 test_servers = "localhost:9093,localhost:9094,localhost:9095"
 test_schema = "tests/test_schema.avsc"
@@ -311,11 +311,12 @@ def generate_control_card_tab2():
             ),
             html.Br(),
             # Alert ID list
+            html.P("Select Alert"),
             dcc.Dropdown(
                 id="alerts-dropdown",
                 placeholder="Select an alert ID",
                 clearable=False,
-                style={'width': '200px', 'display': 'inline-block'}
+                style={'width': '250px', 'display': 'inline-block'}
             ),
             html.Br(),
             html.Div(id='container-button-timestamp'),
@@ -345,7 +346,7 @@ def set_alert_dropdown(topic: str) -> list:
     list: List of objectId alerts (str).
     """
     id_list = get_alert_per_topic(db_path, topic)
-    return [{'label': i, 'value': i} for i in id_list]
+    return [{'label': '{}:'.format(topic) + i, 'value': i} for i in id_list]
 
 @app.callback(
     [dash.dependencies.Output('light-curve', 'figure')],
@@ -461,7 +462,7 @@ def poll_alert_and_show_stream(btn1: int):
             write_alert(alert, test_schema, DATA_PATH, overwrite=False)
     else:
         # Message to print under the `next` button
-        msg = f"no alerts received in the past {maxtimeout} second(s)"
+        msg = f"No alerts received (timeout: {maxtimeout} seconds)"
 
     # Query the monitoring database to retrieve last entries per topic
     data = []
