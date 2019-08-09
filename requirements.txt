@@ -3,3 +3,4 @@ coveralls
 codecov
 confluent-kafka
 fastavro
+dash
