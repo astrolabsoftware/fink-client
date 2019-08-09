@@ -108,3 +108,7 @@ with AlertConsumer(topics, config) as consumer:
     topic, alert = consumer.poll(5)
     print("topic: {}, alert:\n {}".format(topic, alert))
 ```
+
+**Dashboard**
+
+Under construction.
