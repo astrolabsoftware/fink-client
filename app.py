@@ -461,7 +461,7 @@ def poll_alert_and_show_stream(btn1: int):
             write_alert(alert, test_schema, DATA_PATH, overwrite=False)
     else:
         # Message to print under the `next` button
-        msg = f"no alerts received in {maxtimeout} second(s)"
+        msg = f"no alerts received in the past {maxtimeout} second(s)"
 
     # Query the monitoring database to retrieve last entries per topic
     data = []
