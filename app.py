@@ -71,7 +71,7 @@ topic_list = [i for i in topic_dic if i[0:2] != "__"]
 def build_tabs():
     """ Build the two tabs of the dashboard.
 
-    - Tab 1: Stream monitor. Pull alerts and save them on disk. You can also
+    - Tab 1: Stream connector. Pull alerts and save them on disk. You can also
         watch number of alerts per topic received in the previous 5 minutes.
     - Tab 2: Alert explorer. Display properties of each received alert.
 
@@ -90,7 +90,7 @@ def build_tabs():
                 children=[
                     dcc.Tab(
                         id="stream-tab",
-                        label="Stream monitor",
+                        label="Stream connector",
                         value="tab1",
                         className="custom-tab",
                         selected_className="custom-tab--selected",
@@ -134,7 +134,7 @@ def render_tab_content(tab_switch: str) -> list:
         return build_tab_2()
 
 def build_tab_1():
-    """ Build the first tab, which is the stream monitor.
+    """ Build the first tab, which is the stream connector.
 
     There are 2 main components:
         - Left column containing description and `next` button.
