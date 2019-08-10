@@ -23,7 +23,6 @@ import time
 import fastavro
 from typing import Iterable
 from fink_client.consumer import AlertConsumer
-from coverage import Coverage
 
 def read_avro_alerts(data_path: str) -> Iterable[dict]:
     """ Read avro alert files and return an interable
@@ -172,13 +171,4 @@ class TestComponents(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    _data = os.path.abspath(os.path.join(
-            os.path.dirname(__file__), "../.coverage"))
-    _config = os.path.abspath(os.path.join(
-            os.path.dirname(__file__), "../.coveragerc"))
-    cov = Coverage(data_file=_data, config_file=_config, cover_pylib=False)
-    cov.start()
-    unittest.main(exit=False)
-    cov.stop()
-    cov.save()
-    print("Total coverage:", cov.report())
+    unittest.main()
