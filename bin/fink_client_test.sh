@@ -21,11 +21,7 @@ TEST_DIR=${PWD}/tests
 docker-compose -p integration_test -f $TEST_DIR/docker-compose-kafka.yml up -d
 
 # run test module
-coverage run --rcfile ${PWD}/.coveragerc --source=${PWD}/fink_client,${TEST_DIR} $TEST_DIR/test.py
+python $TEST_DIR/test.py
 
 # shut down kafka container
 docker-compose -p integration_test -f $TEST_DIR/docker-compose-kafka.yml down
-
-# report coverage
-coverage combine
-coverage report

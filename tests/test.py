@@ -23,6 +23,7 @@ import time
 import fastavro
 from typing import Iterable
 from fink_client.consumer import AlertConsumer
+from coverage import Coverage
 
 def read_avro_alerts(data_path: str) -> Iterable[dict]:
     """ Read avro alert files and return an interable
@@ -141,19 +142,19 @@ class TestIntegration(unittest.TestCase):
         num_messages = 3
         alerts = self.consumer.consume(num_messages)
         self.assertEqual(len(alerts), num_messages)
-        
+
     def tearDown(self):
         self.consumer.close()
-        
+
 
 class TestComponents(unittest.TestCase):
-    
+
     def test_get_alert_schema(self):
         # download and check if a valid schema is downloaded
         from fink_client.consumer import _get_alert_schema
         schema = _get_alert_schema()
         self.assertIsInstance(schema, dict)
-        
+
     def test_get_kafka_config(self):
         from fink_client.consumer import _get_kafka_config
         myconfig = {
@@ -161,14 +162,23 @@ class TestComponents(unittest.TestCase):
                 "password": "Alice-secret",
                 "group_id": "test_group"}
         kafka_config = _get_kafka_config(myconfig)
-        
+
         valid_config = ("security.protocol" in kafka_config and
                 "sasl.mechanism" in kafka_config and
-                "group.id" in kafka_config and 
+                "group.id" in kafka_config and
                 "bootstrap.servers" in kafka_config)
-        
+
         self.assertTrue(valid_config)
-        
-        
+
+
 if __name__ == "__main__":
-    unittest.main()
+    _data = os.path.abspath(os.path.join(
+            os.path.dirname(__file__), "../.coverage"))
+    _config = os.path.abspath(os.path.join(
+            os.path.dirname(__file__), "../.coveragerc"))
+    cov = Coverage(data_file=_data, config_file=_config, cover_pylib=False)
+    cov.start()
+    unittest.main(exit=False)
+    cov.stop()
+    cov.save()
+    print("Total coverage:", cov.report())
