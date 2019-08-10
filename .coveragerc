@@ -1,7 +1,7 @@
 [run]
 branch = false
 parallel = true
+data_file = ${FINK_CLIENT_HOME}/.coverage
 omit=
-    $SPARK_HOME/*
-    setup.py
-    dist/*
+    *setup.py
+    *dist/*

@@ -15,13 +15,13 @@
 # limitations under the License.
 set -e
 
-TEST_DIR=${PWD}/tests
+TEST_DIR=${FINK_CLIENT_HOME}/tests
 
 # start Kafka in docker container
-docker-compose -p integration_test -f $TEST_DIR/docker-compose-kafka.yml up -d
+docker-compose -p integration_test -f ${TEST_DIR}/docker-compose-kafka.yml up -d
 
 # run test module
-python $TEST_DIR/test.py
+python ${TEST_DIR}/test.py
 
 # shut down kafka container
-docker-compose -p integration_test -f $TEST_DIR/docker-compose-kafka.yml down
+docker-compose -p integration_test -f ${TEST_DIR}/docker-compose-kafka.yml down
