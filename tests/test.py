@@ -159,7 +159,8 @@ class TestComponents(unittest.TestCase):
         myconfig = {
                 "username": "Alice",
                 "password": "Alice-secret",
-                "group_id": "test_group"}
+                "group_id": "test_group"
+        }
         kafka_config = _get_kafka_config(myconfig)
 
         valid_config = ("security.protocol" in kafka_config and
@@ -168,6 +169,24 @@ class TestComponents(unittest.TestCase):
                 "bootstrap.servers" in kafka_config)
 
         self.assertTrue(valid_config)
+        
+    def test_decode_avro_alert(self):
+        from fink_client.consumer import _decode_avro_alert
+        schema = {
+                'name': 'test',
+                'type': 'record',
+                'fields': [
+                        {'name': 'name', 'type': 'string'},
+                        {'name': 'fav_num', 'type': 'int'}
+                ]
+        }
+        record = {u'name': u'Alice', u'fav_num': 63}
+        
+        b = io.BytesIO()
+        fastavro.schemaless_writer(b, schema, record)
+        read_record = _decode_avro_alert(b, schema)
+        
+        self.assertDictEqual(record, read_record)
 
 
 if __name__ == "__main__":
