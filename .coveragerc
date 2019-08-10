@@ -5,3 +5,4 @@ data_file = ${FINK_CLIENT_HOME}/.coverage
 omit=
     *setup.py
     *dist/*
+    */lib/*
