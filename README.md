@@ -25,11 +25,9 @@ pip install -e .
 ```
 Run integration test to verify the working.
 ```bash
-cd tests
-./integration_test.sh
+bin/fink_client_test.sh
 ```
-If you don't see any error and can see alert data being printed on screen, you have
-installed it correctly.
+If you don't see any error and all the test results are ok, you have installed it correctly.
 
 *Note:
 This is a work in progress and we will soon provide a PyPI based installation.*
