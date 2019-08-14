@@ -134,9 +134,10 @@ class TestIntegration(unittest.TestCase):
         self.consumer = AlertConsumer(mytopics, myconfig, schema=test_schema)
 
     def test_poll(self):
-        alert, topic = self.consumer.poll()
+        topic, alert = self.consumer.poll()
         self.assertIsNotNone(alert)
-
+        self.assertTrue(fastavro.validate(alert, self.consumer._parsed_schema))
+        
     def test_consume(self):
         num_messages = 3
         alerts = self.consumer.consume(num_messages)
