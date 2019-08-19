@@ -21,7 +21,7 @@ import fastavro
 from typing import Iterable
 
 def read_avro_alerts(data_path: str) -> Iterable[dict]:
-    """ Read avro alert files and return an interable
+    """ Read avro alert files and return an iterable
     with dicts of alert data
 
     Parameters
@@ -32,7 +32,7 @@ def read_avro_alerts(data_path: str) -> Iterable[dict]:
     Returns
     ----------
     record: Iterable
-        a generator that yields records(dict) after reading avro files
+        a generator that yields records (dict) after reading avro files
         in the given directory
     """
     avro_files = glob.glob(data_path + '/*.avro')

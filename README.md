@@ -107,4 +107,4 @@ with AlertConsumer(topics, config) as consumer:
     print("topic: {}, alert:\n {}".format(topic, alert))
 ```
 
-To learn more about the schema of received alerts and how to work with them, refer to the [jupyter notebook](notebooks/working_with_alerts.ipynb).
+To learn more about the schema of received alerts and how to work with them, refer to the [jupyter notebook](notebooks/working_with_alerts.ipynb). (WIP)

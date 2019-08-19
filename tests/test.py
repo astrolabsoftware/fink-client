@@ -20,8 +20,9 @@ import confluent_kafka
 import time
 import fastavro
 from fink_client.consumer import AlertConsumer
-from fink_client.alertUtils import (
-        read_avro_alerts, encode_into_avro, get_legal_topic_name)
+from fink_client.alertUtils import read_avro_alerts
+from fink_client.alertUtils import encode_into_avro
+from fink_client.alertUtils import get_legal_topic_name
 
 
 class TestIntegration(unittest.TestCase):
