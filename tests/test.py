@@ -17,89 +17,12 @@ import unittest
 import os
 import io
 import confluent_kafka
-import json
-import glob
 import time
 import fastavro
-from typing import Iterable
 from fink_client.consumer import AlertConsumer
-
-def read_avro_alerts(data_path: str) -> Iterable[dict]:
-    """ Read avro alert files and return an interable
-    with dicts of alert data
-
-    Parameters
-    ----------
-    data_path: str
-        a directory path where to look for avro alert files
-
-    Returns
-    ----------
-    record: Iterable
-        a generator that yields records(dict) after reading avro files
-        in the given directory
-    """
-    avro_files = glob.glob(data_path + '/*.avro')
-
-    for avro_file in avro_files:
-        # check for valid avro file
-        if not fastavro.is_avro(avro_file):
-            continue
-
-        with open(avro_file, 'rb') as f:
-            reader = fastavro.reader(f)
-            record = next(reader)
-
-        yield record
-
-
-def encode_into_avro(alert: dict) -> str:
-    """Encode a dict record into avro bytes
-
-    Parameters
-    ----------
-    alert: dict
-        A Dictionary of alert data
-
-    Returns
-    ----------
-    value: str
-        a bytes string with avro encoded alert data
-    """
-    schema_file = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), 'test_schema.avsc'))
-
-    with open(schema_file) as f:
-        schema = json.load(f)
-
-    parsed_schema = fastavro.parse_schema(schema)
-    b = io.BytesIO()
-    fastavro.schemaless_writer(b, parsed_schema, alert)
-
-    return b.getvalue()
-
-
-def get_legal_topic_name(topic: str) -> str:
-    """Returns a legal Kafka topic name
-
-    Special characters are not allowed in the name
-    of a Kafka topic. This method returns a legal name
-    after removing special characters and converting each
-    letter to lowercase
-
-    Parameters
-    ----------
-    topic: str
-        topic name, essentially an alert parameter which is to be used
-        to create a topic
-
-    Returns
-    ----------
-    legal_topic: str
-        A topic name that can be used as a Kafka topic
-    """
-    legal_topic = ''.join(a.lower() for a in topic if a.isalpha())
-    return legal_topic
+from fink_client.alertUtils import read_avro_alerts
+from fink_client.alertUtils import encode_into_avro
+from fink_client.alertUtils import get_legal_topic_name
 
 
 class TestIntegration(unittest.TestCase):
@@ -108,7 +31,9 @@ class TestIntegration(unittest.TestCase):
 
         data_path = os.path.abspath(os.path.join(
                 os.path.dirname(__file__), 'data'))
-
+        schema_path = os.path.abspath(os.path.join(
+                os.path.dirname(__file__), 'test_schema.avsc'))
+        
         alert_reader = read_avro_alerts(data_path)
 
         kafka_servers = 'localhost:9093, localhost:9094, localhost:9095'
@@ -117,7 +42,7 @@ class TestIntegration(unittest.TestCase):
 
 
         for alert in alert_reader:
-            avro_data = encode_into_avro(alert)
+            avro_data = encode_into_avro(alert, schema_path)
             topic = get_legal_topic_name(
                     alert['cross_match_alerts_per_batch'])
             p.produce(topic, avro_data)
@@ -134,9 +59,10 @@ class TestIntegration(unittest.TestCase):
         self.consumer = AlertConsumer(mytopics, myconfig, schema=test_schema)
 
     def test_poll(self):
-        alert, topic = self.consumer.poll()
+        topic, alert = self.consumer.poll()
         self.assertIsNotNone(alert)
-
+        self.assertTrue(fastavro.validate(alert, self.consumer._parsed_schema))
+        
     def test_consume(self):
         num_messages = 3
         alerts = self.consumer.consume(num_messages)
