@@ -18,6 +18,7 @@ import time
 import datetime
 import os
 import pathlib
+import textwrap
 
 import numpy as np
 import pandas as pd
@@ -146,7 +147,7 @@ def build_tab_1():
           of the database.
     """
     msg = """
-    Hit the Poll button to download the next alert sent by the Fink broker.
+    Hit the Poll button to download new alerts sent by the Fink broker.
     More description to come.
     """
     divs = [
@@ -282,8 +283,8 @@ def generate_control_card_tab1():
                 ),
                 className="page-buttons",
                 id="poll-button-div",
-            ),
-            html.Div(id='container-button-Poll'),
+            ), html.Div(id='container-button-Poll')] + [
+                i for i in generate_table()
         ],
     )
 
@@ -323,6 +324,46 @@ def generate_control_card_tab2():
             html.Div(id='container-button-timestamp'),
         ],
     )
+
+def generate_table():
+    """ Generate statitics table for received alerts in the monitoring db.
+
+    Returns
+    ---------
+    div1: A Div containing the title
+    div2: A Div containing the table
+    """
+    # Grab all alerts from the db
+    now = time.time()
+    df_monitoring = get_alert_monitoring_data(db_path, 0, now)
+
+    # Count how many alerts received per topic
+    df = df_monitoring\
+        .groupby(by="topic", as_index=False)\
+        .count()[['topic', 'objectId']]\
+        .rename({"objectId": "count"}, axis='columns')
+
+    # for each topic, grab the last time an alert has been received
+    df_last_entry = df_monitoring\
+        .groupby(by="topic", as_index=False)\
+        .aggregate(max)\
+        .rename({"time": "last received"}, axis='columns')
+
+    # Human readable time
+    df["last received"] = df_last_entry["last received"]\
+        .map(lambda x: time.ctime(x))
+
+    # first time an alert has been received
+    starting_time = time.ctime(df_monitoring["time"].min())
+
+    return [html.H4(f"Statistics since {starting_time}"), html.Table(
+        # Header
+        [html.Tr([html.Th(col) for col in df.columns])] +
+        # Body
+        [html.Tr([
+            html.Td(df.iloc[i][col]) for col in df.columns
+        ]) for i in range(len(df))]
+    )]
 
 @app.callback(
     dash.dependencies.Output('alerts-dropdown', 'options'),
@@ -409,17 +450,14 @@ def draw_light_curve(alert_id):
      dash.dependencies.Output('topic-bar-graph', 'figure')],
     [dash.dependencies.Input('poll-button', 'n_clicks')])
 def poll_alert_and_show_stream(btn1: int):
-    """ This routine poll a new alert, update the graph of stream, and save
-    the alert on disk.
+    """ This routine polls published alerts, update the graph of stream,
+    and save the alert on disk.
 
-    When the button 'Poll' is hit, we poll a new alert, save it on disk,
+    When the button 'Poll' is hit, we poll all new alerts, save them on disk,
     and try to update the graph. Otherwise if the result of the poll is None,
     we just warn the user that no alerts were found until the timeout.
 
     Note this function has two outputs: 'Poll' button, and the graph.
-
-    TODO:
-        - Let the user define how far in the past he wants to go.
 
     Callbacks
     ----------
@@ -440,9 +478,9 @@ def poll_alert_and_show_stream(btn1: int):
     out2: html.div @ `topic-bar-graph`
         Graph data and layout based on incoming alerts.
     """
-    # Try to poll a new alert
-    start = "start polling: {}".format(
-        datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    # # Try to poll a new alert
+    # start = "start: {}".format(
+    #     datetime.datetime.now().strftime('%H:%M:%S'))
     is_alert = True
     n_alerts = 0
     while is_alert:
@@ -469,9 +507,11 @@ def poll_alert_and_show_stream(btn1: int):
                 write_alert(alert, test_schema, DATA_PATH, overwrite=False)
         else:
             # Message to print under the `next` button
-            # msg = f"No alerts received (timeout: {maxtimeout} seconds)"
-            stop = "stop polling: {}".format(
-                datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+            stop = "{}".format(
+                datetime.datetime.now().strftime('%H:%M:%S'))
+            five_minutes_ago = (
+                datetime.datetime.now() - datetime.timedelta(minutes=5)
+            ).strftime('%H:%M:%S')
 
             if n_alerts == 0:
                 msg = f"No alerts received (timeout: {maxtimeout} seconds)"
@@ -483,6 +523,7 @@ def poll_alert_and_show_stream(btn1: int):
     data = []
     bins = np.linspace(-300, 0, 30)
     try:
+        # Computing the time again... need to coordinate times better
         now = time.time()
         df_monitoring = get_alert_monitoring_data(db_path, now - 300, now)
         for topic in topic_list:
@@ -520,14 +561,17 @@ def poll_alert_and_show_stream(btn1: int):
         })
 
     # Update message below `Poll` button
-    out_button = html.Div([html.Div(start), html.Div(stop), html.Div(msg)])
+    out_button = html.Div([html.Div(msg)])
 
     # Update graph data
+    title_text = [
+        "Alerts received in the last 5 minutes", f"{five_minutes_ago} - {stop}"]
+    title = '<br>'.join(title_text)
     out_graph = {
         'data': data,
         "layout": {
             "showlegend": True,
-            'title': "Alerts received in the last 5 minutes"
+            'title': title
         }
     }
     return out_button, out_graph
