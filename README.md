@@ -25,11 +25,9 @@ pip install -e .
 ```
 Run integration test to verify the working.
 ```bash
-cd tests
-./integration_test.sh
+bin/fink_client_test.sh
 ```
-If you don't see any error and can see alert data being printed on screen, you have
-installed it correctly.
+If you don't see any error and all the test results are ok, you have installed it correctly.
 
 *Note:
 This is a work in progress and we will soon provide a PyPI based installation.*
@@ -52,14 +50,14 @@ Once you have the security credentials for accessing the API, import and instant
 
 ```python
 from fink_client.consumer import AlertConsumer
+topics = ["rrlyr", "ebwuma"]
 config = {
-  "topics": ["RRlyr", "AMHer"],
-  "username": "********",
+  "username": "client_name",
   "password": "********",
   "group_id": "client_group"
 }
 
-consumer = AlertConsumer(config)
+consumer = AlertConsumer(topics, config)
 ```
 A single alert can be received using the `poll()` method of `AlertConsumer`. The alerts are received as tuple of (topic, alert) of type (str, dict).
 
@@ -108,6 +106,8 @@ with AlertConsumer(topics, config) as consumer:
     topic, alert = consumer.poll(5)
     print("topic: {}, alert:\n {}".format(topic, alert))
 ```
+
+To learn more about the schema of received alerts and how to work with them, refer to the [jupyter notebook](notebooks/working_with_alerts.ipynb). (WIP)
 
 **Dashboard**
 
