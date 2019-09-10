@@ -15,6 +15,7 @@
 """ Dashboard to pull and monitor alerts emitted by the Fink broker.
 """
 import time
+import datetime
 import os
 import pathlib
 
@@ -274,7 +275,7 @@ def generate_control_card_tab1():
         children=[
             html.Div(
                 html.Button(
-                    "Poll a new alert",
+                    "Poll new alerts",
                     id="poll-button",
                     style={"display": "inline-block", "marginLeft": "10px"},
                     n_clicks=0,
@@ -440,29 +441,43 @@ def poll_alert_and_show_stream(btn1: int):
         Graph data and layout based on incoming alerts.
     """
     # Try to poll a new alert
-    topic, alert = consumer.poll(timeout=maxtimeout)
+    start = "start polling: {}".format(
+        datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    is_alert = True
+    n_alerts = 0
+    while is_alert:
+        topic, alert = consumer.poll(timeout=maxtimeout)
 
-    if alert is not None:
-        # Message to print under the `Poll` button
-        msg = "Alert received!"
+        if alert is not None:
+            n_alerts += 1
+            # Message to print under the `Poll` button
+            msg = "Alert received!"
 
-        # Update the monitoring database
-        now = time.time()
-        df = pd.DataFrame({
-            "objectId": [alert["objectId"]],
-            "time": [now],
-            "topic": topic
-        })
-        update_alert_monitoring_db(db_path, df)
+            # Update the monitoring database
+            now = time.time()
+            df = pd.DataFrame({
+                "objectId": [alert["objectId"]],
+                "time": [now],
+                "topic": topic
+            })
+            update_alert_monitoring_db(db_path, df)
 
-        # Save the alert on disk for later inspection
-        if testmode:
-            write_alert(alert, test_schema, DATA_PATH, overwrite=True)
+            # Save the alert on disk for later inspection
+            if testmode:
+                write_alert(alert, test_schema, DATA_PATH, overwrite=True)
+            else:
+                write_alert(alert, test_schema, DATA_PATH, overwrite=False)
         else:
-            write_alert(alert, test_schema, DATA_PATH, overwrite=False)
-    else:
-        # Message to print under the `next` button
-        msg = f"No alerts received (timeout: {maxtimeout} seconds)"
+            # Message to print under the `next` button
+            # msg = f"No alerts received (timeout: {maxtimeout} seconds)"
+            stop = "stop polling: {}".format(
+                datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
+            if n_alerts == 0:
+                msg = f"No alerts received (timeout: {maxtimeout} seconds)"
+            else:
+                msg = f"{n_alerts} new alerts received"
+            is_alert = False
 
     # Query the monitoring database to retrieve last entries per topic
     data = []
@@ -505,7 +520,7 @@ def poll_alert_and_show_stream(btn1: int):
         })
 
     # Update message below `Poll` button
-    out_button = html.Div([html.Div(msg)])
+    out_button = html.Div([html.Div(start), html.Div(stop), html.Div(msg)])
 
     # Update graph data
     out_graph = {
