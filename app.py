@@ -19,9 +19,13 @@ import datetime
 import os
 import pathlib
 import textwrap
+import gzip
+import io
+import ast
 
 import numpy as np
 import pandas as pd
+from astropy.io import fits
 
 import dash
 import dash_core_components as dcc
@@ -228,10 +232,66 @@ def build_tab_2():
                 }
             }
         )], style={
-            'width': '49%',
+            'width': '66%',
+            'height': '20%',
             'display': 'inline-block',
             'padding': '0 20'
-        })
+        }),
+        html.Div([
+            html.Div([
+                html.Div([dcc.Graph(
+                    id='science-stamps',
+                    figure={
+                        'layout': {
+                            'clickmode': 'event+select'
+                        }
+                    },
+                    style={
+                        'width': '300px',
+                        'height': '300px',
+                        'display': 'inline-block',
+                        'padding': '0 20'
+                    })
+                ])
+            ]),
+            html.Div([
+                html.Div([
+                    html.Div([dcc.Graph(
+                        id='template-stamps',
+                        figure={
+                            'layout': {
+                                'clickmode': 'event+select',
+                                "autosize": True
+                            }
+                        }, style={
+                            'width': '300px',
+                            'height': '300px',
+                            'display': 'inline-block',
+                            'padding': '0 20'
+                        }
+                    )])
+                ])
+            ]),
+            html.Div([
+                html.Div([
+                    html.Div([dcc.Graph(
+                        id='difference-stamps',
+                        figure={
+                            'layout': {
+                                'clickmode': 'event+select',
+                                "autosize": True
+                            }
+                        },
+                        style={
+                            'width': '300px',
+                            'height': '300px',
+                            'display': 'inline-block',
+                            'padding': '0 20'
+                        })
+                    ])
+                ])
+            ])
+        ], style={'columnCount': 3})
     ]
     return [divs]
 
@@ -365,6 +425,68 @@ def generate_table():
         ]) for i in range(len(df))]
     )]
 
+def listify(string: str) -> list:
+    """ Given a string describing a list, return the list. Fill with None if
+    empty.
+
+    Parameters
+    ----------
+    string: str
+        Input String describing a list like '[1, 2, 3, 4]'
+
+    Returns
+    ----------
+    Corresponding list, e.g. '[1, 2, 3]' will return [1, 2, 3].
+    Note that holes will be filled by None: '[1, , 3]' -> [1, None, 3].
+    """
+    s = string\
+        .replace('[,', '[None,')\
+        .replace(',]', ',None]')\
+        .replace(',,', ',None,')\
+        .replace(",,", ",None,")\
+        .replace(",,", ',')
+    return ast.literal_eval(s)
+
+def extract_parameter(alert: dict, field: str) -> np.array:
+    """ Concatenate current and historical observation data for a given field.
+
+    Parameters
+    ----------
+    alert: dict
+        Dictionnary containing alert data
+    field: str
+        Name of the field to extract. It should be present in `candidate`
+        and `prv_candidates`.
+    """
+    data = np.concatenate(
+        [
+            [alert["candidate"][field]],
+            listify(alert["prv_candidates"][field])
+        ]
+    )
+    return data
+
+def readstamp(alert: dict, field: str) -> np.array:
+    """ Read the stamp data inside an alert.
+
+    Parameters
+    ----------
+    alert: dictionary
+        dictionary containing alert data
+    field: string
+        Name of the stamps: cutoutScience, cutoutTemplate, cutoutDifference
+
+    Returns
+    ----------
+    data: np.array
+        2D array containing image data
+    """
+    stamp = alert[field]["stampData"]
+    with gzip.open(io.BytesIO(stamp), 'rb') as f:
+        with fits.open(io.BytesIO(f.read())) as hdul:
+            data = hdul[0].data
+    return data
+
 @app.callback(
     dash.dependencies.Output('alerts-dropdown', 'options'),
     [dash.dependencies.Input('topic-select', 'value')])
@@ -391,20 +513,19 @@ def set_alert_dropdown(topic: str) -> list:
     return [{'label': '{}:'.format(topic) + i, 'value': i} for i in id_list]
 
 @app.callback(
-    [dash.dependencies.Output('light-curve', 'figure')],
+    [dash.dependencies.Output('light-curve', 'figure'),
+     dash.dependencies.Output('science-stamps', 'figure'),
+     dash.dependencies.Output('template-stamps', 'figure'),
+     dash.dependencies.Output('difference-stamps', 'figure')],
     [dash.dependencies.Input('alerts-dropdown', 'value')])
 def draw_light_curve(alert_id):
-    """ Display alert light curve based on its ID.
-
-    TODO:
-        - Make meaningful plot! we currently draw random number for
-          test purposes.
-        - Label axes.
+    """ Display alert light curve and stamps based on its ID.
 
     Callbacks
     ----------
     Input: alert_id coming from the `alerts-dropdown` menu
     Output: Graph to display the historical light curve data of the alert.
+    Output: stamps (Science, Template, Difference)
 
     Parameters
     ----------
@@ -418,32 +539,112 @@ def draw_light_curve(alert_id):
     # Load the alert from disk
     alert = read_alert(os.path.join(DATA_PATH, "{}.avro".format(alert_id)))
 
-    # Should be replaced by alert data
-    xx = np.random.rand(10)
-    yy = np.random.rand(10)
+    # Extract relevant alert data to compute light-curve
+    flux = extract_parameter(alert, "magpsf")
+    upper = extract_parameter(alert, "diffmaglim")
+    sig = extract_parameter(alert, "sigmapsf")
+    jd = extract_parameter(alert, "jd")
+    fid = extract_parameter(alert, "fid")
+    pid = extract_parameter(alert, "pid")
 
-    # Title of the plot
-    name = alert["objectId"]
+    # Bands and dates
+    filter_color = {1: '#1f77b4', 2: '#ff7f0e', 3: '#2ca02c'}
+    # [
+    #     '#1f77b4',  # muted blue
+    #     '#ff7f0e',  # safety orange
+    #     '#2ca02c',  # cooked asparagus green
+    #     '#d62728',  # brick red
+    #     '#9467bd',  # muted purple
+    #     '#8c564b',  # chestnut brown
+    #     '#e377c2',  # raspberry yogurt pink
+    #     '#7f7f7f',  # middle gray
+    #     '#bcbd22',  # curry yellow-green
+    #     '#17becf'   # blue-teal
+    # ]
+    filter_name = {1: 'g band', 2: 'r band', 3: 'i band'}
+    dates = np.array([i - jd[0] for i in jd])
+
+    # Title of the plot (alert ID)
     title = alert["objectId"]
 
-    # Update graph data
-    out_graph = {'data': [
-        {
-            'x': xx,
-            'y': yy,
-            "hoverinfo": "label",
-            "textinfo": "label",
-            'name': name,
-            'mode': 'markers',
-            'marker': {'size': 12}
-        }
-    ], "layout": {
-        "showlegend": True,
+    # loop over filters
+    data = []
+    for filt in filter_color.keys():
+        # Values corresponding to the filter
+        mask = np.where(fid == filt)[0]
+
+        # detection vs upper limit
+        symbols = [
+            "circle" if i is not None else "triangle-down" for i in sig[mask]]
+
+        # y data
+        ydata = np.array([
+            flux[mask][i] if sig[mask][i] is not None
+            else upper[mask][i] for i in range(len(mask))
+        ])
+
+        # Data to plot
+        data.append(
+            {
+                'x': dates[mask],
+                'y': ydata,
+                'error_y': {
+                    'type': 'data',
+                    'array': sig[mask],
+                    'visible': True,
+                    'color': filter_color[filt]
+                },
+                "hoverinfo": "label",
+                "hovertext": ["pid: {}".format(i) for i in pid[mask]],
+                "textinfo": "label",
+                'name': filter_name[filt],
+                'mode': 'markers',
+                'marker': {
+                    'size': 12,
+                    'color': filter_color[filt],
+                    'symbol': symbols}
+            }
+        )
+
+    # Update graph data for light-curve
+    out_light_curve = {'data': data, "layout": {
+        "showlegend": False,
+        'yaxis': {
+            'autorange': 'reversed',
+            'title': 'Magnitude'
+        },
+        'xaxis': {
+            'title': 'Days to candidate'
+        },
         'title': title,
         "paper_bgcolor": "white",
         "plot_bgcolor": "rgba(0,0,0,0)",
     }}
-    return [out_graph]
+
+    # Update graph data for stamps
+    out_stamps = []
+    for field in ['Science', 'Template', 'Difference']:
+        data = readstamp(alert, 'cutout{}'.format(field))
+        x, y = np.meshgrid(range(len(data)), range(len(data)))
+
+        out_stamps.append({'data': [
+            {
+                'x': x.flatten(),
+                'y': y.flatten(),
+                'z': data.flatten(),
+                'type': "heatmap",
+                'colorscale': "Cividis",
+                "hoverinfo": "label",
+                "textinfo": "label",
+                'name': field
+            }
+        ], "layout": {
+            'title': field,
+            "paper_bgcolor": "white",
+            "plot_bgcolor": "rgba(0,0,0,0)",
+        }})
+
+    return [out_light_curve] + out_stamps
 
 @app.callback(
     [dash.dependencies.Output('container-button-Poll', 'children'),
@@ -478,9 +679,7 @@ def poll_alert_and_show_stream(btn1: int):
     out2: html.div @ `topic-bar-graph`
         Graph data and layout based on incoming alerts.
     """
-    # # Try to poll a new alert
-    # start = "start: {}".format(
-    #     datetime.datetime.now().strftime('%H:%M:%S'))
+    # Try to poll new alerts
     is_alert = True
     n_alerts = 0
     while is_alert:
