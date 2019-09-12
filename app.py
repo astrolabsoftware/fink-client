@@ -209,7 +209,7 @@ def build_tab_2():
             ],
         ),
         html.Div(
-            [make_item(1), make_item(2), make_item(3)], className="accordion"),
+            [make_item(2), make_item(1), make_item(3)], className="accordion"),
     ]
     return [divs]
 
@@ -416,13 +416,12 @@ def make_item(i):
                     'clickmode': 'event+select',
                     "autosize": True
                 }
+            }, style={
+                'width': '130vh',
+                'display': 'inline-block',
+                'padding': '0 20'
             }
-        )], style={
-            'width': '99%',
-            'height': '20%',
-            'display': 'inline-block',
-            'padding': '0 20'
-        }),
+        )]),
         html.Div([
             html.Div([
                 html.Div([dcc.Graph(
@@ -486,7 +485,9 @@ def make_item(i):
                 html.H2(
                     dbc.Button(
                         "{}".format(names[i - 1]),
-                        color="link",
+                        color="light",
+                        block=True,
+                        size="lg",
                         id=f"group-{i}-toggle",
                     )
                 )
