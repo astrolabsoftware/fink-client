@@ -30,7 +30,8 @@ from astropy.io import fits
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
+import dash_bootstrap_components as dbc
 
 from fink_client.consumer import AlertConsumer
 from fink_client.avroUtils import write_alert, read_alert
@@ -41,6 +42,7 @@ from db.api import get_alert_per_topic
 
 app = dash.Dash(
     __name__,
+    external_stylesheets=[dbc.themes.BOOTSTRAP],
     meta_tags=[{
         "name": "viewport",
         "content": "width=device-width, initial-scale=1"
@@ -85,37 +87,21 @@ def build_tabs():
     ---------
     html.Div: Div with two chidren.
     """
-    return html.Div(
-        id="tabs",
-        className="tabs",
-        children=[
-            dcc.Tabs(
-                id="app-tabs",
-                value="tab1",
-                className="custom-tabs",
-                children=[
-                    dcc.Tab(
-                        id="stream-tab",
-                        label="Stream connector",
-                        value="tab1",
-                        className="custom-tab",
-                        selected_className="custom-tab--selected",
-                    ),
-                    dcc.Tab(
-                        id="alert-tab",
-                        label="Alert explorer",
-                        value="tab2",
-                        className="custom-tab",
-                        selected_className="custom-tab--selected",
-                    ),
-                ],
-            )
-        ],
-    )
+    return html.Div([
+        dbc.Tabs(
+            [
+                dbc.Tab(label="Stream connector", tab_id="tab-1"),
+                dbc.Tab(label="Alert explorer", tab_id="tab-2"),
+            ],
+            id="tabs",
+            active_tab="tab-1",
+        ),
+        html.Div(id="content"),
+    ])
 
 @app.callback(
     [Output("app-content", "children")],
-    [Input("app-tabs", "value")]
+    [Input("tabs", "active_tab")]
 )
 def render_tab_content(tab_switch: str) -> list:
     """ Build a tab.
@@ -134,7 +120,7 @@ def render_tab_content(tab_switch: str) -> list:
     ----------
     list of list containing `html.div`.
     """
-    if tab_switch == "tab1":
+    if tab_switch == "tab-1":
         return build_tab_1()
     else:
         return build_tab_2()
@@ -222,76 +208,8 @@ def build_tab_2():
                 )
             ],
         ),
-        # Right column (only light curve for the moment)
-        html.Div([dcc.Graph(
-            id='light-curve',
-            figure={
-                'layout': {
-                    'clickmode': 'event+select',
-                    "autosize": True
-                }
-            }
-        )], style={
-            'width': '66%',
-            'height': '20%',
-            'display': 'inline-block',
-            'padding': '0 20'
-        }),
-        html.Div([
-            html.Div([
-                html.Div([dcc.Graph(
-                    id='science-stamps',
-                    figure={
-                        'layout': {
-                            'clickmode': 'event+select'
-                        }
-                    },
-                    style={
-                        'width': '300px',
-                        'height': '300px',
-                        'display': 'inline-block',
-                        'padding': '0 20'
-                    })
-                ])
-            ]),
-            html.Div([
-                html.Div([
-                    html.Div([dcc.Graph(
-                        id='template-stamps',
-                        figure={
-                            'layout': {
-                                'clickmode': 'event+select',
-                                "autosize": True
-                            }
-                        }, style={
-                            'width': '300px',
-                            'height': '300px',
-                            'display': 'inline-block',
-                            'padding': '0 20'
-                        }
-                    )])
-                ])
-            ]),
-            html.Div([
-                html.Div([
-                    html.Div([dcc.Graph(
-                        id='difference-stamps',
-                        figure={
-                            'layout': {
-                                'clickmode': 'event+select',
-                                "autosize": True
-                            }
-                        },
-                        style={
-                            'width': '300px',
-                            'height': '300px',
-                            'display': 'inline-block',
-                            'padding': '0 20'
-                        })
-                    ])
-                ])
-            ])
-        ], style={'columnCount': 3})
+        html.Div(
+            [make_item(1), make_item(2), make_item(3)], className="accordion"),
     ]
     return [divs]
 
@@ -486,6 +404,123 @@ def readstamp(alert: dict, field: str) -> np.array:
         with fits.open(io.BytesIO(f.read())) as hdul:
             data = hdul[0].data
     return data
+
+def make_item(i):
+    # we use this function to make the example items to avoid code duplication
+    to_plot = [
+        # Right column (only light curve for the moment)
+        html.Div([dcc.Graph(
+            id='light-curve',
+            figure={
+                'layout': {
+                    'clickmode': 'event+select',
+                    "autosize": True
+                }
+            }
+        )], style={
+            'width': '99%',
+            'height': '20%',
+            'display': 'inline-block',
+            'padding': '0 20'
+        }),
+        html.Div([
+            html.Div([
+                html.Div([dcc.Graph(
+                    id='science-stamps',
+                    figure={
+                        'layout': {
+                            'clickmode': 'event+select'
+                        }
+                    },
+                    style={
+                        'width': '300px',
+                        'height': '300px',
+                        'display': 'inline-block',
+                        'padding': '0 20'
+                    })
+                ])
+            ]),
+            html.Div([
+                html.Div([
+                    html.Div([dcc.Graph(
+                        id='template-stamps',
+                        figure={
+                            'layout': {
+                                'clickmode': 'event+select',
+                                "autosize": True
+                            }
+                        }, style={
+                            'width': '300px',
+                            'height': '300px',
+                            'display': 'inline-block',
+                            'padding': '0 20'
+                        }
+                    )])
+                ])
+            ]),
+            html.Div([
+                html.Div([
+                    html.Div([dcc.Graph(
+                        id='difference-stamps',
+                        figure={
+                            'layout': {
+                                'clickmode': 'event+select',
+                                "autosize": True
+                            }
+                        },
+                        style={
+                            'width': '300px',
+                            'height': '300px',
+                            'display': 'inline-block',
+                            'padding': '0 20'
+                        })
+                    ])
+                ])
+            ])
+        ], style={'columnCount': 3}), dbc.CardBody(f"This is the content of group {i}...")
+    ]
+    names = ["Light-curve", "Stamps", "Alert properties"]
+    return dbc.Card(
+        [
+            dbc.CardHeader(
+                html.H2(
+                    dbc.Button(
+                        "{}".format(names[i - 1]),
+                        color="link",
+                        id=f"group-{i}-toggle",
+                    )
+                )
+            ),
+            dbc.Collapse(
+                html.Div([
+                    to_plot[i - 1]
+                ]),
+                is_open=True if i == 2 else False,
+                id=f"collapse-{i}",
+            ),
+        ]
+    )
+
+@app.callback(
+    [Output(f"collapse-{i}", "is_open") for i in range(1, 4)],
+    [Input(f"group-{i}-toggle", "n_clicks") for i in range(1, 4)],
+    [State(f"collapse-{i}", "is_open") for i in range(1, 4)],
+)
+def toggle_accordion(n1, n2, n3, is_open1, is_open2, is_open3):
+    ctx = dash.callback_context
+
+    if not ctx.triggered:
+        return ""
+    else:
+        button_id = ctx.triggered[0]["prop_id"].split(".")[0]
+
+    if button_id == "group-1-toggle" and n1:
+        return not is_open1, is_open2, is_open3
+    elif button_id == "group-2-toggle" and n2:
+        return is_open1, not is_open2, is_open3
+    elif button_id == "group-3-toggle" and n3:
+        return is_open1, is_open2, not is_open3
+    return False, False, False
 
 @app.callback(
     dash.dependencies.Output('alerts-dropdown', 'options'),
@@ -780,12 +815,12 @@ def poll_alert_and_show_stream(btn1: int):
 app.layout = html.Div(
     id="app-container",
     children=[
-        # Banner
-        html.Div(
-            id="banner",
-            className="banner",
-            children=["Fink Monitor - version 0.1.0"],
-        ),
+        # # Banner
+        # html.Div(
+        #     id="banner",
+        #     className="banner",
+        #     children=["Fink Monitor - version 0.1.0"],
+        # ),
         # Build the 2 tabs
         build_tabs(),
         html.Div(id="app-content")
