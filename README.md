@@ -11,7 +11,7 @@
 Clone the GitHub repository
 ```bash
 git clone https://github.com/astrolabsoftware/fink-client.git
-cd fink-client
+cd fink-client && export FINK_CLIENT_HOME=$(PWD)
 ```
 For testing purposes, use a python virtual environement (`virtualenv`)
 ```bash
