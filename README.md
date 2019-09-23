@@ -11,9 +11,12 @@
 Clone the GitHub repository
 ```bash
 git clone https://github.com/astrolabsoftware/fink-client.git
-cd fink-client && export FINK_CLIENT_HOME=$(PWD)
+cd fink-client && export FINK_CLIENT_HOME=$(PWD) >> ~/.bash_profile
 ```
-For testing purposes, use a python virtual environement (`virtualenv`)
+The above expression will place the environment variable for `$FINK_CLIENT_HOME`
+into your `~/.bash_profile` such that this variable should not be required to be set again.
+
+For testing purposes, use a python virtual environment (`virtualenv`)
 ```bash
 virtualenv myenv
 source myenv/bin/activate
