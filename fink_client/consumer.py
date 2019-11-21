@@ -165,9 +165,9 @@ def _get_kafka_config(config: dict) -> dict:
     else:
         # use default fink_servers
         fink_servers = [
-                "localhost:9093",
-                "localhost:9094",
-                "localhost:9095"
+            "localhost:9093",
+            "localhost:9094",
+            "localhost:9095"
         ]
         kafka_config["bootstrap.servers"] = "{}".format(",".join(fink_servers))
 
