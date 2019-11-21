@@ -18,7 +18,6 @@ import time
 import datetime
 import os
 import pathlib
-import textwrap
 import gzip
 import io
 import ast
@@ -60,14 +59,16 @@ DATA_PATH = BASE_PATH.joinpath("data").resolve()
 # To put in a configuration file
 testmode = True # Allow to overwrite alerts and loop over a subset of inputs
 maxtimeout = 2  # timeout (seconds)
-mytopics = ["rrlyr", "ebwuma", "unknown"]
-test_servers = "localhost:9093,localhost:9094,localhost:9095"
-test_schema = "tests/test_schema.avsc"
+mytopics = ["rrlyr"]
+test_servers = "localhost:9092,localhost:9093"
+test_schema = "schemas/distribution_schema.avsc"
 db_path = 'db/alert-monitoring.db'
 
 myconfig = {
+    "username": "***",
+    "password": "***",
     'bootstrap.servers': test_servers,
-    'group_id': 'test_group'}
+    'group_id': '***'}
 
 # Instantiate a consumer
 consumer = AlertConsumer(mytopics, myconfig, schema=test_schema)
@@ -343,29 +344,27 @@ def generate_table():
         ]) for i in range(len(df))]
     )]
 
-def listify(string: str) -> list:
-    """ Given a string describing a list, return the list. Fill with None if
-    empty.
+def extract_history(history_list: list, field: str) -> list:
+    """Extract the historical measurements contained in the alerts
+    for the parameter `field`.
 
     Parameters
     ----------
-    string: str
-        Input String describing a list like '[1, 2, 3, 4]'
+    history_list: list of dict
+        List of dictionary from alert['prv_candidates'].
+    field: str
+        The field name for which you want to extract the data. It must be
+        a key of elements of history_list (alert['prv_candidates'])
 
     Returns
     ----------
-    Corresponding list, e.g. '[1, 2, 3]' will return [1, 2, 3].
-    Note that holes will be filled by None: '[1, , 3]' -> [1, None, 3].
+    measurement: list
+        List of all the `field` measurements contained in the alerts.
     """
-    s = string\
-        .replace('[,', '[None,')\
-        .replace(',]', ',None]')\
-        .replace(',,', ',None,')\
-        .replace(",,", ",None,")\
-        .replace(",,", ',')
-    return ast.literal_eval(s)
+    measurement = [obs[field] for obs in history_list]
+    return measurement
 
-def extract_parameter(alert: dict, field: str) -> np.array:
+def extract_field(alert: dict, field: str) -> np.array:
     """ Concatenate current and historical observation data for a given field.
 
     Parameters
@@ -379,7 +378,7 @@ def extract_parameter(alert: dict, field: str) -> np.array:
     data = np.concatenate(
         [
             [alert["candidate"][field]],
-            listify(alert["prv_candidates"][field])
+            extract_history(alert['prv_candidates'], field)
         ]
     )
     return data
@@ -576,12 +575,12 @@ def draw_light_curve(alert_id):
     alert = read_alert(os.path.join(DATA_PATH, "{}.avro".format(alert_id)))
 
     # Extract relevant alert data to compute light-curve
-    flux = extract_parameter(alert, "magpsf")
-    upper = extract_parameter(alert, "diffmaglim")
-    sig = extract_parameter(alert, "sigmapsf")
-    jd = extract_parameter(alert, "jd")
-    fid = extract_parameter(alert, "fid")
-    pid = extract_parameter(alert, "pid")
+    flux = extract_field(alert, "magpsf")
+    upper = extract_field(alert, "diffmaglim")
+    sig = extract_field(alert, "sigmapsf")
+    jd = extract_field(alert, "jd")
+    fid = extract_field(alert, "fid")
+    pid = extract_field(alert, "pid")
 
     # Bands and dates
     filter_color = {1: '#1f77b4', 2: '#ff7f0e', 3: '#2ca02c'}
