@@ -85,8 +85,8 @@ class AlertConsumer:
         if msg.error():
             error_message = ("Error: {}\n"
                 "topic: {}[{}] at offset: {} with key: {}").format(
-                msg.error, msg.topic(), msg.partition(), msg.offset(),
-                str(msg.key))
+                msg.error(), msg.topic(), msg.partition(), msg.offset(),
+                str(msg.key()))
             raise AlertError(error_message)
 
         topic = msg.topic()
