@@ -1,5 +1,4 @@
-schemas/distribution_schema.avsc
-
+*.db
 .sonarlint/
 
 # macOS specific

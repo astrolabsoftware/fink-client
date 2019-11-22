@@ -3,3 +3,8 @@ coveralls
 codecov
 confluent-kafka
 fastavro
+dash
+dash-bootstrap-components
+astropy
+pandas
+visdcc
