@@ -91,7 +91,7 @@ def get_alert_monitoring_data(
         df = pd.DataFrame()
     return df
 
-def get_alert_per_topic(db_path: str, topic: str):
+def get_information_per_topic(db_path: str, topic: str, field: str):
     """ Query all alert data monitoring rows for a given topic
 
     Parameters
@@ -101,6 +101,8 @@ def get_alert_per_topic(db_path: str, topic: str):
         it does not exist yet.
     topic: str
         Topic name of a stream
+    field: str
+        Entry of the database.
 
     Returns
     ----------
@@ -109,15 +111,15 @@ def get_alert_per_topic(db_path: str, topic: str):
 
     Examples
     ----------
-    >>> df = get_alert_per_topic(db_fn, "tutu")
+    >>> df = get_information_per_topic(db_fn, "tutu", "objectId")
     >>> print(len(df))
     1
     """
     con = sqlite3.connect(db_path)
-    statement = f"SELECT objectId FROM `{ALERT_TABLE}` WHERE topic = '{topic}';"
+    statement = f"SELECT {field} FROM `{ALERT_TABLE}` WHERE topic = '{topic}';"
     try:
         df = pd.read_sql_query(statement, con)
-        alert_id = list(df["objectId"])
+        alert_id = list(df[field])
     except pd.io.sql.DatabaseError as e:
         print(e)
         alert_id = [""]
