@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Dashboard to pull and monitor alerts emitted by the Fink broker.
+""" Dashboard to pull and explore alerts emitted by the Fink broker.
 """
 import time
 import datetime
@@ -20,7 +20,6 @@ import os
 import pathlib
 import gzip
 import io
-import ast
 
 import numpy as np
 import pandas as pd
@@ -37,6 +36,7 @@ import visdcc
 
 from fink_client.consumer import AlertConsumer
 from fink_client.avroUtils import write_alert, read_alert
+import fink_client.fink_client_conf as fcc
 
 from db.api import get_alert_monitoring_data
 from db.api import update_alert_monitoring_db
@@ -62,7 +62,7 @@ app = dash.Dash(
     }],
 )
 
-server = app.server
+# server = app.server
 app.config.suppress_callback_exceptions = True
 
 BASE_PATH = pathlib.Path(__file__).parent.resolve()
@@ -70,22 +70,14 @@ BASE_PATH = pathlib.Path(__file__).parent.resolve()
 # Path to put in a configuration file
 DATA_PATH = BASE_PATH.joinpath("data").resolve()
 
-# To put in a configuration file
-testmode = True # Allow to overwrite alerts and loop over a subset of inputs
-maxtimeout = 2  # timeout (seconds)
-mytopics = ["rrlyr"]
-test_servers = "localhost:9092,localhost:9093"
-test_schema = "schemas/distribution_schema.avsc"
-db_path = 'db/alert-monitoring.db'
-
 myconfig = {
-    "username": "finkConsumer",
-    "password": "finkConsumer-secret",
-    'bootstrap.servers': test_servers,
-    'group_id': 'spark-kafka-client'}
+    "username": fcc.username,
+    "password": fcc.password,
+    'bootstrap.servers': fcc.servers,
+    'group_id': fcc.group_id}
 
 # Instantiate a consumer
-consumer = AlertConsumer(mytopics, myconfig, schema=test_schema)
+consumer = AlertConsumer(fcc.mytopics, myconfig, schema=fcc.schema)
 
 # List topics
 topic_dic = consumer._consumer.list_topics().topics.keys()
@@ -358,7 +350,7 @@ def generate_table():
     """
     # Grab all alerts from the db
     now = time.time()
-    df_monitoring = get_alert_monitoring_data(db_path, 0, now)
+    df_monitoring = get_alert_monitoring_data(fcc.db_path, 0, now)
 
     if df_monitoring.empty:
         msg = "Empty alert database - press the button to receive alerts"
@@ -613,8 +605,8 @@ def set_alert_dropdown(topic: str) -> list:
     ----------
     list: List of objectId alerts (str).
     """
-    id_list = get_information_per_topic(db_path, topic, 'objectId')
-    ts_list = get_information_per_topic(db_path, topic, 'timestamp')
+    id_list = get_information_per_topic(fcc.db_path, topic, 'objectId')
+    ts_list = get_information_per_topic(fcc.db_path, topic, 'timestamp')
     return [{'label': '{}:'.format(id) + ts, 'value': id} for ts, id in zip(ts_list, id_list)]
 
 @app.callback(
@@ -828,7 +820,8 @@ def poll_alert_and_show_stream(btn1: int):
     out2: html.div @ `topic-bar-graph`
         Graph data and layout based on incoming alerts.
     """
-    overwrite = True if testmode else False
+    maxtimeout = fcc.maxtimeout
+    overwrite = True if fcc.testmode else False
     # Try to poll new alerts
     is_alert = True
     n_alerts = 0
@@ -848,10 +841,10 @@ def poll_alert_and_show_stream(btn1: int):
                 "topic": topic,
                 "timestamp": [alert["timestamp"]],
             })
-            update_alert_monitoring_db(db_path, df)
+            update_alert_monitoring_db(fcc.db_path, df)
 
             # Save the alert on disk for later inspection
-            write_alert(alert, test_schema, DATA_PATH, overwrite=overwrite)
+            write_alert(alert, fcc.schema, DATA_PATH, overwrite=overwrite)
         else:
             # Message to print under the `next` button
             stop = "{}".format(
@@ -871,7 +864,7 @@ def poll_alert_and_show_stream(btn1: int):
     bins = np.linspace(-300, 0, 30)
     # Computing the time again... need to coordinate times better
     now = time.time()
-    df_monitoring = get_alert_monitoring_data(db_path, now - 300, now)
+    df_monitoring = get_alert_monitoring_data(fcc.db_path, now - 300, now)
     for topic in topic_list:
         # Get alert times and IDs per topic
         if df_monitoring.empty:
