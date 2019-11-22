@@ -102,7 +102,7 @@ def get_information_per_topic(db_path: str, topic: str, field: str):
     topic: str
         Topic name of a stream
     field: str
-        Entry of the database.
+        Field for which you want the data.
 
     Returns
     ----------
@@ -117,6 +117,8 @@ def get_information_per_topic(db_path: str, topic: str, field: str):
     """
     con = sqlite3.connect(db_path)
     statement = f"SELECT {field} FROM `{ALERT_TABLE}` WHERE topic = '{topic}';"
+
+    # catch error if the DB is empty
     try:
         df = pd.read_sql_query(statement, con)
         alert_id = list(df[field])
