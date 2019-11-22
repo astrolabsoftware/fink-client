@@ -62,7 +62,6 @@ app = dash.Dash(
     }],
 )
 
-# server = app.server
 app.config.suppress_callback_exceptions = True
 
 BASE_PATH = pathlib.Path(__file__).parent.resolve()
@@ -138,14 +137,10 @@ def build_tab_1():
     There are 2 main components:
         - Left column containing description and `next` button.
         - Right column containing the graph with streams
-
-    TODO:
-        - add div with total number of alerts per topic since the beginning
-          of the database.
     """
     msg = """
     Hit the Poll button to download new alerts sent by the Fink broker.
-    More description to come.
+    Alternatively, you can go to the second Tab to check received alerts.
     """
     divs = [
         # Left column
@@ -189,15 +184,9 @@ def build_tab_2():
         - Left column containing description and dropdown menus in cascade:
             first the user choose a topic, and then an alert ID for display.
         - Right column containing the graphs with alert properties.
-
-    TODO:
-        - Add div for displaying thumbnails
-        - Add div to display table of alert properties
-        - Add div to display view in Simbad
     """
     msg = """
     Choose a topic, and an alert ID to see the properties of the alert.
-    More description to come.
     """
     divs = [
         # Left column
@@ -238,11 +227,9 @@ def description_card(msg: str):
         id="description-card",
         children=[
             html.H5("Fink dashboard"),
-            html.H3("Start exploring the Universe"),
-            html.Div(
-                id="intro",
-                children=msg,
-            ),
+            html.H3("Explore the transient sky"),
+            html.Div(msg),
+            html.Br()
         ],
     )
 
@@ -307,7 +294,7 @@ def generate_control_card_tab2():
             ),
             html.Br(),
             html.Div(id='container-button-timestamp'),
-            html.Div([visdcc.Run_js(id ='aladin-lite-div')], style={
+            html.Div([visdcc.Run_js(id='aladin-lite-div')], style={
                 'width': '300px',
                 'height': '300px'})
         ],
@@ -317,12 +304,32 @@ def generate_control_card_tab2():
     Output('aladin-lite-div', 'run'),
     [Input('alerts-dropdown', 'value')])
 def integrate_aladin_lite(alert_id):
+    """ Integrate aladin light in the 2nd Tab of the dashboard.
+
+    the default parameters are:
+        * PanSTARRS colors
+        * FoV = 0.02 deg
+        * SIMBAD catalig overlayed.
+
+    Callbacks
+    ----------
+    Input: takes the alert ID
+    Output: Display a sky image around the alert position from aladin.
+
+    Parameters
+    ----------
+    alert_id: str
+        ID of the alert
+    """
     default_img = ""
     if alert_id:
         alert = read_alert(os.path.join(DATA_PATH, "{}.avro".format(alert_id)))
 
-        ra = extract_field(alert, 'ra')
-        dec = extract_field(alert, 'dec')
+        # Coordinate of the current alert
+        ra0 = extract_field(alert, 'ra')[-1]
+        dec0 = extract_field(alert, 'dec')[-1]
+
+        # Javascript. Note the use {{}} for dictionary
         img = """
         var aladin = A.aladin('#aladin-lite-div',
                   {{
@@ -335,9 +342,14 @@ def integrate_aladin_lite(alert_id):
         var cat = 'https://axel.u-strasbg.fr/HiPSCatService/Simbad';
         var hips = A.catalogHiPS(cat, {{onClick: 'showTable', name: 'Simbad'}});
         aladin.addCatalog(hips);
-        """.format(ra[-1], dec[-1])
+        """.format(ra0, dec0)
+
+        # img cannot be executed directly because of formatting
+        # We split line-by-line and remove comments
         img_to_show = [i for i in img.split('\n') if '// ' not in i]
+
         return " ".join(img_to_show)
+
     return default_img
 
 def generate_table():
@@ -353,7 +365,7 @@ def generate_table():
     df_monitoring = get_alert_monitoring_data(fcc.db_path, 0, now)
 
     if df_monitoring.empty:
-        msg = "Empty alert database - press the button to receive alerts"
+        msg = "Empty alert database - keep polling!"
         return [html.H4(msg)]
 
     # Count how many alerts received per topic
@@ -417,8 +429,14 @@ def extract_field(alert: dict, field: str) -> np.array:
     alert: dict
         Dictionnary containing alert data
     field: str
-        Name of the field to extract. It should be present in `candidate`
-        and `prv_candidates`.
+        Name of the field to extract.
+
+    Returns
+    ----------
+    data: np.array
+        List containing previous measurements and current measurement at the
+        end. If `field` is not in `prv_candidates fields, data will be
+        [None, None, ..., alert['candidate'][field]].
     """
     data = np.concatenate(
         [
@@ -449,8 +467,19 @@ def readstamp(alert: dict, field: str) -> np.array:
             data = hdul[0].data
     return data
 
-def make_item(i):
-    # we use this function to make the example items to avoid code duplication
+def make_item(i: int):
+    """ Build the data in the accordion in the 2nd tab.
+
+    Parameters
+    ----------
+    i: int
+        Item number in the accordion
+
+    Returns
+    ----------
+    dbc.Card
+        The data for the item to display.
+    """
     to_plot = [
         # Right column (only light curve for the moment)
         html.Div([dcc.Dropdown(
@@ -458,7 +487,7 @@ def make_item(i):
             placeholder="Select a field",
             clearable=False,
             style={'width': '250px', 'display': 'inline-block'}
-        ),dcc.Graph(
+        ), dcc.Graph(
             id='light-curve',
             figure={
                 'layout': {
@@ -568,6 +597,8 @@ def make_item(i):
     [State(f"collapse-{i}", "is_open") for i in range(1, 4)],
 )
 def toggle_accordion(n1, n2, n3, is_open1, is_open2, is_open3):
+    """ Build the accordion in the 2nd tab.
+    """
     ctx = dash.callback_context
 
     if not ctx.triggered:
@@ -588,8 +619,8 @@ def toggle_accordion(n1, n2, n3, is_open1, is_open2, is_open3):
     [dash.dependencies.Input('topic-select', 'value')])
 def set_alert_dropdown(topic: str) -> list:
     """ According to the selected topic in `topic-select`, retrieve the
-    corresponding alert ID from the monitoring database and populate the
-    `alerts-dropdown` menu.
+    corresponding alert ID and timestamp from the monitoring database and
+    populate the `alerts-dropdown` menu.
 
     Callbacks
     ---------
@@ -603,24 +634,29 @@ def set_alert_dropdown(topic: str) -> list:
 
     Returns
     ----------
-    list: List of objectId alerts (str).
+        list: List of dicts with objectId and timestamp alerts (str).
     """
     id_list = get_information_per_topic(fcc.db_path, topic, 'objectId')
     ts_list = get_information_per_topic(fcc.db_path, topic, 'timestamp')
-    return [{'label': '{}:'.format(id) + ts, 'value': id} for ts, id in zip(ts_list, id_list)]
+    return [
+        {'label': '{}:'.format(id) + ts, 'value': id}
+        for ts, id in zip(ts_list, id_list)
+    ]
 
 @app.callback(
     dash.dependencies.Output('field-dropdown', 'options'),
     [dash.dependencies.Input('alerts-dropdown', 'value')])
 def set_field_dropdown_xaxis(alert_id: str) -> list:
-    """ According to the selected topic in `topic-select`, retrieve the
-    corresponding alert ID from the monitoring database and populate the
-    `alerts-dropdown` menu.
+    """ According to the alert_id, retrieve the corresponding alert fields
+    and populate the `field-dropdown` menu.
+
+    Fields with current+historical measurements will have a star to their
+    name (e.g. magpsd*, jd*, but cdsxmatch).
 
     Callbacks
     ---------
-    Input: incoming topic from the `topic-select` dropdown menu
-    Output: list of objectId alerts corresponding to the topic.
+    Input: incoming alert_id from the `alerts-dropdown` menu
+    Output: list of available alert fields.
 
     Parameters
     ----------
@@ -648,12 +684,15 @@ def set_field_dropdown_xaxis(alert_id: str) -> list:
      dash.dependencies.Output('difference-stamps', 'figure')],
     [dash.dependencies.Input('alerts-dropdown', 'value'),
      dash.dependencies.Input('field-dropdown', 'value')])
-def draw_light_curve(alert_id, field_name):
-    """ Display alert light curve and stamps based on its ID.
+def draw_curve(alert_id, field_name):
+    """ Display alert data and stamps based on its ID.
+
+    By default, the data curve is the light curve (magpsd vs jd).
 
     Callbacks
     ----------
     Input: alert_id coming from the `alerts-dropdown` menu
+    Input: field_name coming from the `field-dropdown` menu
     Output: Graph to display the historical light curve data of the alert.
     Output: stamps (Science, Template, Difference)
 
@@ -661,6 +700,8 @@ def draw_light_curve(alert_id, field_name):
     ----------
     alert_id: str
         ID of the alerts (must be unique and saved on disk).
+    field_name: str
+        Name of the alert field to plot (default is None).
 
     Returns
     ----------
@@ -921,21 +962,39 @@ def poll_alert_and_show_stream(btn1: int):
     [dash.dependencies.Input('alerts-dropdown', 'value')]
 )
 def display_candidate(alert_id):
-    """ Generate statitics table for received alerts in the monitoring db.
+    """ Generate statitics table for received alerts.
+
+    Parameters
+    ----------
+    alert_id: str
+        Alert ID from alerts-dropdown
 
     Returns
     ---------
-    div1: A Div containing the title
-    div2: A Div containing the table
+    dict: dictionary from the alert pandas dataframe
+    columns: list of dictionaries with column names.
     """
     # Load the alert from disk
     alert = read_alert(os.path.join(DATA_PATH, "{}.avro".format(alert_id)))
 
-    candidate = {k: [v] for k, v in alert['candidate'].items()}
+    # Load meta data first
+    to_avoid = [
+        'candidate', 'prv_candidates',
+        'cutoutScience', 'cutoutTemplate', 'cutoutDifference'
+    ]
+    candidate = {k: [v] for k, v in alert.items() if k not in to_avoid}
+
+    # Load data from current measurement
+    candidate.update({k: [v] for k, v in alert['candidate'].items()})
+
+    # formatting
     df = pd.DataFrame.from_dict(candidate).T
     df = df.reset_index(drop=False)
+
+    # Column names
     df.columns = ['field', 'value']
     columns = [{"name": str(i), 'id': str(i)} for i in df.columns]
+
     return df.to_dict('rows'), columns
 
 
@@ -943,12 +1002,6 @@ def display_candidate(alert_id):
 app.layout = html.Div(
     id="app-container",
     children=[
-        # # Banner
-        # html.Div(
-        #     id="banner",
-        #     className="banner",
-        #     children=["Fink Monitor - version 0.1.0"],
-        # ),
         # Build the 2 tabs
         build_tabs(),
         html.Div(id="app-content")
