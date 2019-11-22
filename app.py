@@ -27,21 +27,35 @@ import pandas as pd
 from astropy.io import fits
 
 import dash
+import dash_table
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
+
+import visdcc
 
 from fink_client.consumer import AlertConsumer
 from fink_client.avroUtils import write_alert, read_alert
 
 from db.api import get_alert_monitoring_data
 from db.api import update_alert_monitoring_db
-from db.api import get_alert_per_topic
+from db.api import get_information_per_topic
+
+external_scripts = [
+    'http://code.jquery.com/jquery-1.9.1.min.js',
+    'http://aladin.u-strasbg.fr/AladinLite/api/v2/latest/aladin.min.js'
+]
+
+external_stylesheets = [
+    dbc.themes.BOOTSTRAP,
+    'http://aladin.u-strasbg.fr/AladinLite/api/v2/latest/aladin.min.css'
+]
 
 app = dash.Dash(
     __name__,
-    external_stylesheets=[dbc.themes.BOOTSTRAP],
+    external_stylesheets=external_stylesheets,
+    external_scripts=external_scripts,
     meta_tags=[{
         "name": "viewport",
         "content": "width=device-width, initial-scale=1"
@@ -65,10 +79,10 @@ test_schema = "schemas/distribution_schema.avsc"
 db_path = 'db/alert-monitoring.db'
 
 myconfig = {
-    "username": "***",
-    "password": "***",
+    "username": "finkConsumer",
+    "password": "finkConsumer-secret",
     'bootstrap.servers': test_servers,
-    'group_id': '***'}
+    'group_id': 'spark-kafka-client'}
 
 # Instantiate a consumer
 consumer = AlertConsumer(mytopics, myconfig, schema=test_schema)
@@ -297,12 +311,42 @@ def generate_control_card_tab2():
                 id="alerts-dropdown",
                 placeholder="Select an alert ID",
                 clearable=False,
-                style={'width': '250px', 'display': 'inline-block'}
+                style={'width': '300px', 'display': 'inline-block'}
             ),
             html.Br(),
             html.Div(id='container-button-timestamp'),
+            html.Div([visdcc.Run_js(id ='aladin-lite-div')], style={
+                'width': '300px',
+                'height': '300px'})
         ],
     )
+
+@app.callback(
+    Output('aladin-lite-div', 'run'),
+    [Input('alerts-dropdown', 'value')])
+def integrate_aladin_lite(alert_id):
+    default_img = ""
+    if alert_id:
+        alert = read_alert(os.path.join(DATA_PATH, "{}.avro".format(alert_id)))
+
+        ra = extract_field(alert, 'ra')
+        dec = extract_field(alert, 'dec')
+        img = """
+        var aladin = A.aladin('#aladin-lite-div',
+                  {{
+                    survey: 'P/PanSTARRS/DR1/color/z/zg/g',
+                    fov: 0.02,
+                    target: '{} {}',
+                    reticleColor: '#ff89ff',
+                    reticleSize: 64
+        }});
+        var cat = 'https://axel.u-strasbg.fr/HiPSCatService/Simbad';
+        var hips = A.catalogHiPS(cat, {{onClick: 'showTable', name: 'Simbad'}});
+        aladin.addCatalog(hips);
+        """.format(ra[-1], dec[-1])
+        img_to_show = [i for i in img.split('\n') if '// ' not in i]
+        return " ".join(img_to_show)
+    return default_img
 
 def generate_table():
     """ Generate statitics table for received alerts in the monitoring db.
@@ -315,6 +359,10 @@ def generate_table():
     # Grab all alerts from the db
     now = time.time()
     df_monitoring = get_alert_monitoring_data(db_path, 0, now)
+
+    if df_monitoring.empty:
+        msg = "Empty alert database - press the button to receive alerts"
+        return [html.H4(msg)]
 
     # Count how many alerts received per topic
     df = df_monitoring\
@@ -361,7 +409,12 @@ def extract_history(history_list: list, field: str) -> list:
     measurement: list
         List of all the `field` measurements contained in the alerts.
     """
-    measurement = [obs[field] for obs in history_list]
+    try:
+        measurement = [obs[field] for obs in history_list]
+    except KeyError as e:
+        print('{} not in history data')
+        measurement = [None] * len(history_list)
+
     return measurement
 
 def extract_field(alert: dict, field: str) -> np.array:
@@ -408,7 +461,12 @@ def make_item(i):
     # we use this function to make the example items to avoid code duplication
     to_plot = [
         # Right column (only light curve for the moment)
-        html.Div([dcc.Graph(
+        html.Div([dcc.Dropdown(
+            id="field-dropdown",
+            placeholder="Select a field",
+            clearable=False,
+            style={'width': '250px', 'display': 'inline-block'}
+        ),dcc.Graph(
             id='light-curve',
             figure={
                 'layout': {
@@ -475,9 +533,20 @@ def make_item(i):
                     ])
                 ])
             ])
-        ], style={'columnCount': 3}), dbc.CardBody(f"This is the content of group {i}...")
+        ], style={'columnCount': 3}),
+        # dbc.CardBody(f"This is the content of group {i}..."),
+        html.Div(dash_table.DataTable(
+            id='candidate-table',
+            style_table={
+                'maxHeight': '300px',
+                'overflowY': 'scroll',
+                'border': 'thin lightgrey solid'
+            },
+            fixed_rows={'headers': True, 'data': 0},
+            style_cell={'width': '150px', 'textAlign': 'center'}
+        ))
     ]
-    names = ["Light-curve", "Stamps", "Alert properties"]
+    names = ["Data curves", "Stamps", "Alert properties"]
     return dbc.Card(
         [
             dbc.CardHeader(
@@ -544,16 +613,50 @@ def set_alert_dropdown(topic: str) -> list:
     ----------
     list: List of objectId alerts (str).
     """
-    id_list = get_alert_per_topic(db_path, topic)
-    return [{'label': '{}:'.format(topic) + i, 'value': i} for i in id_list]
+    id_list = get_information_per_topic(db_path, topic, 'objectId')
+    ts_list = get_information_per_topic(db_path, topic, 'timestamp')
+    return [{'label': '{}:'.format(id) + ts, 'value': id} for ts, id in zip(ts_list, id_list)]
+
+@app.callback(
+    dash.dependencies.Output('field-dropdown', 'options'),
+    [dash.dependencies.Input('alerts-dropdown', 'value')])
+def set_field_dropdown_xaxis(alert_id: str) -> list:
+    """ According to the selected topic in `topic-select`, retrieve the
+    corresponding alert ID from the monitoring database and populate the
+    `alerts-dropdown` menu.
+
+    Callbacks
+    ---------
+    Input: incoming topic from the `topic-select` dropdown menu
+    Output: list of objectId alerts corresponding to the topic.
+
+    Parameters
+    ----------
+    topic: str
+        Name of a subscribed topic
+
+    Returns
+    ----------
+    list: List of objectId alerts (str).
+    """
+    alert = read_alert(os.path.join(DATA_PATH, "{}.avro".format(alert_id)))
+
+    # Sort the prv_candidates keys
+    keys = list(alert['candidate'].keys())
+    hist_keys = list(alert['prv_candidates'][0].keys())
+    keys = [i + "*" if i in list(hist_keys) else i for i in keys]
+    keys.sort()
+
+    return [{'label': i, 'value': i} for i in keys]
 
 @app.callback(
     [dash.dependencies.Output('light-curve', 'figure'),
      dash.dependencies.Output('science-stamps', 'figure'),
      dash.dependencies.Output('template-stamps', 'figure'),
      dash.dependencies.Output('difference-stamps', 'figure')],
-    [dash.dependencies.Input('alerts-dropdown', 'value')])
-def draw_light_curve(alert_id):
+    [dash.dependencies.Input('alerts-dropdown', 'value'),
+     dash.dependencies.Input('field-dropdown', 'value')])
+def draw_light_curve(alert_id, field_name):
     """ Display alert light curve and stamps based on its ID.
 
     Callbacks
@@ -571,13 +674,24 @@ def draw_light_curve(alert_id):
     ----------
     html.div: Graph data and layout based on incoming alert data.
     """
+    # Remove tag for data with history (see set_field_dropdown_xaxis)
+    if field_name is not None and field_name.endswith('*'):
+        field_name = field_name[:-1]
+
     # Load the alert from disk
     alert = read_alert(os.path.join(DATA_PATH, "{}.avro".format(alert_id)))
 
     # Extract relevant alert data to compute light-curve
-    flux = extract_field(alert, "magpsf")
-    upper = extract_field(alert, "diffmaglim")
-    sig = extract_field(alert, "sigmapsf")
+    if field_name is None or field_name == 'magpsf':
+        flux = extract_field(alert, "magpsf")
+        upper = extract_field(alert, "diffmaglim")
+        sig = extract_field(alert, "sigmapsf")
+        field_name = 'magpsf'
+    else:
+        flux = extract_field(alert, field_name)
+        upper = np.zeros_like(flux)
+        sig = np.zeros_like(flux)
+
     jd = extract_field(alert, "jd")
     fid = extract_field(alert, "fid")
     pid = extract_field(alert, "pid")
@@ -642,12 +756,12 @@ def draw_light_curve(alert_id):
         )
 
     # Update graph data for light-curve
+    yaxis = {'title': field_name}
+    if field_name == 'magpsf':
+        yaxis['autorange'] = 'reversed'
     out_light_curve = {'data': data, "layout": {
         "showlegend": False,
-        'yaxis': {
-            'autorange': 'reversed',
-            'title': 'Magnitude'
-        },
+        'yaxis': yaxis,
         'xaxis': {
             'title': 'Days to candidate'
         },
@@ -714,6 +828,7 @@ def poll_alert_and_show_stream(btn1: int):
     out2: html.div @ `topic-bar-graph`
         Graph data and layout based on incoming alerts.
     """
+    overwrite = True if testmode else False
     # Try to poll new alerts
     is_alert = True
     n_alerts = 0
@@ -730,15 +845,13 @@ def poll_alert_and_show_stream(btn1: int):
             df = pd.DataFrame({
                 "objectId": [alert["objectId"]],
                 "time": [now],
-                "topic": topic
+                "topic": topic,
+                "timestamp": [alert["timestamp"]],
             })
             update_alert_monitoring_db(db_path, df)
 
             # Save the alert on disk for later inspection
-            if testmode:
-                write_alert(alert, test_schema, DATA_PATH, overwrite=True)
-            else:
-                write_alert(alert, test_schema, DATA_PATH, overwrite=False)
+            write_alert(alert, test_schema, DATA_PATH, overwrite=overwrite)
         else:
             # Message to print under the `next` button
             stop = "{}".format(
@@ -756,12 +869,23 @@ def poll_alert_and_show_stream(btn1: int):
     # Query the monitoring database to retrieve last entries per topic
     data = []
     bins = np.linspace(-300, 0, 30)
-    try:
-        # Computing the time again... need to coordinate times better
-        now = time.time()
-        df_monitoring = get_alert_monitoring_data(db_path, now - 300, now)
-        for topic in topic_list:
-            # Get alert times and IDs per topic
+    # Computing the time again... need to coordinate times better
+    now = time.time()
+    df_monitoring = get_alert_monitoring_data(db_path, now - 300, now)
+    for topic in topic_list:
+        # Get alert times and IDs per topic
+        if df_monitoring.empty:
+            # If something happen with the DB, plot empty data.
+            data.append({
+                'x': [],
+                'y': [],
+                'type': 'bar',
+                "hoverinfo": "label",
+                "textinfo": "label",
+                'hovermode': "closest",
+                'name': 'None'
+            })
+        else:
             df_topic = df_monitoring[df_monitoring["topic"] == topic]
             data_time = df_topic["time"]
             data_id = df_topic["objectId"]
@@ -781,18 +905,6 @@ def poll_alert_and_show_stream(btn1: int):
                 "textinfo": data_id,
                 'name': topic
             })
-    except pd.io.sql.DatabaseError as e:
-        # If something happen with the DB, plot empty data.
-        print(e)
-        data.append({
-            'x': [],
-            'y': [],
-            'type': 'bar',
-            "hoverinfo": "label",
-            "textinfo": "label",
-            'hovermode': "closest",
-            'name': 'None'
-        })
 
     # Update message below `Poll` button
     out_button = html.Div([html.Div(msg)])
@@ -809,6 +921,29 @@ def poll_alert_and_show_stream(btn1: int):
         }
     }
     return out_button, out_graph
+
+@app.callback(
+    [dash.dependencies.Output('candidate-table', 'data'),
+     dash.dependencies.Output('candidate-table', 'columns')],
+    [dash.dependencies.Input('alerts-dropdown', 'value')]
+)
+def display_candidate(alert_id):
+    """ Generate statitics table for received alerts in the monitoring db.
+
+    Returns
+    ---------
+    div1: A Div containing the title
+    div2: A Div containing the table
+    """
+    # Load the alert from disk
+    alert = read_alert(os.path.join(DATA_PATH, "{}.avro".format(alert_id)))
+
+    candidate = {k: [v] for k, v in alert['candidate'].items()}
+    df = pd.DataFrame.from_dict(candidate).T
+    df = df.reset_index(drop=False)
+    df.columns = ['field', 'value']
+    columns = [{"name": str(i), 'id': str(i)} for i in df.columns]
+    return df.to_dict('rows'), columns
 
 
 # Top level of the app.

@@ -30,17 +30,19 @@ def update_alert_monitoring_db(db_path: str, df: pd.DataFrame):
         Path to the monitoring database. The database will be created if
         it does not exist yet.
     df: pd.DataFrame
-        Pandas DataFrame with N rows and with 3 columns:
-            - time (float) from time.time()
+        Pandas DataFrame with N rows and with 4 columns:
+            - Reception time (float) from time.time() (alert reception time)
             - objectId (str) from alert
             - topic (str) from alert
+            - timestamp (str) from alert (alert emission time)
 
     Examples
     ----------
     >>> df = pd.DataFrame({
     ...     "time": [time.time()],
     ...     "objectId": ["tutu"],
-    ...     "topic": ["titi"]})
+    ...     "topic": ["titi"],
+    ...     "timestamp": ['2019-11-21 08:47:37.411'})
 
     >>> update_alert_monitoring_db(db_fn, df)
     """
@@ -76,13 +78,17 @@ def get_alert_monitoring_data(
     con = sqlite3.connect(db_path)
     statement = f"""
     SELECT
-        time, objectId, topic
+        time, objectId, topic, timestamp
     FROM
         `{ALERT_TABLE}`
     WHERE
         time > '{start}' AND time <= '{end}';
     """
-    df = pd.read_sql_query(statement, con)
+    try:
+        df = pd.read_sql_query(statement, con)
+    except pd.io.sql.DatabaseError as e:
+        print(e)
+        df = pd.DataFrame()
     return df
 
 def get_alert_per_topic(db_path: str, topic: str):
@@ -109,8 +115,13 @@ def get_alert_per_topic(db_path: str, topic: str):
     """
     con = sqlite3.connect(db_path)
     statement = f"SELECT objectId FROM `{ALERT_TABLE}` WHERE topic = '{topic}';"
-    df = pd.read_sql_query(statement, con)
-    return list(df["objectId"])
+    try:
+        df = pd.read_sql_query(statement, con)
+        alert_id = list(df["objectId"])
+    except pd.io.sql.DatabaseError as e:
+        print(e)
+        alert_id = [""]
+    return alert_id
 
 
 if __name__ == "__main__":
@@ -125,7 +136,8 @@ if __name__ == "__main__":
     df = pd.DataFrame({
         "time": [time.time()],
         "objectId": ["toto"],
-        "topic": ["tutu"]
+        "topic": ["tutu"],
+        "timestamp": ['2019-11-21 08:47:37.411']
     })
     update_alert_monitoring_db(db_fn, df)
 

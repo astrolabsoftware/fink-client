@@ -7,4 +7,4 @@ dash
 dash-bootstrap-components
 astropy
 pandas
-
+visdcc
