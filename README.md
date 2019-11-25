@@ -30,4 +30,4 @@ If you don't see any error and all the test results are ok, you have installed i
 
 ## Usage
 
-Learn how to use fink-client by following the dedicated [tutorial]().
+Learn how to use fink-client by following the dedicated [tutorial](https://fink-broker.readthedocs.io/en/latest/tutorials/using-fink-client/).
