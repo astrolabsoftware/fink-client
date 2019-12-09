@@ -32,7 +32,7 @@ class TestIntegration(unittest.TestCase):
         data_path = os.path.abspath(os.path.join(
             os.path.dirname(__file__), 'data'))
         schema_path = os.path.abspath(os.path.join(
-            os.path.dirname(__file__), '../schemas/distribution_schema.avsc'))
+            os.path.dirname(__file__), '../schemas/distribution_schema_0p1.avsc'))
 
         alert_reader = read_avro_alerts(data_path)
 
