@@ -196,7 +196,7 @@ def _get_alert_schema(schema_path: str = None):
         # get schema from fink-broker
         try:
             print("Getting schema from fink servers...")
-            schema_url = "https://raw.github.com/astrolabsoftware/fink-broker/master/schemas/distribution_schema.avsc"
+            schema_url = "https://raw.github.com/astrolabsoftware/fink-broker/master/schemas/distribution_schema_0p1.avsc"
             filename = schema_url.split("/")[-1]
             r = requests.get(schema_url, timeout=1)
             schema_path = os.path.abspath(os.path.join(
