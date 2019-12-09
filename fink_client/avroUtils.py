@@ -60,7 +60,7 @@ def write_alert(alert: dict, schema: str, path: str, overwrite: bool = False):
     Examples
     ----------
     >>> fn_in = 'tests/data/fink-broker-sample-alert-1.avro'
-    >>> schema_path = 'schemas/fink_alert_schema.avsc'
+    >>> schema_path = 'schemas/distribution_schema_0p1.avsc'
     >>> alert = read_alert(fn_in)
 
     Write the alert on disk

@@ -205,7 +205,7 @@ def _get_alert_schema(schema_path: str = None):
                 f.write(r.text)
         except RequestException:
             schema_path = os.path.abspath(os.path.join(
-                os.path.dirname(__file__), '../schemas/fink_alert_schema.avsc'))
+                os.path.dirname(__file__), '../schemas/distribution_schema_0p1.avsc'))
             m = ("Could not obtain schema from fink servers\n"
                 "Using default schema available at: {}").format(schema_path)
             print(m)
