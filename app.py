@@ -71,16 +71,18 @@ DATA_PATH = BASE_PATH.joinpath("data").resolve()
 
 myconfig = {
     "username": fcc.username,
-    "password": fcc.password,
     'bootstrap.servers': fcc.servers,
     'group_id': fcc.group_id}
+
+if fcc.password is not None:
+    myconfig['password'] = fcc.password
 
 # Instantiate a consumer
 consumer = AlertConsumer(fcc.mytopics, myconfig, schema=fcc.schema)
 
 # List topics
 topic_dic = consumer._consumer.list_topics().topics.keys()
-topic_list = [i for i in topic_dic if i[0:2] != "__"]
+topic_list = [i for i in topic_dic if i[0:2] != "__" and i in fcc.mytopics]
 
 def build_tabs():
     """ Build the two tabs of the dashboard.
