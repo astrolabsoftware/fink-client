@@ -32,7 +32,7 @@ class TestIntegration(unittest.TestCase):
         data_path = os.path.abspath(os.path.join(
             os.path.dirname(__file__), 'data'))
         schema_path = os.path.abspath(os.path.join(
-            os.path.dirname(__file__), '../schemas/distribution_schema_0p1.avsc'))
+            os.path.dirname(__file__), '../schemas/distribution_schema_0p2.avsc'))
 
         alert_reader = read_avro_alerts(data_path)
 
@@ -64,6 +64,9 @@ class TestIntegration(unittest.TestCase):
         num_messages = 1
         alerts = self.consumer.consume(num_messages)
         self.assertEqual(len(alerts), num_messages)
+        #for alert in alerts:
+        #    print(alert[1]['rfscore'])
+        #self.assertTrue(an_alert['rfscore'] is not None)
 
     def tearDown(self):
         self.consumer.close()
