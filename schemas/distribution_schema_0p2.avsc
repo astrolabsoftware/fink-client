@@ -1248,6 +1248,13 @@
       ]
     },
     {
+      "name": "rfscore",
+      "type": [
+        "double",
+        "null"
+      ]
+    },
+    {
       "name": "publisher",
       "type": "string"
     }

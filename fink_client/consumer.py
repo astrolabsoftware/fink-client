@@ -196,7 +196,7 @@ def _get_alert_schema(schema_path: str = None):
         # get schema from fink-broker
         try:
             print("Getting schema from fink servers...")
-            schema_url = "https://raw.github.com/astrolabsoftware/fink-broker/master/schemas/distribution_schema_0p1.avsc"
+            schema_url = "https://raw.github.com/astrolabsoftware/fink-broker/master/schemas/distribution_schema_0p2.avsc"
             filename = schema_url.split("/")[-1]
             r = requests.get(schema_url, timeout=1)
             schema_path = os.path.abspath(os.path.join(
@@ -205,7 +205,7 @@ def _get_alert_schema(schema_path: str = None):
                 f.write(r.text)
         except RequestException:
             schema_path = os.path.abspath(os.path.join(
-                os.path.dirname(__file__), '../schemas/distribution_schema_0p1.avsc'))
+                os.path.dirname(__file__), '../schemas/distribution_schema_0p2.avsc'))
             m = ("Could not obtain schema from fink servers\n"
                 "Using default schema available at: {}").format(schema_path)
             print(m)
