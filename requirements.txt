@@ -8,3 +8,4 @@ dash-bootstrap-components
 astropy
 pandas
 visdcc
+aplpy
