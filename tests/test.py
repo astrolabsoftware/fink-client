@@ -17,7 +17,6 @@ import unittest
 import os
 import io
 import confluent_kafka
-import time
 import fastavro
 from fink_client.consumer import AlertConsumer
 from fink_client.avroUtils import AlertReader
@@ -65,9 +64,6 @@ class TestIntegration(unittest.TestCase):
         num_messages = 1
         alerts = self.consumer.consume(num_messages)
         self.assertEqual(len(alerts), num_messages)
-        #for alert in alerts:
-        #    print(alert[1]['rfscore'])
-        #self.assertTrue(an_alert['rfscore'] is not None)
 
     def tearDown(self):
         self.consumer.close()
