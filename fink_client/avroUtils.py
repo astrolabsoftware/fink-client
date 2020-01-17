@@ -16,6 +16,10 @@ import sys
 import os
 import glob
 import doctest
+import io
+import json
+
+from typing import Iterable
 
 from fastavro import reader, writer
 import pandas as pd
@@ -125,7 +129,7 @@ class AlertReader():
         >>> assert('objectId' in r.to_pandas().columns)
 
         """
-        return pd.DataFrame.from_records(self.to_list())
+        return pd.DataFrame(self.to_iterator())
 
     def to_list(self, size: int = None) -> list:
         """ Read Avro alert and return data as list of dictionary
@@ -151,6 +155,24 @@ class AlertReader():
         2
         """
         return [self._read_single_alert(fn) for fn in self.filenames[:size]]
+
+    def to_iterator(self) -> Iterable[dict]:
+        """ Return an iterator for alert data
+
+        Returns
+        ----------
+        out: Iterable[dict]
+            Alert data (dictionaries) in an iterator
+
+        Examples
+        ----------
+        >>> r = AlertReader(avro_folder)
+        >>> myiterator = r.to_iterator()
+        >>> assert('objectId' in next(myiterator).keys())
+
+        """
+        for fn in self.filenames:
+            yield self._read_single_alert(fn)
 
 def write_alert(alert: dict, schema: str, path: str, overwrite: bool = False):
     """ Write avro alert on disk
@@ -191,6 +213,66 @@ def write_alert(alert: dict, schema: str, path: str, overwrite: bool = False):
 
     with open(alert_filename, 'wb') as out:
         writer(out, _get_alert_schema(schema), [alert])
+
+def encode_into_avro(alert: dict, schema_file: str) -> str:
+    """Encode a dict record into avro bytes
+
+    Parameters
+    ----------
+    alert: dict
+        A Dictionary of alert data
+    schema_file: str
+        Path of avro schema file
+
+    Returns
+    ----------
+    value: str
+        a bytes string with avro encoded alert data
+
+    Examples
+    ----------
+    >>> r = AlertReader(avro_file)
+    >>> alert = r.to_list(size=1)[0]
+    >>> avro_encoded = encode_into_avro(alert, schema_path)
+    """
+    with open(schema_file) as f:
+        schema = json.load(f)
+
+    parsed_schema = fastavro.parse_schema(schema)
+    b = io.BytesIO()
+    fastavro.schemaless_writer(b, parsed_schema, alert)
+
+    return b.getvalue()
+
+
+def get_legal_topic_name(topic: str) -> str:
+    """Returns a legal Kafka topic name
+
+    Special characters are not allowed in the name
+    of a Kafka topic. This method returns a legal name
+    after removing special characters and converting each
+    letter to lowercase
+
+    Parameters
+    ----------
+    topic: str
+        topic name, essentially an alert parameter which is to be used
+        to create a topic
+
+    Returns
+    ----------
+    legal_topic: str
+        A topic name that can be used as a Kafka topic
+
+    Examples
+    ----------
+    >>> bad_name = 'IaMEvi\\l'
+    >>> good_name = get_legal_topic_name(bad_name)
+    >>> print(good_name)
+    iamevil
+    """
+    legal_topic = ''.join(a.lower() for a in topic if a.isalpha())
+    return legal_topic
 
 
 if __name__ == "__main__":

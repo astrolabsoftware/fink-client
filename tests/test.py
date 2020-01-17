@@ -20,9 +20,9 @@ import confluent_kafka
 import time
 import fastavro
 from fink_client.consumer import AlertConsumer
-from fink_client.alertUtils import read_avro_alerts
-from fink_client.alertUtils import encode_into_avro
-from fink_client.alertUtils import get_legal_topic_name
+from fink_client.avroUtils import AlertReader
+from fink_client.avroUtils import encode_into_avro
+from fink_client.avroUtils import get_legal_topic_name
 
 
 class TestIntegration(unittest.TestCase):
@@ -34,13 +34,14 @@ class TestIntegration(unittest.TestCase):
         schema_path = os.path.abspath(os.path.join(
             os.path.dirname(__file__), '../schemas/distribution_schema_0p2.avsc'))
 
-        alert_reader = read_avro_alerts(data_path)
+        r = AlertReader(data_path)
+        alerts = r.to_list()
 
         kafka_servers = 'localhost:9093, localhost:9094, localhost:9095'
         p = confluent_kafka.Producer({
             'bootstrap.servers': kafka_servers})
 
-        for alert in alert_reader:
+        for alert in alerts:
             avro_data = encode_into_avro(alert, schema_path)
             topic = get_legal_topic_name(alert['cdsxmatch'])
             p.produce(topic, avro_data)

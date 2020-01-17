@@ -40,8 +40,7 @@ class AlertConsumer:
         topics : list of str
             list of topics to subscribe
         config: dict
-            Dictionary of configurations
-
+            Dictionary of configurations. Allowed keys are:
             username: str
                 username for API access
             password: str
@@ -83,10 +82,13 @@ class AlertConsumer:
 
         # msg.error() returns None or KafkaError
         if msg.error():
-            error_message = ("Error: {}\n"
-                "topic: {}[{}] at offset: {} with key: {}").format(
-                msg.error(), msg.topic(), msg.partition(), msg.offset(),
-                str(msg.key()))
+            error_message = """
+            Error: {} topic: {}[{}] at offset: {} with key: {}
+            """.format(
+                msg.error(), msg.topic(),
+                msg.partition(), msg.offset(),
+                str(msg.key())
+            )
             raise AlertError(error_message)
 
         topic = msg.topic()
@@ -173,7 +175,6 @@ def _get_kafka_config(config: dict) -> dict:
 
     return kafka_config
 
-
 def _get_alert_schema(schema_path: str = None):
     """Returns schema for decoding avro alert
 
@@ -214,7 +215,6 @@ def _get_alert_schema(schema_path: str = None):
         schema = json.load(f)
 
     return fastavro.parse_schema(schema)
-
 
 def _decode_avro_alert(avro_alert: io.IOBase, schema: dict) -> Any:
     """Decodes a file-like stream of avro data
