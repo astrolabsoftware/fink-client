@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-# Copyright 2019 AstroLab Software
-# Author: Abhishek Chauhan
+# Copyright 2019-2020 AstroLab Software
+# Author: Abhishek Chauhan, Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -205,11 +205,18 @@ def _get_alert_schema(schema_path: str = None):
             with open(schema_path, "w") as f:
                 f.write(r.text)
         except RequestException:
-            schema_path = os.path.abspath(os.path.join(
-                os.path.dirname(__file__), '../schemas/distribution_schema_0p2.avsc'))
-            m = ("Could not obtain schema from fink servers\n"
-                "Using default schema available at: {}").format(schema_path)
-            print(m)
+            schema_path = os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__),
+                    '../schemas/distribution_schema_0p2.avsc'
+                )
+            )
+
+            msg = """
+            Could not obtain schema from fink servers
+            Using default schema available at: {}
+            """.format(schema_path)
+            print(msg)
 
     with open(schema_path) as f:
         schema = json.load(f)
