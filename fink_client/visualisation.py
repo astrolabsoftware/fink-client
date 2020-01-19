@@ -47,7 +47,7 @@ def plot_cutout(
             ffig.show_grayscale(stretch=stretch, vmid=vmid)
     return ffig
 
-def show_stamps(alert: dict):
+def show_stamps(alert: dict, fig=None):
     """ Plot the 3 cutouts contained in an alert.
 
     Parameters
@@ -55,7 +55,6 @@ def show_stamps(alert: dict):
     alert: dict
         Dictionnary containing alert data.
     """
-    fig = plt.figure(figsize=(12, 4))
     for i, cutout in enumerate(['Science', 'Template', 'Difference']):
         stamp = alert['cutout{}'.format(cutout)]['stampData']
         ffig = plot_cutout(stamp, fig=fig, subplot=(1, 3, i + 1))

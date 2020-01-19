@@ -19,13 +19,13 @@ import io
 import json
 
 from typing import Iterable
+from typing import Any
 
 from fastavro import reader, writer
 import pandas as pd
 
 import fastavro
 
-from fink_client.consumer import _get_alert_schema
 from fink_client.tester import regular_unit_tests
 
 class AlertReader():
@@ -180,8 +180,8 @@ def write_alert(alert: dict, schema: str, path: str, overwrite: bool = False):
     ----------
     alert: dict
         Alert data to save (dictionary with avro syntax)
-    schema: str
-        Path to Avro schema of the alert.
+    schema: str or dict
+        Path to Avro schema of the alert, or parsed schema.
     path: str
         Folder that will contain the alert. The filename will always be
         <objectID>.avro
@@ -206,12 +206,14 @@ def write_alert(alert: dict, schema: str, path: str, overwrite: bool = False):
     """
     alert_filename = os.path.join(path, "{}.avro".format(alert["objectId"]))
 
+    if type(schema) == str:
+        schema = _get_alert_schema(schema)
     # Check if the alert already exist
     if os.path.exists(alert_filename) and not overwrite:
         raise IOError("{} already exists!".format(alert_filename))
 
     with open(alert_filename, 'wb') as out:
-        writer(out, _get_alert_schema(schema), [alert])
+        writer(out, schema, [alert])
 
 def encode_into_avro(alert: dict, schema_file: str) -> str:
     """Encode a dict record into avro bytes
@@ -272,6 +274,73 @@ def get_legal_topic_name(topic: str) -> str:
     """
     legal_topic = ''.join(a.lower() for a in topic if a.isalpha())
     return legal_topic
+
+def _get_alert_schema(schema_path: str = None):
+    """Returns schema for decoding avro alert
+
+    This method downloads the latest schema available on the fink servers
+    or falls back to using a default schema located in dir 'schemas'/
+
+    Parameters
+    ----------
+    schema_path: str, optional
+        a local path where to look for schema,
+        Note that schema doesn't get downloaded from fink servers if schema_path
+        is given
+
+    Returns
+    ----------
+    parsed_schema: dict
+        Dictionary of json format schema for decoding avro alerts from fink
+    """
+    if schema_path is None:
+        # get schema from fink-broker
+        try:
+            print("Getting schema from fink servers...")
+            schema_url = "https://raw.github.com/astrolabsoftware/fink-broker/master/schemas/distribution_schema_0p2.avsc"
+            filename = schema_url.split("/")[-1]
+            r = requests.get(schema_url, timeout=1)
+            schema_path = os.path.abspath(os.path.join(
+                os.path.dirname(__file__), '../schemas/{}'.format(filename)))
+            with open(schema_path, "w") as f:
+                f.write(r.text)
+        except RequestException:
+            schema_path = os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__),
+                    '../schemas/distribution_schema_0p2.avsc'
+                )
+            )
+
+            msg = """
+            Could not obtain schema from fink servers
+            Using default schema available at: {}
+            """.format(schema_path)
+            print(msg)
+
+    with open(schema_path) as f:
+        schema = json.load(f)
+
+    return fastavro.parse_schema(schema)
+
+def _decode_avro_alert(avro_alert: io.IOBase, schema: dict) -> Any:
+    """Decodes a file-like stream of avro data
+
+    Parameters
+    ----------
+    avro_alert: io.IOBase
+        a file-like stream with avro encoded data
+
+    schema: dict
+        Dictionary of json format schema to decode avro data
+
+    Returns
+    ----------
+    record: Any
+        Record obtained after decoding avro data (typically, dict)
+    """
+    avro_alert.seek(0)
+    return fastavro.schemaless_reader(avro_alert, schema)
 
 
 if __name__ == "__main__":
