@@ -15,6 +15,15 @@
 # limitations under the License.
 set -e
 
+
+# Run the test suite on the modules
+for i in ${FINK_CLIENT_HOME}/fink_client/*.py
+do
+  coverage run \
+    --source=${FINK_CLIENT_HOME} \
+    --rcfile ${FINK_CLIENT_HOME}/.coveragerc $i
+done
+
 TEST_DIR=${FINK_CLIENT_HOME}/tests
 
 # start Kafka in docker container

@@ -11,7 +11,7 @@
 Clone the GitHub repository
 ```bash
 git clone https://github.com/astrolabsoftware/fink-client.git
-cd fink-client && export FINK_CLIENT_HOME=$(PWD) >> ~/.bash_profile
+cd fink-client && echo 'export FINK_CLIENT_HOME=${PWD}' >> ~/.bash_profile
 ```
 The above expression will place the environment variable for `$FINK_CLIENT_HOME`
 into your `~/.bash_profile` such that this variable should not be required to be set again.

@@ -1,0 +1,84 @@
+#!/usr/bin/env python
+# Copyright 2019-2020 AstroLab Software
+# Author: Julien Peloton
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+""" Kafka consumer to listen and archive Fink streams """
+import argparse
+import time
+
+import matplotlib
+import matplotlib.pyplot as plt
+
+import numpy as np
+
+from fink_client.consumer import AlertConsumer
+import fink_client.fink_client_conf_cloud as fcc
+
+def main():
+    """ """
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        '-config', type=str, default='fink_client/fink_client_conf.py',
+        help="Path to your Fink configuration file.")
+    parser.add_argument(
+        '--display', action='store_true',
+        help="If specified, print on screen information about incoming alert.")
+    parser.add_argument(
+        '--save', action='store_true',
+        help="If specified, save alert data on disk (Avro). See also -outdir.")
+    parser.add_argument(
+        '-outdir', type=str, default='.',
+        help="Folder to store incoming alerts if --save is set. It must exist.")
+    args = parser.parse_args(None)
+
+    myconfig = {
+        "username": fcc.username,
+        'bootstrap.servers': fcc.servers,
+        'group_id': fcc.group_id}
+
+    if fcc.password is not None:
+        myconfig['password'] = fcc.password
+
+    # Instantiate a consumer
+    consumer = AlertConsumer(fcc.mytopics, myconfig, schema=fcc.schema)
+
+    # Time to wait before polling again if no alerts
+    maxtimeout = fcc.maxtimeout
+
+    # infinite loop
+    while True:
+        if args.save:
+            # Save alerts on disk
+            topic, alert = consumer.poll_and_write(
+                outdir=args.outdir,
+                timeout=maxtimeout,
+                overwrite=fcc.testmode)
+        else:
+            # TODO: this is useless to get it and done nothing
+            # why not thinking about handler like Comet?
+            topic, alert = consumer.poll(timeout=maxtimeout)
+
+        if args.display and topic is not None:
+            print("-" * 65)
+            row = [
+                time.ctime(), alert['timestamp'], topic, alert['objectId'],
+                alert['cdsxmatch'], alert['rfscore']
+            ]
+            print("{}|{:<25}|{:<10}|{:<15}|{:<10}|{:<5}|".format(*row))
+        elif args.display:
+            print('No alerts the last {} seconds'.format(maxtimeout))
+
+
+if __name__ == "__main__":
+    main()
