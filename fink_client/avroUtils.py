@@ -17,6 +17,8 @@ import glob
 import doctest
 import io
 import json
+import requests
+from requests.exceptions import RequestException
 
 from typing import Iterable
 from typing import Any

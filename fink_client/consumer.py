@@ -14,13 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import io
-import os
-import json
 import confluent_kafka
-import fastavro
-import requests
 from confluent_kafka import KafkaError
-from requests.exceptions import RequestException
 
 from fink_client.avroUtils import write_alert
 from fink_client.avroUtils import _get_alert_schema
