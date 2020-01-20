@@ -16,6 +16,7 @@
 """ Kafka consumer to listen and archive Fink streams """
 import argparse
 import time
+import importlib
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -23,7 +24,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from fink_client.consumer import AlertConsumer
-import fink_client.fink_client_conf_cloud as fcc
 
 def main():
     """ """
@@ -41,6 +41,15 @@ def main():
         '-outdir', type=str, default='.',
         help="Folder to store incoming alerts if --save is set. It must exist.")
     args = parser.parse_args(None)
+
+    # Import the configuration - not very satisfactory...
+    try:
+        fcc = importlib.import_module(
+            args.config.replace('/', '.').replace('.py', '')
+        )
+    except ModuleNotFoundError as e:
+        print(e)
+        print('Configuration file must be of the form fink_client/yourconf.py')
 
     myconfig = {
         "username": fcc.username,
