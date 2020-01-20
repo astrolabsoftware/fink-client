@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from fink_client.consumer import AlertConsumer
-import fink_client.fink_client_conf as fcc
+import fink_client.fink_client_conf_cloud as fcc
 
 def main():
     """ """
