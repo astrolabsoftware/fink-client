@@ -34,7 +34,7 @@ servers = "localhost:9092,localhost:9093"
 
 # Incoming alert schema to decode the data
 # If empty,the client will attempt to download the online latest version.
-schema = "schemas/distribution_schema.avsc"
+schema = "schemas/distribution_schema_0p2.avsc"
 
 # Monitoring database. It includes metadata for the client to run.
 # If it does not exist, it will be automatically created by the client.
