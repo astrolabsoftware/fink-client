@@ -32,10 +32,11 @@ mytopics = ["rrlyr"]
 # Servers from which data will be pulled
 servers = "localhost:9092,localhost:9093"
 
-# Incoming alert schema to decode the data
-# If empty,the client will attempt to download the online latest version.
-schema = "schemas/distribution_schema_0p2.avsc"
+# Incoming alert schema to decode the data. You need to specify full path.
+# If empty, the client will attempt to download the online latest version.
+schema = "/path/to/fink-client/schemas/distribution_schema_0p2.avsc"
 
 # Monitoring database. It includes metadata for the client to run.
+# You need to specify the full path
 # If it does not exist, it will be automatically created by the client.
-db_path = 'db/alert-monitoring.db'
+db_path = '/path/to/fink-client/db/alert-monitoring.db'
