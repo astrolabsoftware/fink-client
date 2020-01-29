@@ -8,21 +8,33 @@
 
 ## Installation
 
-Clone the GitHub repository
-```bash
-git clone https://github.com/astrolabsoftware/fink-client.git
-cd fink-client && echo 'export FINK_CLIENT_HOME=${PWD}' >> ~/.bash_profile
-```
-The above expression will place the environment variable for `$FINK_CLIENT_HOME`
-into your `~/.bash_profile` such that this variable should not be required to be set again.
+You need to have Python 3.5+ installed, and `fink_client>=0.2` installed with dependencies:
 
-Install `fink_client` dependencies
 ```bash
+# Install fink-client somewhere on your computer
+git clone https://github.com/astrolabsoftware/fink-client
+cd fink-client
 pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
 ```
 
-Run integration test to verify the working.
+Then, assuming you are using bash shell, update your `~/.bash_profile` with the path to the library and binaries:
+
+```bash
+# Add these lines at the end of your ~/.bash_profile
+export FINK_CLIENT_HOME=${PWD}
+export PYTHONPATH=${FINK_CLIENT_HOME}:$PYTHONPATH
+export PATH=${FINK_CLIENT_HOME}/bin:$PATH
+```
+
+Finally source the file to activate the changes:
+
+```bash
+source ~/.bash_profile
+```
+
+You can also run integration test (docker-compose required):
+
 ```bash
 bin/fink_client_test.sh
 ```
