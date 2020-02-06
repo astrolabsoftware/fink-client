@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """ Kafka consumer to listen and archive Fink streams """
+import sys
+
 import argparse
 import time
 import importlib
