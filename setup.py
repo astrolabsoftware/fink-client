@@ -33,6 +33,13 @@ setuptools.setup(
     url="https://fink-broker.readthedocs.io/en/latest/",
     install_requires=requirements,
     packages=setuptools.find_packages(),
+    entry_points = {
+        'console_scripts': [
+            'fink-alert-viewer=fink_client.scripts.alert_viewer:main',
+            'fink-consumer=fink_client.scripts.consumer:main'
+        ]
+    },
+    scripts=['bin/fink_client_test.sh'],
     classifiers=[
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",

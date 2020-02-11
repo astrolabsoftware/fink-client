@@ -8,36 +8,27 @@
 
 ## Installation
 
-You need to have Python 3.5+ installed, and `fink_client>=0.2` installed with dependencies:
+`fink_client` requires a version of Python 3.5+. 
+
+To install this module run the following commands:
 
 ```bash
 # Install fink-client somewhere on your computer
 git clone https://github.com/astrolabsoftware/fink-client
 cd fink-client
 pip install --upgrade pip setuptools wheel
-pip install -r requirements.txt
+pip install .
 ```
 
-Then, assuming you are using bash shell, update your `~/.bash_profile` with the path to the library and binaries:
+For testing purposes, update your `~/.bash_profile` (assuming you are using bash shell) with the `FINK_CLIENT_HOME` environment variable:
 
 ```bash
-# Add these lines at the end of your ~/.bash_profile
-export FINK_CLIENT_HOME=${PWD}
-export PYTHONPATH=${FINK_CLIENT_HOME}:$PYTHONPATH
-export PATH=${FINK_CLIENT_HOME}/bin:$PATH
-```
-
-Finally source the file to activate the changes:
-
-```bash
+echo "export FINK_CLIENT_HOME=${PWD}" >> ~/.bash_profile
 source ~/.bash_profile
+# and run the integration tests (docker-compose required)
+fink_client_test.sh
 ```
 
-You can also run integration test (docker-compose required):
-
-```bash
-bin/fink_client_test.sh
-```
 If you don't see any error and all the test results are ok, you have installed it correctly.
 
 ## Usage
