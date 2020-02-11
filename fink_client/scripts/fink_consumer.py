@@ -37,6 +37,9 @@ def main():
         '--display', action='store_true',
         help="If specified, print on screen information about incoming alert.")
     parser.add_argument(
+         '--available_topics', action='store_true',
+         help="If specified, print on screen information about available topics.")
+    parser.add_argument(
         '--save', action='store_true',
         help="If specified, save alert data on disk (Avro). See also -outdir.")
     parser.add_argument(
@@ -63,6 +66,10 @@ def main():
 
     # Instantiate a consumer
     consumer = AlertConsumer(fcc.mytopics, myconfig, schema=fcc.schema)
+
+    if args.available_topics:
+        print(consumer.available_topics().keys())
+        sys.exit(0)
 
     # Time to wait before polling again if no alerts
     maxtimeout = fcc.maxtimeout
