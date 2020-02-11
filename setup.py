@@ -35,8 +35,8 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     entry_points = {
         'console_scripts': [
-            'fink-alert-viewer=fink_client.scripts.alert_viewer:main',
-            'fink-consumer=fink_client.scripts.consumer:main'
+            'fink_alert_viewer=fink_client.scripts.fink_alert_viewer:main',
+            'fink_consumer=fink_client.scripts.fink_consumer:main'
         ]
     },
     scripts=['bin/fink_client_test.sh'],
