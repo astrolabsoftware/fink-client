@@ -154,6 +154,31 @@ class AlertConsumer:
 
         return topic, alert
 
+    def available_topics(self) -> dict:
+        """ Return available broker topics
+
+        Note, this routine only display topics, but users need
+        to be authorized to poll data.
+
+        Returns
+        ---------
+        topics: dict
+            Keys are topic names, values are metadata
+
+        """
+        return self._consumer.list_topics().topics
+
+    def available_brokers(self) -> dict:
+        """ Return available brokers
+
+        Returns
+        ---------
+        brokers: dict
+            Keys are broker ID, values are metadata with IP:PORT
+
+        """
+        return self._consumer.list_topics().brokers
+
     def close(self):
         """Close connection to Fink broker"""
         self._consumer.close()
