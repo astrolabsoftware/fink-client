@@ -65,6 +65,14 @@ class TestIntegration(unittest.TestCase):
         alerts = self.consumer.consume(num_messages)
         self.assertEqual(len(alerts), num_messages)
 
+    def test_topics(self):
+        topics = self.consumer.available_topics()
+        self.assertTrue('rrlyr' in topics.keys())
+
+    def test_broker_name(self):
+        brokers = self.consumer.available_brokers()
+        self.assertTrue(0 in brokers.keys())
+
     def tearDown(self):
         self.consumer.close()
 
