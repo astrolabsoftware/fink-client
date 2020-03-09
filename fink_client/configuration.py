@@ -33,6 +33,18 @@ def write_credentials(dict_file: dict, verbose: bool = False, tmp: bool = False)
         If True, print the credentials location. Default is False.
     tmp: bool, optional
         If True, store the credentials under /tmp. Default is False.
+
+    Examples
+    ----------
+    >>> conf = {
+    ...   'username': 'test',
+    ...   'password': None,
+    ...   'mytopics': ['rrlyr'],
+    ...   'servers': 'localhost:9093',
+    ...   'group_id': 'test_group',
+    ...   'maxtimeout': 10
+    ... }
+    >>> write_credentials(conf, verbose=False, tmp=True)
     """
     if tmp:
         ROOTDIR = "/tmp"
@@ -73,7 +85,7 @@ def load_credentials(tmp: bool = False) -> dict:
 
     Examples
     ----------
-    >>> conf = load_credentials()
+    >>> conf = load_credentials(tmp=True)
     """
     if tmp:
         ROOTDIR = "/tmp"
