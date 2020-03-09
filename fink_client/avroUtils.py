@@ -312,7 +312,12 @@ def _get_alert_schema(schema_path: str = None, timeout: int = 1) -> dict:
     <class 'dict'>
 
     Raise error in case of non valid schema path
-    >>> schema_c = _get_alert_schema('')
+    >>> schema_c = _get_alert_schema('') # doctest: +NORMALIZE_WHITESPACE, +ELLIPSIS
+    Traceback (most recent call last):
+     ...
+    OSError: `schema_path` must be None (direct download) or
+    a non-empty string (path to a custom schema).
+    Currently: 
     """
     if schema_path is None:
         # get schema from fink-client
