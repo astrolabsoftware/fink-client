@@ -40,6 +40,9 @@ def main():
         '-maxtimeout', type=int, default=10,
         help="Timeout when polling the servers. Default is 10 seconds.")
     parser.add_argument(
+        '--tmp', action='store_true',
+        help="If specified, register credentials in /tmp.")
+    parser.add_argument(
         '--verbose', action='store_true',
         help="If specified, print useful information.")
     args = parser.parse_args(None)
@@ -59,8 +62,8 @@ def main():
     }
 
     # Write credentials
-    write_credentials(dict_file, args.verbose)
+    write_credentials(dict_file, args.verbose, args.tmp)
 
     # check credentials are correct
     if args.verbose:
-        print(load_credentials())
+        print(load_credentials(args.tmp))

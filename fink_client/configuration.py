@@ -16,10 +16,10 @@
 import yaml
 import os
 
-ROOTDIR = os.path.join(os.environ['HOME'], ".finkclient")
-CREDNAME = "credentials.yml"
+_ROOTDIR = os.path.join(os.environ['HOME'], ".finkclient")
+_CREDNAME = "credentials.yml"
 
-def write_credentials(dict_file: dict, verbose: bool = False) -> None:
+def write_credentials(dict_file: dict, verbose: bool = False, tmp: bool = False):
     """ Store user credentials on the computer.
 
     To get your credentials, contact Fink admins or fill the registration form:
@@ -30,8 +30,15 @@ def write_credentials(dict_file: dict, verbose: bool = False) -> None:
     dict_file: dict
         Dictionnary containing user credentials.
     verbose: bool, optional
-        If True, print the credentials location.
+        If True, print the credentials location. Default is False.
+    tmp: bool, optional
+        If True, store the credentials under /tmp. Default is False.
     """
+    if tmp:
+        ROOTDIR = "/tmp"
+    else:
+        ROOTDIR = _ROOTDIR
+
     # check there are no missing information
     mandatory_keys = [
         'username', 'password', 'group_id',
@@ -45,21 +52,35 @@ def write_credentials(dict_file: dict, verbose: bool = False) -> None:
     os.makedirs(ROOTDIR, exist_ok=True)
 
     # Store data into yml file
-    with open(os.path.join(ROOTDIR, CREDNAME), 'w') as f:
+    with open(os.path.join(ROOTDIR, _CREDNAME), 'w') as f:
         yaml.dump(dict_file, f)
 
     if verbose:
-        print('Credentials stored at {}/{}'.format(ROOTDIR, CREDNAME))
+        print('Credentials stored at {}/{}'.format(ROOTDIR, _CREDNAME))
 
-def load_credentials() -> dict:
+def load_credentials(tmp: bool = False) -> dict:
     """ Load fink-client credentials.
+
+    Parameters
+    ----------
+    tmp: bool, optional
+        If True, load the credentials from /tmp. Default is False.
 
     Returns
     --------
     creds: dict
         Dictionnary containing user credentials.
+
+    Examples
+    ----------
+    >>> conf = load_credentials()
     """
-    path = os.path.join(ROOTDIR, CREDNAME)
+    if tmp:
+        ROOTDIR = "/tmp"
+    else:
+        ROOTDIR = _ROOTDIR
+
+    path = os.path.join(ROOTDIR, _CREDNAME)
 
     if not os.path.exists(path):
         msg = """
