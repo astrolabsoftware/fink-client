@@ -86,6 +86,9 @@ def load_credentials(tmp: bool = False) -> dict:
     Examples
     ----------
     >>> conf = load_credentials(tmp=True)
+
+    If, however the credentials do not exist yet
+    >>> conf = load_credentials()
     """
     if tmp:
         ROOTDIR = "/tmp"
@@ -102,7 +105,7 @@ def load_credentials(tmp: bool = False) -> dict:
             https://forms.gle/2td4jysT4e9pkf889
           2. run `fink_client_registration` to register
         """
-        print(msg)
+        raise IOError(msg)
 
     with open(path) as f:
         creds = yaml.load(f, Loader=yaml.FullLoader)

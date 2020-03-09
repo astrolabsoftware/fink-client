@@ -310,6 +310,9 @@ def _get_alert_schema(schema_path: str = None, timeout: int = 1) -> dict:
     >>> schema_c = _get_alert_schema(schema_path)
     >>> print(type(schema_c))
     <class 'dict'>
+
+    Raise error in case of non valid schema path
+    >>> schema_c = _get_alert_schema('')
     """
     if schema_path is None:
         # get schema from fink-client
@@ -326,7 +329,7 @@ def _get_alert_schema(schema_path: str = None, timeout: int = 1) -> dict:
             """.format(__schema_version__, os.path.join(base_url, tree))
             print(msg)
 
-    elif type(schema_path) == str:
+    elif type(schema_path) == str and schema_path != '':
         with open(schema_path) as f:
             schema = json.load(f)
     else:
