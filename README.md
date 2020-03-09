@@ -14,14 +14,16 @@
 pip install fink-client
 ```
 
-## Usage
+## Registration
 
 In order to connect and poll alerts from Fink, you need to get your credentials:
 
-1. subscribe to one or more Fink streams by filling this [form](https://forms.gle/2td4jysT4e9pkf889). 
+1. Subscribe to one or more Fink streams by filling this [form](https://forms.gle/2td4jysT4e9pkf889).
 2. After filling the form, we will send your credentials. Register them on your laptop by simply running:
   ```
   fink_client_register -username <USERNAME> -group_id <GROUP_ID> ...
   ```
 
-Finally, learn how to use fink-client by following the dedicated [tutorial](https://github.com/astrolabsoftware/fink-client-tutorial).
+## Usage
+
+Once you have your credentials, you are ready to poll streams! Learn how to use fink-client by following the dedicated [tutorial](https://github.com/astrolabsoftware/fink-client-tutorial). It should not take long to learn it!
