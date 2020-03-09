@@ -87,7 +87,16 @@ def load_credentials(tmp: bool = False) -> dict:
 
     Examples
     ----------
-    >>> conf = load_credentials(tmp=True)
+    >>> conf_in = {
+    ...   'username': 'test',
+    ...   'password': None,
+    ...   'mytopics': ['rrlyr'],
+    ...   'servers': 'localhost:9093',
+    ...   'group_id': 'test_group',
+    ...   'maxtimeout': 10
+    ... }
+    >>> write_credentials(conf_in, verbose=False, tmp=True)
+    >>> conf_out = load_credentials(tmp=True)
 
     If, however the credentials do not exist yet
     >>> os.remove('/tmp/credentials.yml')
