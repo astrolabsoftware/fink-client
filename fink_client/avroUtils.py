@@ -278,7 +278,7 @@ def get_legal_topic_name(topic: str) -> str:
     legal_topic = ''.join(a.lower() for a in topic if a.isalpha())
     return legal_topic
 
-def _get_alert_schema(schema_path: str = None) -> dict:
+def _get_alert_schema(schema_path: str = None, timeout: int = 1) -> dict:
     """Returns schema for decoding Fink avro alerts
 
     This method downloads the latest schema available on the fink client server
@@ -290,6 +290,9 @@ def _get_alert_schema(schema_path: str = None) -> dict:
         a local path where to look for schema.
         Note that schema doesn't get downloaded from Fink servers
         if schema_path is given
+    timeout: int, optional
+        Timeout (sec) when attempting to download the schema from Fink servers.
+        Default is 1 second.
 
     Returns
     ----------
@@ -311,11 +314,10 @@ def _get_alert_schema(schema_path: str = None) -> dict:
     if schema_path is None:
         # get schema from fink-client
         try:
-            print("Getting schema from fink servers...")
             base_url = "https://raw.github.com/astrolabsoftware/fink-client"
             tree = "master/schemas"
             schema_url = os.path.join(base_url, tree, __schema_version__)
-            r = requests.get(schema_url, timeout=1)
+            r = requests.get(schema_url, timeout=timeout)
             schema = json.loads(r.text)
         except RequestException:
             msg = """
