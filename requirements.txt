@@ -9,3 +9,4 @@ astropy
 pandas
 visdcc
 aplpy
+yaml
