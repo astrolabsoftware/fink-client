@@ -301,12 +301,12 @@ def _get_alert_schema(schema_path: str = None) -> dict:
     direct download
     >>> schema = _get_alert_schema()
     >>> print(type(schema))
-    dict
+    <class 'dict'>
 
     Custom schema
     >>> schema_c = _get_alert_schema(schema_path)
     >>> print(type(schema_c))
-    dict
+    <class 'dict'>
     """
     if schema_path is None:
         # get schema from fink-client
