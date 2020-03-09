@@ -16,6 +16,8 @@
 import yaml
 import os
 
+from fink_client.tester import regular_unit_tests
+
 _ROOTDIR = os.path.join(os.environ['HOME'], ".finkclient")
 _CREDNAME = "credentials.yml"
 
@@ -88,7 +90,16 @@ def load_credentials(tmp: bool = False) -> dict:
     >>> conf = load_credentials(tmp=True)
 
     If, however the credentials do not exist yet
-    >>> conf = load_credentials()
+    >>> os.remove('/tmp/credentials.yml')
+    >>> conf = load_credentials(tmp=True) # doctest: +NORMALIZE_WHITESPACE, +ELLIPSIS
+    Traceback (most recent call last):
+     ...
+    OSError: No credentials found, did you register?
+    To get your credentials, and use fink-client you need to:
+      1. subscribe to one or more Fink streams at
+        https://forms.gle/2td4jysT4e9pkf889
+      2. run `fink_client_registration` to register
+
     """
     if tmp:
         ROOTDIR = "/tmp"
@@ -111,3 +122,9 @@ def load_credentials(tmp: bool = False) -> dict:
         creds = yaml.load(f, Loader=yaml.FullLoader)
 
     return creds
+
+
+if __name__ == "__main__":
+    """ Run the test suite """
+
+    regular_unit_tests(globals())
