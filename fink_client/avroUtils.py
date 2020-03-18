@@ -29,6 +29,7 @@ import pandas as pd
 import fastavro
 
 from fink_client.tester import regular_unit_tests
+from fink_client import __schema_version__
 
 class AlertReader():
     """ Class to load alert Avro files
@@ -277,51 +278,72 @@ def get_legal_topic_name(topic: str) -> str:
     legal_topic = ''.join(a.lower() for a in topic if a.isalpha())
     return legal_topic
 
-def _get_alert_schema(schema_path: str = None):
-    """Returns schema for decoding avro alert
+def _get_alert_schema(schema_path: str = None, timeout: int = 1) -> dict:
+    """Returns schema for decoding Fink avro alerts
 
-    This method downloads the latest schema available on the fink servers
-    or falls back to using a default schema located in dir 'schemas'/
+    This method downloads the latest schema available on the fink client server
+    or falls back to using a custom schema provided by the user.
 
     Parameters
     ----------
     schema_path: str, optional
-        a local path where to look for schema,
-        Note that schema doesn't get downloaded from fink servers if schema_path
-        is given
+        a local path where to look for schema.
+        Note that schema doesn't get downloaded from Fink servers
+        if schema_path is given
+    timeout: int, optional
+        Timeout (sec) when attempting to download the schema from Fink servers.
+        Default is 1 second.
 
     Returns
     ----------
     parsed_schema: dict
-        Dictionary of json format schema for decoding avro alerts from fink
+        Dictionary of json format schema for decoding avro alerts from Fink
+
+    Examples
+    ----------
+    direct download
+    >>> schema = _get_alert_schema()
+    >>> print(type(schema))
+    <class 'dict'>
+
+    Custom schema
+    >>> schema_c = _get_alert_schema(schema_path)
+    >>> print(type(schema_c))
+    <class 'dict'>
+
+    Raise error in case of non valid schema path
+    >>> schema_c = _get_alert_schema('') # doctest: +NORMALIZE_WHITESPACE, +ELLIPSIS
+    Traceback (most recent call last):
+     ...
+    OSError: `schema_path` must be None (direct download) or
+    a non-empty string (path to a custom schema).
+    Currently: 
     """
     if schema_path is None:
-        # get schema from fink-broker
+        # get schema from fink-client
         try:
-            print("Getting schema from fink servers...")
-            schema_url = "https://raw.github.com/astrolabsoftware/fink-broker/master/schemas/distribution_schema_0p2.avsc"
-            filename = schema_url.split("/")[-1]
-            r = requests.get(schema_url, timeout=1)
-            schema_path = os.path.abspath(os.path.join(
-                os.path.dirname(__file__), '../schemas/{}'.format(filename)))
-            with open(schema_path, "w") as f:
-                f.write(r.text)
+            base_url = "https://raw.github.com/astrolabsoftware/fink-client"
+            tree = "master/schemas"
+            schema_url = os.path.join(base_url, tree, __schema_version__)
+            r = requests.get(schema_url, timeout=timeout)
+            schema = json.loads(r.text)
         except RequestException:
-            schema_path = os.path.abspath(
-                os.path.join(
-                    os.path.dirname(__file__),
-                    '../schemas/distribution_schema_0p2.avsc'
-                )
-            )
-
             msg = """
-            Could not obtain schema from fink servers
-            Using default schema available at: {}
-            """.format(schema_path)
+            {} could not be downloaded. Check your internet connection, or the
+            availability of the file at {}
+            """.format(__schema_version__, os.path.join(base_url, tree))
             print(msg)
 
-    with open(schema_path) as f:
-        schema = json.load(f)
+    elif type(schema_path) == str and schema_path != '':
+        with open(schema_path) as f:
+            schema = json.load(f)
+    else:
+        msg = """
+        `schema_path` must be None (direct download) or
+        a non-empty string (path to a custom schema).
+        Currently: {}
+        """.format(schema_path)
+        raise IOError(msg)
 
     return fastavro.parse_schema(schema)
 

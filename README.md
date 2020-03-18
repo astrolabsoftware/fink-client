@@ -8,29 +8,22 @@
 
 ## Installation
 
-`fink_client` requires a version of Python 3.5+. 
-
-To install this module run the following commands:
+`fink_client` requires a version of Python 3.5+. To install it, just run
 
 ```bash
-# Install fink-client somewhere on your computer
-git clone https://github.com/astrolabsoftware/fink-client
-cd fink-client
-pip install --upgrade pip setuptools wheel
-pip install .
+pip install fink-client
 ```
 
-For testing purposes, update your `~/.bash_profile` (assuming you are using bash shell) with the `FINK_CLIENT_HOME` environment variable:
+## Registration
 
-```bash
-echo "export FINK_CLIENT_HOME=${PWD}" >> ~/.bash_profile
-source ~/.bash_profile
-# and run the integration tests (docker-compose required)
-fink_client_test.sh
-```
+In order to connect and poll alerts from Fink, you need to get your credentials:
 
-If you don't see any error and all the test results are ok, you have installed it correctly.
+1. Subscribe to one or more Fink streams by filling this [form](https://forms.gle/2td4jysT4e9pkf889).
+2. After filling the form, we will send your credentials. Register them on your laptop by simply running:
+  ```
+  fink_client_register -username <USERNAME> -group_id <GROUP_ID> ...
+  ```
 
 ## Usage
 
-Learn how to use fink-client by following the dedicated [tutorial](https://github.com/astrolabsoftware/fink-client-tutorial).
+Once you have your credentials, you are ready to poll streams! Learn how to use fink-client by following the dedicated [tutorial](https://github.com/astrolabsoftware/fink-client-tutorial). It should not take long to learn it!

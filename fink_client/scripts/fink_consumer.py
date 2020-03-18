@@ -26,16 +26,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from fink_client.consumer import AlertConsumer
+from fink_client.configuration import load_credentials
 
 def main():
     """ """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        '-config', type=str, default='fink_client/fink_client_conf.py',
-        help="Path to your Fink configuration file.")
-    parser.add_argument(
         '--display', action='store_true',
         help="If specified, print on screen information about incoming alert.")
+    parser.add_argument(
+        '-limit', type=int, default=None,
+        help="If specified, download only `limit` alerts. Default is None.")
     parser.add_argument(
          '--available_topics', action='store_true',
          help="If specified, print on screen information about available topics.")
@@ -47,46 +48,44 @@ def main():
         help="Folder to store incoming alerts if --save is set. It must exist.")
     args = parser.parse_args(None)
 
-    # Import the configuration - not very satisfactory...
-    try:
-        fcc = importlib.import_module(
-            args.config.replace('/', '.').replace('.py', '')
-        )
-    except ModuleNotFoundError as e:
-        print(e)
-        print('Configuration file must be of the form fink_client/yourconf.py')
+    # load user configuration
+    conf = load_credentials()
 
     myconfig = {
-        "username": fcc.username,
-        'bootstrap.servers': fcc.servers,
-        'group_id': fcc.group_id}
+        "username": conf['username'],
+        'bootstrap.servers': conf['servers'],
+        'group_id': conf['group_id']}
 
-    if fcc.password is not None:
-        myconfig['password'] = fcc.password
+    if conf['password'] is not None:
+        myconfig['password'] = conf['password']
 
     # Instantiate a consumer
-    consumer = AlertConsumer(fcc.mytopics, myconfig, schema=fcc.schema)
+    consumer = AlertConsumer(conf['mytopics'], myconfig)
 
     if args.available_topics:
         print(consumer.available_topics().keys())
         sys.exit(0)
 
     # Time to wait before polling again if no alerts
-    maxtimeout = fcc.maxtimeout
+    maxtimeout = conf['maxtimeout']
 
     # infinite loop
+    maxpoll = args.limit if args.limit else 1e10
     try:
-        while True:
+        poll_number = 0
+        while poll_number < maxpoll:
             if args.save:
                 # Save alerts on disk
                 topic, alert = consumer.poll_and_write(
                     outdir=args.outdir,
-                    timeout=maxtimeout,
-                    overwrite=fcc.testmode)
+                    timeout=maxtimeout)
             else:
                 # TODO: this is useless to get it and done nothing
                 # why not thinking about handler like Comet?
                 topic, alert = consumer.poll(timeout=maxtimeout)
+
+            if topic is not None:
+                poll_number += 1
 
             if args.display and topic is not None:
                 print("-" * 65)

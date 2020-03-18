@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-# Copyright 2019 AstroLab Software
-# Author: Abhishek Chauhan
+# Copyright 2019-2020 AstroLab Software
+# Author: Abhishek Chauhan, Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,6 +23,8 @@ from fink_client.avroUtils import AlertReader
 from fink_client.avroUtils import encode_into_avro
 from fink_client.avroUtils import get_legal_topic_name
 
+from fink_client.configuration import load_credentials
+
 
 class TestIntegration(unittest.TestCase):
 
@@ -31,12 +33,15 @@ class TestIntegration(unittest.TestCase):
         data_path = os.path.abspath(os.path.join(
             os.path.dirname(__file__), 'data'))
         schema_path = os.path.abspath(os.path.join(
-            os.path.dirname(__file__), '../schemas/distribution_schema_0p2.avsc'))
+            os.path.dirname(__file__),
+            '../schemas/distribution_schema_0p2.avsc'))
 
         r = AlertReader(data_path)
         alerts = r.to_list()
 
-        kafka_servers = 'localhost:9093, localhost:9094, localhost:9095'
+        conf = load_credentials(tmp=True)
+
+        kafka_servers = conf['servers']
         p = confluent_kafka.Producer({
             'bootstrap.servers': kafka_servers})
 
@@ -47,11 +52,11 @@ class TestIntegration(unittest.TestCase):
         p.flush()
 
         # instantiate an AlertConsumer
-        mytopics = ["rrlyr"]
+        mytopics = conf["mytopics"]
 
         myconfig = {
             'bootstrap.servers': kafka_servers,
-            'group_id': 'test_group'}
+            'group_id': conf['group_id']}
 
         self.consumer = AlertConsumer(mytopics, myconfig, schema=schema_path)
 
