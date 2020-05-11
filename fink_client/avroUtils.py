@@ -143,8 +143,7 @@ class AlertReader():
         >>> assert('objectId' in r.to_pandas().columns)
 
         """
-        nest = self.to_iterator()
-        return pd.DataFrame([item for sublist in nest for item in sublist])
+        return pd.DataFrame(self.to_iterator())
 
     def to_list(self, size: int = None) -> list:
         """ Read Avro alert and return data as list of dictionary
@@ -188,7 +187,8 @@ class AlertReader():
 
         """
         for fn in self.filenames:
-            yield self._read_single_alert(fn)
+            for alert in self._read_single_alert(fn):
+                yield alert
 
 def write_alert(alert: dict, schema: str, path: str, overwrite: bool = False):
     """ Write avro alert on disk
