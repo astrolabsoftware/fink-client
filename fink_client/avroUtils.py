@@ -42,7 +42,7 @@ class AlertReader():
     Examples
     ----------
     Load a single Avro alert
-    >>> r = AlertReader(avro_file)
+    >>> r = AlertReader(avro_single_alert)
     >>> list_of_alerts = r.to_list()
     >>> print(len(list_of_alerts))
     1
@@ -51,6 +51,11 @@ class AlertReader():
     >>> r = AlertReader(avro_folder)
     >>> df = r.to_pandas()
     >>> assert('objectId' in  df.columns)
+
+    If there are several alerts in one file, they are all retrieved
+    >>> r = AlertReader(avro_multi_file)
+    >>> print('{} alerts decoded'.format(len(r.to_list())))
+    11 alerts decoded
 
     """
     def __init__(self, path: str):
@@ -105,16 +110,23 @@ class AlertReader():
         ----------
         >>> r = AlertReader("")
         WARNING: path to avro files is empty
-        >>> alert = r._read_single_alert(name=avro_file)
+
+        >>> alert = r._read_single_alert(name=avro_single_alert)
         """
         if name is None:
             name = self.path
 
+        isNext = True
+        data = []
+
         with open(name, 'rb') as fo:
             avro_reader = reader(fo)
-
-            # One alert per file only
-            return avro_reader.next()
+            while isNext:
+                try:
+                    data.append(avro_reader.next())
+                except StopIteration:
+                    isNext = False
+        return data
 
     def to_pandas(self) -> pd.DataFrame:
         """ Read Avro alert(s) and return data as Pandas DataFrame
@@ -146,7 +158,7 @@ class AlertReader():
 
         Examples
         ----------
-        >>> r = AlertReader(avro_file)
+        >>> r = AlertReader(avro_single_alert)
         >>> mylist = r.to_list()
         >>> print(len(mylist))
         1
@@ -156,7 +168,8 @@ class AlertReader():
         >>> print(len(mylist))
         2
         """
-        return [self._read_single_alert(fn) for fn in self.filenames[:size]]
+        nest = [self._read_single_alert(fn) for fn in self.filenames[:size]]
+        return [item for sublist in nest for item in sublist]
 
     def to_iterator(self) -> Iterable[dict]:
         """ Return an iterator for alert data
@@ -174,7 +187,8 @@ class AlertReader():
 
         """
         for fn in self.filenames:
-            yield self._read_single_alert(fn)
+            for alert in self._read_single_alert(fn):
+                yield alert
 
 def write_alert(alert: dict, schema: str, path: str, overwrite: bool = False):
     """ Write avro alert on disk
@@ -191,7 +205,7 @@ def write_alert(alert: dict, schema: str, path: str, overwrite: bool = False):
 
     Examples
     ----------
-    >>> r = AlertReader(avro_file)
+    >>> r = AlertReader(avro_single_alert)
     >>> alert = r.to_list(size=1)[0]
 
     Write the alert on disk
@@ -235,7 +249,7 @@ def encode_into_avro(alert: dict, schema_file: str) -> str:
 
     Examples
     ----------
-    >>> r = AlertReader(avro_file)
+    >>> r = AlertReader(avro_single_alert)
     >>> alert = r.to_list(size=1)[0]
     >>> avro_encoded = encode_into_avro(alert, schema_path)
     """
@@ -317,7 +331,7 @@ def _get_alert_schema(schema_path: str = None, timeout: int = 1) -> dict:
      ...
     OSError: `schema_path` must be None (direct download) or
     a non-empty string (path to a custom schema).
-    Currently: 
+    Currently:
     """
     if schema_path is None:
         # get schema from fink-client
@@ -371,7 +385,8 @@ if __name__ == "__main__":
     """ Run the test suite """
 
     args = globals()
-    args['avro_file'] = 'datatest/ZTF19acihgng.avro'
+    args['avro_single_alert'] = 'datatest/ZTF19acihgng.avro'
+    args['avro_multi_file'] = 'datatest/avro_multi_alerts.avro'
     args['avro_folder'] = 'datatest'
     args['schema_path'] = 'schemas/distribution_schema_0p2.avsc'
 
