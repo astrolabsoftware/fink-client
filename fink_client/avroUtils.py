@@ -105,16 +105,23 @@ class AlertReader():
         ----------
         >>> r = AlertReader("")
         WARNING: path to avro files is empty
+
         >>> alert = r._read_single_alert(name=avro_file)
         """
         if name is None:
             name = self.path
 
+        isNext = True
+        data = []
+
         with open(name, 'rb') as fo:
             avro_reader = reader(fo)
-
-            # One alert per file only
-            return avro_reader.next()
+            while isNext:
+                try:
+                    data.append(avro_reader.next())
+                except StopIteration:
+                    isNext = False
+        return data
 
     def to_pandas(self) -> pd.DataFrame:
         """ Read Avro alert(s) and return data as Pandas DataFrame
@@ -131,7 +138,8 @@ class AlertReader():
         >>> assert('objectId' in r.to_pandas().columns)
 
         """
-        return pd.DataFrame(self.to_iterator())
+        nest = self.to_iterator()
+        return pd.DataFrame([item for sublist in nest for item in sublist])
 
     def to_list(self, size: int = None) -> list:
         """ Read Avro alert and return data as list of dictionary
@@ -156,7 +164,8 @@ class AlertReader():
         >>> print(len(mylist))
         2
         """
-        return [self._read_single_alert(fn) for fn in self.filenames[:size]]
+        nest = [self._read_single_alert(fn) for fn in self.filenames[:size]]
+        return [item for sublist in nest for item in sublist]
 
     def to_iterator(self) -> Iterable[dict]:
         """ Return an iterator for alert data
@@ -317,7 +326,7 @@ def _get_alert_schema(schema_path: str = None, timeout: int = 1) -> dict:
      ...
     OSError: `schema_path` must be None (direct download) or
     a non-empty string (path to a custom schema).
-    Currently: 
+    Currently:
     """
     if schema_path is None:
         # get schema from fink-client
