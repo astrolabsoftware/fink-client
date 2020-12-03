@@ -26,4 +26,40 @@ In order to connect and poll alerts from Fink, you need to get your credentials:
 
 ## Usage
 
-Once you have your credentials, you are ready to poll streams! Learn how to use fink-client by following the dedicated [tutorial](https://github.com/astrolabsoftware/fink-client-tutorial). It should not take long to learn it!
+Once you have your credentials, you are ready to poll streams! 
+
+```bash
+fink_consumer -h
+usage: fink_consumer [-h] [--display] [-limit LIMIT] [--available_topics]
+                     [--save] [-outdir OUTDIR]
+
+Kafka consumer to listen and archive Fink streams
+
+optional arguments:
+  -h, --help          show this help message and exit
+  --display           If specified, print on screen information about incoming
+                      alert.
+  -limit LIMIT        If specified, download only `limit` alerts. Default is
+                      None.
+  --available_topics  If specified, print on screen information about
+                      available topics.
+  --save              If specified, save alert data on disk (Avro). See also
+                      -outdir.
+  -outdir OUTDIR      Folder to store incoming alerts if --save is set. It
+                      must exist.
+```
+
+You can also look at an alert on the disk:
+
+```bash
+fink_alert_viewer -h
+usage: fink_alert_viewer [-h] [-filename FILENAME]
+
+Display cutouts and lightcurve from a ZTF alert
+
+optional arguments:
+  -h, --help          show this help message and exit
+  -filename FILENAME  Path to an alert data file (avro format)
+```
+
+Learn how to use fink-client by following the dedicated [tutorial](https://github.com/astrolabsoftware/fink-client-tutorial). It should not take long to learn it!
