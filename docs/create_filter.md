@@ -16,6 +16,8 @@ First, identify alert entries of interest for your filter (do I need magnitude? 
 1. [Standard] Open an issue in the [fink-filters](https://github.com/astrolabsoftware/fink-filters) repository by describing your needs. We will figure out together how to build the filter.
 2. [Expert] Fork and clone the [fink-filters](https://github.com/astrolabsoftware/fink-filters) repo, and add your filter directly. Then open a Pull Request that will be reviewed by our team.
 
+Keep in mind, LSST incoming stream will be about 10 million alerts per night, or ~1TB/night. Hence the filter must focus on a specific aspect of the stream, to reduce the outgoing volume of alerts. Based on your submission, we will also provide estimate of the volume to be transferred.
+
 ## Concretely, what is a filter?
 
 In this example, let's imagine you want to receive all alerts flagged as `RRLyr` by the xmatch module. You would create a file called filter.py and define a simple routine:
