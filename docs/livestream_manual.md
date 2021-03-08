@@ -44,7 +44,7 @@ Processed alerts are stored 1 week on our servers, which means if you forget to 
 fink_consumer --display -limit 1
 ```
 
-This will download the first available alert, and print some useful information. But then the alert is consumed and you'll move to the next alert. Of course, if you want to keep the data, you need to store it. This can be easily done:
+This will download the first available alert, and print some useful information.  The alert schema is automatically downloaded from the GitHub repo. But then the alert is consumed and you'll move to the next alert. Of course, if you want to keep the data, you need to store it. This can be easily done:
 
 ```bash
 # create a folder to store alerts
@@ -141,3 +141,41 @@ python my_consumer.py
 ```
 
 You should start to see alert flowing!
+
+## Troubleshooting
+
+In case of trouble, send us an email (contact@fink-broker.org) or open an issue (https://github.com/astrolabsoftware/fink-client). A typical error though would be:
+
+```
+Traceback (most recent call last):
+  File "/Users/julien/anaconda3/bin/fink_consumer", line 10, in <module>
+    sys.exit(main())
+  File "/Users/julien/Documents/workspace/myrepos/fink-client/fink_client/scripts/fink_consumer.py", line 92, in main
+    topic, alert = consumer.poll(timeout=maxtimeout)
+  File "/Users/julien/Documents/workspace/myrepos/fink-client/fink_client/consumer.py", line 94, in poll
+    alert = _decode_avro_alert(avro_alert, self._parsed_schema)
+  File "/Users/julien/Documents/workspace/myrepos/fink-client/fink_client/avroUtils.py", line 381, in _decode_avro_alert
+    return fastavro.schemaless_reader(avro_alert, schema)
+  File "fastavro/_read.pyx", line 835, in fastavro._read.schemaless_reader
+  File "fastavro/_read.pyx", line 846, in fastavro._read.schemaless_reader
+  File "fastavro/_read.pyx", line 561, in fastavro._read._read_data
+  File "fastavro/_read.pyx", line 456, in fastavro._read.read_record
+  File "fastavro/_read.pyx", line 559, in fastavro._read._read_data
+  File "fastavro/_read.pyx", line 431, in fastavro._read.read_union
+  File "fastavro/_read.pyx", line 555, in fastavro._read._read_data
+  File "fastavro/_read.pyx", line 349, in fastavro._read.read_array
+  File "fastavro/_read.pyx", line 561, in fastavro._read._read_data
+  File "fastavro/_read.pyx", line 456, in fastavro._read.read_record
+  File "fastavro/_read.pyx", line 559, in fastavro._read._read_data
+  File "fastavro/_read.pyx", line 405, in fastavro._read.read_union
+IndexError: list index out of range
+```
+
+This error happens when the schema to decode the alert is not matching the alert content. If you see this happening, just open an issue in the repo and quote the schema version you are using: 
+
+```python
+import fink_client
+print(fink_client.__schema_version__)
+```
+
+we will figure out a solution!
