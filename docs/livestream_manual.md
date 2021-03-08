@@ -2,7 +2,7 @@
 
 _version 0.1 05/03/2021_
 
-This manual has been tested for `fink-client` version 1.2. Other versions might work. In case of trouble, send us an enail (contact@fink-broker.org) or open an issue (https://github.com/astrolabsoftware/fink-client).
+This manual has been tested for `fink-client` version 1.2. Other versions might work. In case of trouble, send us an email (contact@fink-broker.org) or open an issue (https://github.com/astrolabsoftware/fink-client).
 
 ## Installation of fink-client
 
