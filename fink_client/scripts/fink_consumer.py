@@ -46,6 +46,9 @@ def main():
     parser.add_argument(
         '-outdir', type=str, default='.',
         help="Folder to store incoming alerts if --save is set. It must exist.")
+    parser.add_argument(
+        '-schema', type=str, default=None,
+        help="Avro schema to decode the incoming alerts. Default is None (latest version downloaded from server)")
     args = parser.parse_args(None)
 
     # load user configuration
@@ -60,7 +63,11 @@ def main():
         myconfig['password'] = conf['password']
 
     # Instantiate a consumer
-    consumer = AlertConsumer(conf['mytopics'], myconfig)
+    if args.schema is None:
+        schema = None
+    else:
+        schema = args.schema
+    consumer = AlertConsumer(conf['mytopics'], myconfig, schema=schema)
 
     if args.available_topics:
         print(consumer.available_topics().keys())
