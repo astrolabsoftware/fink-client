@@ -2,7 +2,7 @@
 
 _version 0.1 05/03/2021_
 
-This manual has been tested for `fink-client` version 1.2. Other versions might work. In case of trouble, send us an email (contact@fink-broker.org) or open an issue (https://github.com/astrolabsoftware/fink-client).
+This manual has been tested for `fink-client` version 1.3. Other versions might work. In case of trouble, send us an email (contact@fink-broker.org) or open an issue (https://github.com/astrolabsoftware/fink-client).
 
 ## Installation of fink-client
 
@@ -21,11 +21,11 @@ You first need to register your credentials. Upon installation, run on a termina
 ```bash
 # access help using `fink_client_register -h`
 fink_client_register \
-	-username <USERNAME> \
-	-group_id <GROUP_ID> \
-	-mytopics <topic1 topic2 etc> \ # space separated if several
-	-servers <SERVER> \ # comma separated if several
-	-maxtimeout 5 \
+	-username <USERNAME> \ # given privately
+	-group_id <GROUP_ID> \ # given privately
+	-mytopics <topic1 topic2 etc> \ # given privately, space separated if several
+	-servers <SERVER> \ # given privately, comma separated if several
+	-maxtimeout 5 \ # in seconds
 	 --verbose
 ```
 
@@ -44,7 +44,7 @@ Processed alerts are stored 1 week on our servers, which means if you forget to 
 fink_consumer --display -limit 1
 ```
 
-This will download the first available alert, and print some useful information.  The alert schema is automatically downloaded from the GitHub repo. But then the alert is consumed and you'll move to the next alert. Of course, if you want to keep the data, you need to store it. This can be easily done:
+This will download the first available alert, and print some useful information.  The alert schema is automatically downloaded from the GitHub repo (see the Troubleshooting section if that command does not work). Then the alert is consumed and you'll move to the next alert. Of course, if you want to keep the data, you need to store it. This can be easily done:
 
 ```bash
 # create a folder to store alerts
@@ -54,7 +54,7 @@ mkdir alertDB
 fink_consumer --display --save -outdir alertDB -limit 1
 ```
 
-This will download the next available alert, display some useful information on screen, and save it (avro format) on disk. Then if all works, then you can remove the limit, and let the consumer run for ever!
+This will download the next available alert, display some useful information on screen, and save it (Apache Avro format) on disk. Then if all works, then you can remove the limit, and let the consumer run for ever!
 
 ```bash
 # access help using `fink_consumer-h`
@@ -71,7 +71,17 @@ Once alerts are saved, you can open it and explore the content. We wrote a small
 fink_alert_viewer -filename alertDB/ZTF21aancozh.avro
 ```
 
-of course, you can develop your own tools!
+of course, you can develop your own tools based on this one! Note Apache Avro is not something supported by default in Pandas for example, so we provide a small utilities to load alerts more easily:
+
+```python
+from fink_client.avroUtils import AlertReader
+
+# you can also specify one folder with several alerts directly
+r = AlertReader('data/ZTF17aaadlhe.avro')
+
+# convert alert to Pandas DataFrame
+r.to_pandas()
+```
 
 ## Going beyond
 
