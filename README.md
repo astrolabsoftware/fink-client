@@ -8,7 +8,7 @@
 
 ## Installation
 
-`fink_client` requires a version of Python 3.5+. To install it, just run
+`fink_client` requires a version of Python 3.7+. To install it, just run
 
 ```bash
 pip install fink-client
@@ -26,12 +26,12 @@ In order to connect and poll alerts from Fink, you need to get your credentials:
 
 ## Usage
 
-Once you have your credentials, you are ready to poll streams! 
+Once you have your credentials, you are ready to poll streams!
 
 ```bash
 fink_consumer -h
 usage: fink_consumer [-h] [--display] [-limit LIMIT] [--available_topics]
-                     [--save] [-outdir OUTDIR]
+                     [--save] [-outdir OUTDIR] [-schema SCHEMA]
 
 Kafka consumer to listen and archive Fink streams
 
@@ -47,6 +47,8 @@ optional arguments:
                       -outdir.
   -outdir OUTDIR      Folder to store incoming alerts if --save is set. It
                       must exist.
+  -schema SCHEMA      Avro schema to decode the incoming alerts. Default is
+                      None (latest version downloaded from server)
 ```
 
 You can also look at an alert on the disk:

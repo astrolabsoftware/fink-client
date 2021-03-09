@@ -25,7 +25,7 @@ import aplpy
 import numpy as np
 
 def plot_cutout(
-        stamp: bytes, stretch: str = 'arcsinh', vmid: float = 10,
+        stamp: bytes, stretch: str = 'arcsinh', vmid: float = None,
         fig=None, subplot=None, **kwargs) -> aplpy.FITSFigure:
     """ Plot one cutout contained in an alert (2D array)
 
@@ -42,6 +42,8 @@ def plot_cutout(
                 fig = plt.figure(figsize=(4, 4))
             if subplot is None:
                 subplot = (1, 1, 1)
+            if vmid is None:
+                vmid = np.median(hdul[0].data)
             ffig = aplpy.FITSFigure(
                 hdul[0], figure=fig, subplot=subplot, **kwargs)
             ffig.show_grayscale(stretch=stretch, vmid=vmid)
