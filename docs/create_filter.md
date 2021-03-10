@@ -2,21 +2,21 @@
 
 ## What is a filter?
 
-A filter is typically a Python routine that selects which alerts need to be sent based on user-defined criteria. Criteria are based on the alert entries: position, flux, properties, ... and added values by the broker. You can find what's in alert in these links:
+A filter is typically a Python routine that selects which alerts need to be sent based on user-defined criteria. Criteria are based on the alert entries: position, flux, properties, ... and added values by the broker. You can find what is in the alert package in these links:
 
 - Original ZTF data: https://zwickytransientfacility.github.io/ztf-avro-alert/schema.html
 - Added value from Fink: http://134.158.75.151:24000/api
 
-Filters run directly on our servers, and the end of the Fink pipelines.
+Filters run directly on our servers, and at the end of the Fink pipelines.
 
 ## How to create a filter?
 
 First, identify alert entries of interest for your filter (do I need magnitude? cross-match information? etc.). Then, you have two choices:
 
-1. [Standard] Open an issue in the [fink-filters](https://github.com/astrolabsoftware/fink-filters) repository by describing your needs. We will figure out together how to build the filter.
+1. [Standard] Open an issue in the [fink-filters](https://github.com/astrolabsoftware/fink-filters) repository describing your needs. We will contact you back to discuss possibilities for building a filter.
 2. [Expert] Fork and clone the [fink-filters](https://github.com/astrolabsoftware/fink-filters) repo, and add your filter directly. Then open a Pull Request that will be reviewed by our team.
 
-Keep in mind, LSST incoming stream will be about 10 million alerts per night, or ~1TB/night. Hence the filter must focus on a specific aspect of the stream, to reduce the outgoing volume of alerts. Based on your submission, we will also provide estimate of the volume to be transferred.
+Keep in mind, LSST incoming stream will be about 10 million alerts per night, or ~1TB/night. Hence the filter must focus on a specific aspect of the stream, to reduce the outgoing volume of alerts. Based on your submission, we will also try to provide estimate of the volume to be transferred.
 
 ## Concretely, what is a filter?
 
