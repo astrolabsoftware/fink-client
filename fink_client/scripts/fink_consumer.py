@@ -24,6 +24,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 import numpy as np
+from tabulate import tabulate
 
 from fink_client.consumer import AlertConsumer
 from fink_client.configuration import load_credentials
@@ -95,12 +96,13 @@ def main():
                 poll_number += 1
 
             if args.display and topic is not None:
-                print("-" * 65)
-                row = [
-                    time.ctime(), alert['timestamp'], topic, alert['objectId'],
+                utc = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())
+                table = [[
+                    alert['timestamp'], utc, topic, alert['objectId'],
                     alert['cdsxmatch'], alert['rfscore']
-                ]
-                print("{}|{:<25}|{:<10}|{:<15}|{:<10}|{:<5}|".format(*row))
+                ],]
+                headers = ['Emitted at (UTC)', 'Received at (UTC)', 'Topic', 'objectId', 'Simbad', 'RF score']
+                print(tabulate(table, headers, tablefmt="pretty"))
             elif args.display:
                 print('No alerts the last {} seconds'.format(maxtimeout))
     except KeyboardInterrupt:

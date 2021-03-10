@@ -10,3 +10,4 @@ pandas
 visdcc
 aplpy
 pyyaml
+tabulate
