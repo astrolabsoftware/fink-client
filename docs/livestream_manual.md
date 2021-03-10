@@ -83,14 +83,17 @@ r = AlertReader('data/ZTF17aaadlhe.avro')
 r.to_pandas()
 ```
 
-## Going beyond
+## Write your own consumer
 
-You can write your own consumer with handler to manipulate alerts upon receival. We give an simple example here. Open your favourite editor, and paste the following lines:
+You can write your own consumer to manipulate alerts upon receival. We give an simple example here. Open your favourite editor, and paste the following lines:
 
 ```python
 """ Poll the Fink servers only once at a time """
 from fink_client.consumer import AlertConsumer
 from fink_client.configuration import load_credentials
+
+import time
+import tabulate
 
 def poll_single_alert(myconfig, topics) -> None:
     """ Connect to and poll fink servers once.
@@ -110,14 +113,28 @@ def poll_single_alert(myconfig, topics) -> None:
     # Poll the servers
     topic, alert = consumer.poll(maxtimeout)
 
-    # Analyse output
+    # Analyse output - we just print some values for example
     if topic is not None:
-        print("-" * 65)
-        row = [
-            alert['timestamp'], topic, alert['objectId'],
-            alert['roid'], alert['rfscore'], alert['snn_snia_vs_nonia']
-        ]
-        print("{:<25}|{:<10}|{:<15}|{}|{:<10}|{:<10}".format(*row))
+		utc = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())
+		table = [
+			[
+		 		alert['timestamp'], 
+		 		utc, 
+		 		topic, 
+		 		alert['objectId'],
+		 		alert['cdsxmatch'], 
+		 		alert['rfscore']
+		 	],
+		]
+		headers = [
+			'Emitted at (UTC)', 
+			'Received at (UTC)', 
+			'Topic', 
+			'objectId', 
+			'Simbad', 
+			'RF score'
+		]
+		print(tabulate(table, headers, tablefmt="pretty"))
     else:
         print(
             'No alerts received in the last {} seconds'.format(
@@ -150,7 +167,24 @@ You only need to update the `myconfig` dictionnary with the connection informati
 python my_consumer.py
 ```
 
-You should start to see alert flowing!
+You should start to see alert flowing! Dummy example:
+
+```bash
++----------------------------+---------------------+------------------------------+--------------+---------+----------+
+|      Emitted at (UTC)      |  Received at (UTC)  |            Topic             |   objectId   | Simbad  | RF score |
++----------------------------+---------------------+------------------------------+--------------+---------+----------+
+| 2021-03-07 06:03:14.002569 | 2021-03-10 22:05:56 | fink_early_sn_candidates_ztf | ZTF21aalekwo | Unknown |  0.913   |
++----------------------------+---------------------+------------------------------+--------------+---------+----------+
+```
+
+When there is no more alerts available upstream, you will start to see:
+
+```bash
+# X depends on the timeout you defined in the registration
+No alerts the last X seconds
+```
+
+Now it is your turn to modify this script to do something meaningful with alerts coming to you!
 
 ## Troubleshooting
 

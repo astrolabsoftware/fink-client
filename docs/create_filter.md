@@ -56,7 +56,10 @@ Remarks:
 @pandas_udf(BooleanType(), PandasUDFType.SCALAR) # <- mandatory
 def filter_w_several_input(acol: Any, anothercol: Any) -> pd.Series:
     """ Documentation """
-    pass
+    mask = acol.values == ...
+    mask *= anothercol.values == ...
+    
+    return pd.Series(mask)s
 ```
 
 
