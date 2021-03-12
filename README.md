@@ -4,7 +4,7 @@
 
 # Fink client
 
-`fink-client` is a light package to manipulate catalogs and alerts issued from the [fink broker](https://github.com/astrolabsoftware/fink-broker) programmatically. Learn how to connect and use it by reading the [documentation](docs/).
+`fink-client` is a light package to manipulate catalogs and alerts issued from the [fink broker](https://github.com/astrolabsoftware/fink-broker) programmatically. Learn how to connect and use it by checking the [documentation](docs/).
 
 ## Installation
 
