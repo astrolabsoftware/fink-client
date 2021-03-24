@@ -292,7 +292,7 @@ def get_legal_topic_name(topic: str) -> str:
     legal_topic = ''.join(a.lower() for a in topic if a.isalpha())
     return legal_topic
 
-def _get_alert_schema(schema_path: str = None, timeout: int = 1) -> dict:
+def _get_alert_schema(schema_path: str = None, key : str = None, timeout: int = 1) -> dict:
     """Returns schema for decoding Fink avro alerts
 
     This method downloads the latest schema available on the fink client server
@@ -333,31 +333,38 @@ def _get_alert_schema(schema_path: str = None, timeout: int = 1) -> dict:
     a non-empty string (path to a custom schema).
     Currently:
     """
-    if schema_path is None:
+    if (schema_path is None) and (key is None):
+        msg = """
+        The message cannot be decoded as there is no key (None). Either specify a
+        key when writing the alert, or specify manually the schema path.
+        """
+        raise NotImplementedError(msg)
+
+    # User-defined schema
+    if type(schema_path) == str and schema_path != '':
+        with open(schema_path) as f:
+            schema = json.load(f)
+    elif type(schema_path) == str and schema_path == '':
+        msg = """
+        `schema_path` must be a non-empty string (path to a avsc file).
+        """
+        raise IOError(msg)
+    # Finally using the key
+    elif key is not None:
         # get schema from fink-client
+        schema_name = __schema_version__.format(key)
+        base_url = "https://raw.github.com/astrolabsoftware/fink-client"
+        tree = "master/schemas"
+        schema_url = os.path.join(base_url, tree, schema_name)
         try:
-            base_url = "https://raw.github.com/astrolabsoftware/fink-client"
-            tree = "master/schemas"
-            schema_url = os.path.join(base_url, tree, __schema_version__)
             r = requests.get(schema_url, timeout=timeout)
             schema = json.loads(r.text)
         except RequestException:
             msg = """
             {} could not be downloaded. Check your internet connection, or the
             availability of the file at {}
-            """.format(__schema_version__, os.path.join(base_url, tree))
+            """.format(schema_name, os.path.join(base_url, tree))
             print(msg)
-
-    elif type(schema_path) == str and schema_path != '':
-        with open(schema_path) as f:
-            schema = json.load(f)
-    else:
-        msg = """
-        `schema_path` must be None (direct download) or
-        a non-empty string (path to a custom schema).
-        Currently: {}
-        """.format(schema_path)
-        raise IOError(msg)
 
     return fastavro.parse_schema(schema)
 
