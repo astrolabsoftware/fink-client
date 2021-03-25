@@ -1,8 +1,8 @@
 # Fink livestream manual
 
-_version 0.1 05/03/2021_
+_version 0.2 25/03/2021_
 
-This manual has been tested for `fink-client` version 1.3. Other versions might work. In case of trouble, send us an email (contact@fink-broker.org) or open an issue (https://github.com/astrolabsoftware/fink-client).
+This manual has been tested for `fink-client` version 2.0. Other versions might work. In case of trouble, send us an email (contact@fink-broker.org) or open an issue (https://github.com/astrolabsoftware/fink-client).
 
 ## Installation of fink-client
 
@@ -97,7 +97,7 @@ import tabulate
 
 def poll_single_alert(myconfig, topics) -> None:
     """ Connect to and poll fink servers once.
-    
+
     Parameters
     ----------
     myconfig: dic
@@ -111,27 +111,27 @@ def poll_single_alert(myconfig, topics) -> None:
     consumer = AlertConsumer(topics, myconfig)
 
     # Poll the servers
-    topic, alert = consumer.poll(maxtimeout)
+    topic, alert, key = consumer.poll(maxtimeout)
 
     # Analyse output - we just print some values for example
     if topic is not None:
 		utc = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())
 		table = [
 			[
-		 		alert['timestamp'], 
-		 		utc, 
-		 		topic, 
+		 		alert['timestamp'],
+		 		utc,
+		 		topic,
 		 		alert['objectId'],
-		 		alert['cdsxmatch'], 
+		 		alert['cdsxmatch'],
 		 		alert['rfscore']
 		 	],
 		]
 		headers = [
-			'Emitted at (UTC)', 
-			'Received at (UTC)', 
-			'Topic', 
-			'objectId', 
-			'Simbad', 
+			'Emitted at (UTC)',
+			'Received at (UTC)',
+			'Topic',
+			'objectId',
+			'Simbad',
 			'RF score'
 		]
 		print(tabulate(table, headers, tablefmt="pretty"))
@@ -215,11 +215,4 @@ Traceback (most recent call last):
 IndexError: list index out of range
 ```
 
-This error happens when the schema to decode the alert is not matching the alert content. If you see this happening, just open an issue in the repo and quote the schema version you are using: 
-
-```python
-import fink_client
-print(fink_client.__schema_version__)
-```
-
-we will figure out a solution!
+This error happens when the schema to decode the alert is not matching the alert content. 
