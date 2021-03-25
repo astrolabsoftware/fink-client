@@ -68,7 +68,7 @@ def main():
         schema = None
     else:
         schema = args.schema
-    consumer = AlertConsumer(conf['mytopics'], myconfig, schema=schema)
+    consumer = AlertConsumer(conf['mytopics'], myconfig, schema_path=schema)
 
     if args.available_topics:
         print(consumer.available_topics().keys())
@@ -84,13 +84,13 @@ def main():
         while poll_number < maxpoll:
             if args.save:
                 # Save alerts on disk
-                topic, alert = consumer.poll_and_write(
+                topic, alert, key = consumer.poll_and_write(
                     outdir=args.outdir,
                     timeout=maxtimeout)
             else:
                 # TODO: this is useless to get it and done nothing
                 # why not thinking about handler like Comet?
-                topic, alert = consumer.poll(timeout=maxtimeout)
+                topic, alert, key = consumer.poll(timeout=maxtimeout)
 
             if topic is not None:
                 poll_number += 1

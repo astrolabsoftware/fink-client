@@ -30,7 +30,7 @@ class AlertConsumer:
     High level Kafka consumer to receive alerts from Fink broker
     """
 
-    def __init__(self, topics: list, config: dict, schema=None):
+    def __init__(self, topics: list, config: dict, schema_path=None):
         """Creates an instance of `AlertConsumer`
 
         Parameters
@@ -50,7 +50,8 @@ class AlertConsumer:
         """
         self._topics = topics
         self._kafka_config = _get_kafka_config(config)
-        self._parsed_schema = _get_alert_schema(schema_path=schema)
+        self.schema_path = schema_path
+        # self._parsed_schema = _get_alert_schema(schema_path=schema_path)
         self._consumer = confluent_kafka.Consumer(self._kafka_config)
         self._consumer.subscribe(self._topics)
 
@@ -71,12 +72,12 @@ class AlertConsumer:
 
         Returns
         ----------
-        (topic, alert): tuple(str, dict)
-            returns (None, None) on timeout
+        (topic, alert, key): tuple(str, dict, str)
+            returns (None, None, None) on timeout
         """
         msg = self._consumer.poll(timeout)
         if msg is None:
-            return None, None
+            return None, None, None
 
         # msg.error() returns None or KafkaError
         if msg.error():
@@ -90,10 +91,28 @@ class AlertConsumer:
             raise AlertError(error_message)
 
         topic = msg.topic()
-        avro_alert = io.BytesIO(msg.value())
-        alert = _decode_avro_alert(avro_alert, self._parsed_schema)
 
-        return topic, alert
+        # decode the key if it is bytes
+        key = msg.key()
+        if type(key) == bytes:
+            key = key.decode('utf8')
+
+        # Get the schema
+        if self.schema_path is not None:
+            _parsed_schema = _get_alert_schema(schema_path=self.schema_path)
+        elif key is not None:
+            _parsed_schema = _get_alert_schema(key=key)
+        else:
+            msg = """
+            The message cannot be decoded as there is no key (None). Either specify a
+            key when writing the alert, or specify manually the schema path when
+            instantiating ``AlertConsumer`` (or from fink_consumer).
+            """
+            raise NotImplementedError(msg)
+        avro_alert = io.BytesIO(msg.value())
+        alert = _decode_avro_alert(avro_alert, _parsed_schema)
+
+        return topic, alert, key
 
     def consume(self, num_alerts: int = 1, timeout: float = -1) -> list:
         """ Consume and return list of messages
@@ -108,8 +127,8 @@ class AlertConsumer:
 
         Returns
         ----------
-        list: [tuple(str, dict)]
-            list of topic, alert
+        list: [tuple(str, dict, str)]
+            list of topic, alert, key
             returns an empty list on timeout
         """
         alerts = []
@@ -117,10 +136,28 @@ class AlertConsumer:
 
         for msg in msg_list:
             topic = msg.topic()
-            avro_alert = io.BytesIO(msg.value())
-            alert = _decode_avro_alert(avro_alert, self._parsed_schema)
 
-            alerts.append((topic, alert))
+            # decode the key if it is bytes
+            key = msg.key()
+            if type(key) == bytes:
+                key = key.decode('utf8')
+
+            # Get the schema
+            if self.schema_path is not None:
+                _parsed_schema = _get_alert_schema(schema_path=self.schema_path)
+            elif key is not None:
+                _parsed_schema = _get_alert_schema(key=key)
+            else:
+                msg = """
+                The message cannot be decoded as there is no key (None). Either specify a
+                key when writing the alert, or specify manually the schema path when
+                instantiating ``AlertConsumer`` (or from fink_consumer).
+                """
+                raise NotImplementedError(msg)
+            avro_alert = io.BytesIO(msg.value())
+            alert = _decode_avro_alert(avro_alert, _parsed_schema)
+
+            alerts.append((topic, alert, key))
 
         return alerts
 
@@ -128,7 +165,7 @@ class AlertConsumer:
             self, outdir: str, timeout: float = -1,
             overwrite: bool = False) -> (str, dict):
         """ Consume one message from Fink server, save alert on disk and
-        return (topic, alert)
+        return (topic, alert, key)
 
         Parameters
         ----------
@@ -147,12 +184,26 @@ class AlertConsumer:
             returns (None, None) on timeout
 
         """
-        topic, alert = self.poll(timeout)
+        topic, alert, key = self.poll(timeout)
+
+        # Get the schema
+        if self.schema_path is not None:
+            _parsed_schema = _get_alert_schema(schema_path=self.schema_path)
+        elif key is not None:
+            _parsed_schema = _get_alert_schema(key=key)
+        else:
+            msg = """
+            The message cannot be written as there is no key (None). Either specify a
+            key when writing the alert, or specify manually the schema path when
+            instantiating ``AlertConsumer`` (or from fink_consumer).
+            """
+            raise NotImplementedError(msg)
+
         if topic is not None:
             # print('Alert written at {}'.format(outdir))
-            write_alert(alert, self._parsed_schema, outdir, overwrite=overwrite)
+            write_alert(alert, _parsed_schema, outdir, overwrite=overwrite)
 
-        return topic, alert
+        return topic, alert, key
 
     def available_topics(self) -> dict:
         """ Return available broker topics

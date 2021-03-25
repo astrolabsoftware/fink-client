@@ -13,4 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 __version__ = "1.4"
-__schema_version__ = "distribution_schema_0p3-live.avsc"
+__schema_version__ = "distribution_schema_fink_ztf_{}.avsc"
