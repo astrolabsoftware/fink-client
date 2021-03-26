@@ -18,7 +18,7 @@ import os
 
 from fink_client.tester import regular_unit_tests
 
-_ROOTDIR = os.path.join(os.environ['HOME'], ".finkclient")
+_ROOTDIR = os.path.join(os.path.expanduser('~'), ".finkclient")
 _CREDNAME = "credentials.yml"
 
 def write_credentials(dict_file: dict, verbose: bool = False, tmp: bool = False):
