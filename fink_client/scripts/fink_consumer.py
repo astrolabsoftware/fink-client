@@ -18,10 +18,6 @@ import sys
 
 import argparse
 import time
-import importlib
-
-import matplotlib
-import matplotlib.pyplot as plt
 
 import numpy as np
 from tabulate import tabulate

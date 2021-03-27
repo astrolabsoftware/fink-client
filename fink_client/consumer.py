@@ -186,20 +186,19 @@ class AlertConsumer:
         """
         topic, alert, key = self.poll(timeout)
 
-        # Get the schema
-        if self.schema_path is not None:
-            _parsed_schema = _get_alert_schema(schema_path=self.schema_path)
-        elif key is not None:
-            _parsed_schema = _get_alert_schema(key=key)
-        else:
-            msg = """
-            The message cannot be written as there is no key (None). Either specify a
-            key when writing the alert, or specify manually the schema path when
-            instantiating ``AlertConsumer`` (or from fink_consumer).
-            """
-            raise NotImplementedError(msg)
-
         if topic is not None:
+            # Get the schema
+            if self.schema_path is not None:
+                _parsed_schema = _get_alert_schema(schema_path=self.schema_path)
+            elif key is not None:
+                _parsed_schema = _get_alert_schema(key=key)
+            else:
+                msg = """
+                The message cannot be written as there is no key (None). Either specify a
+                key when writing the alert, or specify manually the schema path when
+                instantiating ``AlertConsumer`` (or from fink_consumer).
+                """
+                raise NotImplementedError(msg)
             # print('Alert written at {}'.format(outdir))
             write_alert(alert, _parsed_schema, outdir, overwrite=overwrite)
 
