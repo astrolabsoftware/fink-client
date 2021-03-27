@@ -1339,6 +1339,13 @@
       ]
     },
     {
+      "name": "knscore",
+      "type": [
+        "double",
+        "null"
+      ]
+    },
+    {
       "name": "fink_broker_version",
       "type": [
         "string",
@@ -1349,13 +1356,6 @@
       "name": "fink_science_version",
       "type": [
         "string",
-        "null"
-      ]
-    },
-    {
-      "name": "knscore",
-      "type": [
-        "double",
         "null"
       ]
     }
