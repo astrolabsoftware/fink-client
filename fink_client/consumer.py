@@ -108,9 +108,8 @@ class AlertConsumer:
             _parsed_schema = _get_alert_schema(key=key)
         else:
             msg = """
-            The message cannot be decoded as there is no key (None). Either specify a
-            key when writing the alert, or specify manually the schema path when
-            instantiating ``AlertConsumer`` (or from fink_consumer).
+            The message cannot be decoded as there is no key (None). Alternatively
+            specify manually the schema path when instantiating ``AlertConsumer`` (or from fink_consumer).
             """
             raise NotImplementedError(msg)
         avro_alert = io.BytesIO(msg.value())
