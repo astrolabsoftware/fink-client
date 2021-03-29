@@ -97,6 +97,10 @@ class AlertConsumer:
         if type(key) == bytes:
             key = key.decode('utf8')
 
+        if key is None:
+            # backward compatibility
+            key = '1.0_0.4.3'
+
         # Get the schema
         if self.schema_path is not None:
             _parsed_schema = _get_alert_schema(schema_path=self.schema_path)
