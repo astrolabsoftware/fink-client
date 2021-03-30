@@ -67,8 +67,8 @@ Once alerts are saved, you can open it and explore the content. We wrote a small
 
 ```bash
 # access help using `fink_alert_viewer -h`
-# Adapt the filename accordingly
-fink_alert_viewer -filename alertDB/ZTF21aancozh.avro
+# Adapt the filename accordingly -- it is <objectId>_<candid>.avro
+fink_alert_viewer -filename alertDB/ZTF21aaqkqwq_1549473362115015004.avro
 ```
 
 of course, you can develop your own tools based on this one! Note Apache Avro is not something supported by default in Pandas for example, so we provide a small utilities to load alerts more easily:
@@ -77,7 +77,7 @@ of course, you can develop your own tools based on this one! Note Apache Avro is
 from fink_client.avroUtils import AlertReader
 
 # you can also specify one folder with several alerts directly
-r = AlertReader('data/ZTF17aaadlhe.avro')
+r = AlertReader('alertDB/ZTF21aaqkqwq_1549473362115015004.avro')
 
 # convert alert to Pandas DataFrame
 r.to_pandas()
