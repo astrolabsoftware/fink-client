@@ -221,7 +221,7 @@ def write_alert(alert: dict, schema: str, path: str, overwrite: bool = False):
       ...
     OSError: ./ZTF19acihgng.avro already exists!
     """
-    alert_filename = os.path.join(path, "{}.avro".format(alert["objectId"]))
+    alert_filename = os.path.join(path, "{}_{}.avro".format(alert["objectId"], alert["candidate"]["candid"]))
 
     if type(schema) == str:
         schema = _get_alert_schema(schema)
