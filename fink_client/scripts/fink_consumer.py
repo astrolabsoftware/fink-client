@@ -82,7 +82,9 @@ def main():
                 # Save alerts on disk
                 topic, alert, key = consumer.poll_and_write(
                     outdir=args.outdir,
-                    timeout=maxtimeout)
+                    timeout=maxtimeout,
+                    overwrite=True
+                )
             else:
                 # TODO: this is useless to get it and done nothing
                 # why not thinking about handler like Comet?
