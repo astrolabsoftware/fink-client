@@ -1,8 +1,8 @@
 # Fink livestream manual
 
-_date 30/03/2021_
+_date 12/04/2021_
 
-This manual has been tested for `fink-client` version 2.3. Other versions might work. In case of trouble, send us an email (contact@fink-broker.org) or open an issue (https://github.com/astrolabsoftware/fink-client).
+This manual has been tested for `fink-client` version 2.4. Other versions might work. In case of trouble, send us an email (contact@fink-broker.org) or open an issue (https://github.com/astrolabsoftware/fink-client).
 
 ## Installation of fink-client
 
