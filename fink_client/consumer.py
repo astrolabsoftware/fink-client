@@ -33,6 +33,10 @@ class AlertConsumer:
     def __init__(self, topics: list, config: dict, schema_path=None):
         """Creates an instance of `AlertConsumer`
 
+        Note we are currently using SASL for the user authentication.
+        `config` parameters get then translated for Kafka.
+        For lower level usage, see `_get_kafka_config`
+
         Parameters
         ----------
         topics : list of str
