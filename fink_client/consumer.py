@@ -248,6 +248,8 @@ class AlertConsumer:
 def _get_kafka_config(config: dict) -> dict:
     """Returns configurations for a consumer instance
 
+    Note we are using SASL for authentication (SCRAM-SHA-512).
+
     Parameters
     ----------
     config: dict
