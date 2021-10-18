@@ -247,10 +247,10 @@ or directly in your code:
 consumer = AlertConsumer(mytopics, myconfig)
 ```
 
-Do not set it to `None` in the code directly either:
+However, if you want the old behaviour, then you need to specify it using `sasl.*` parameters:
 
 ```python
-myconfig['password'] = None
+myconfig['sasl.username'] = 'your_username'
+myconfig['sasl.password'] = None
 consumer = AlertConsumer(mytopics, myconfig)
-cimpl.KafkaException: KafkaError{code=_INVALID_ARG,val=-186,str="Failed to create consumer: sasl.username and sasl.password must be set"}
 ```
