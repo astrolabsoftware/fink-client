@@ -246,3 +246,11 @@ or directly in your code:
 # a 'password' key set
 consumer = AlertConsumer(mytopics, myconfig)
 ```
+
+Do not set it to `None` in the code directly either:
+
+```python
+myconfig['password'] = None
+consumer = AlertConsumer(mytopics, myconfig)
+cimpl.KafkaException: KafkaError{code=_INVALID_ARG,val=-186,str="Failed to create consumer: sasl.username and sasl.password must be set"}
+```
