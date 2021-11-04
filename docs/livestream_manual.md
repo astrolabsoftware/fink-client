@@ -188,7 +188,11 @@ Now it is your turn to modify this script to do something meaningful with alerts
 
 ## Troubleshooting
 
-In case of trouble, send us an email (contact@fink-broker.org) or open an issue (https://github.com/astrolabsoftware/fink-client). A typical error though would be:
+In case of trouble, send us an email (contact@fink-broker.org) or open an issue (https://github.com/astrolabsoftware/fink-client).
+
+### Wrong schema
+
+A typical error though would be:
 
 ```
 Traceback (most recent call last):
@@ -215,4 +219,38 @@ Traceback (most recent call last):
 IndexError: list index out of range
 ```
 
-This error happens when the schema to decode the alert is not matching the alert content. 
+This error happens when the schema to decode the alert is not matching the alert content. Usually this should not happen (schema ID is taken from the alert, and downloaded from the servers). In case it happens though, you can force a schema:
+
+```
+fink_consumer [...] -schema [path_to_a_good_schema]
+```
+
+### Authentication error
+
+If you try to poll the servers and get:
+
+```
+%3|1634555965.502|FAIL|rdkafka#consumer-1| [thrd:sasl_plaintext://134.158.74.95:24499/bootstrap]: sasl_plaintext://134.158.74.95:24499/bootstrap: SASL SCRAM-SHA-512 mechanism handshake failed: Broker: Request not valid in current SASL state: broker's supported mechanisms:  (after 18ms in state AUTH_HANDSHAKE)
+```
+
+You are likely giving a password when instantiating the consumer. Check your `~/.finkclient/credentials.yml`, it should contain
+
+```yml
+password: null
+```
+
+or directly in your code:
+
+```python
+# myconfig is a dict that should NOT have
+# a 'password' key set
+consumer = AlertConsumer(mytopics, myconfig)
+```
+
+However, if you want the old behaviour, then you need to specify it using `sasl.*` parameters:
+
+```python
+myconfig['sasl.username'] = 'your_username'
+myconfig['sasl.password'] = None
+consumer = AlertConsumer(mytopics, myconfig)
+```
