@@ -14,7 +14,6 @@
 # limitations under the License.
 import os
 import glob
-import doctest
 import io
 import json
 import requests
@@ -292,7 +291,7 @@ def get_legal_topic_name(topic: str) -> str:
     legal_topic = ''.join(a.lower() for a in topic if a.isalpha())
     return legal_topic
 
-def _get_alert_schema(schema_path: str = None, key : str = None, timeout: int = 1) -> dict:
+def _get_alert_schema(schema_path: str = None, key: str = None, timeout: int = 1) -> dict:
     """Returns schema for decoding Fink avro alerts
 
     This method downloads the latest schema available on the fink client server

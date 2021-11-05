@@ -17,7 +17,6 @@ import io
 import gzip
 
 import matplotlib.pyplot as plt
-import matplotlib
 
 from astropy.io import fits
 import aplpy
@@ -84,8 +83,8 @@ def extract_history(history_list: list, field: str) -> list:
     """
     try:
         measurement = [obs[field] for obs in history_list]
-    except KeyError as e:
-        print('{} not in history data')
+    except KeyError:
+        print('{} not in history data'.format(field))
         measurement = [None] * len(history_list)
 
     return measurement

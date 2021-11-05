@@ -15,7 +15,6 @@
 # limitations under the License.
 import io
 import confluent_kafka
-from confluent_kafka import KafkaError
 
 from fink_client.avroUtils import write_alert
 from fink_client.avroUtils import _get_alert_schema
