@@ -29,4 +29,6 @@ jobs:
         flake8 fink_client/*.py --count --show-source --statistics --ignore=E302,E501,E711
     - name: Science modules
       run: |
+        ls -lth .
+        ls -lth fink_science/
         flake8 fink_science/scripts/*.py --count --show-source --statistics --ignore=E302,E501,E711
