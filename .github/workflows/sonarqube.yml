@@ -20,8 +20,8 @@ jobs:
         args: >
           -Dsonar.organization=astrolabsoftware
           -Dsonar.projectKey=astrolabsoftware_fink-client
-          -Dsonar.sources=fink_client/,fink_client/scripts/
-          -Dsonar.test.exclusions=fink_client/htmlcov,fink_client/slackUtils.py
+          -Dsonar.sources=fink_client/,tests/,fink_client/scripts/
+          -Dsonar.test.exclusions=fink_client/htmlcov,tests/htmlcov
           -Dsonar.verbose=true
           -Dsonar.coverage.exclusions=**/**
       env:
