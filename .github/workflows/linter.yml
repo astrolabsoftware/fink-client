@@ -26,7 +26,7 @@ jobs:
         pip install flake8
     - name: utilities
       run: |
-        flake8 fink_client/*.py --count --show-source --statistics --ignore=E302,E501
+        flake8 fink_client/*.py --count --show-source --statistics --ignore=E302,E501,E711
     - name: Science modules
       run: |
-        flake8 fink_science/scripts/*.py --count --show-source --statistics --ignore=E302,E501
+        flake8 fink_science/scripts/*.py --count --show-source --statistics --ignore=E302,E501,E711

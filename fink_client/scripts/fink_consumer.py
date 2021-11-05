@@ -19,7 +19,6 @@ import sys
 import argparse
 import time
 
-import numpy as np
 from tabulate import tabulate
 
 from fink_client.consumer import AlertConsumer
@@ -35,8 +34,8 @@ def main():
         '-limit', type=int, default=None,
         help="If specified, download only `limit` alerts. Default is None.")
     parser.add_argument(
-         '--available_topics', action='store_true',
-         help="If specified, print on screen information about available topics.")
+        '--available_topics', action='store_true',
+        help="If specified, print on screen information about available topics.")
     parser.add_argument(
         '--save', action='store_true',
         help="If specified, save alert data on disk (Avro). See also -outdir.")
@@ -95,10 +94,12 @@ def main():
 
             if args.display and topic is not None:
                 utc = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())
-                table = [[
-                    alert['timestamp'], utc, topic, alert['objectId'],
-                    alert['cdsxmatch'], alert['rfscore']
-                ],]
+                table = [
+                    [
+                        alert['timestamp'], utc, topic, alert['objectId'],
+                        alert['cdsxmatch'], alert['rfscore']
+                    ],
+                ]
                 headers = ['Emitted at (UTC)', 'Received at (UTC)', 'Topic', 'objectId', 'Simbad', 'RF score']
                 print(tabulate(table, headers, tablefmt="pretty"))
             elif args.display:
