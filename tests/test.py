@@ -58,10 +58,10 @@ class TestIntegration(unittest.TestCase):
             'bootstrap.servers': kafka_servers,
             'group_id': conf['group_id']}
 
-        self.consumer = AlertConsumer(mytopics, myconfig, schema=schema_path)
+        self.consumer = AlertConsumer(mytopics, myconfig, schema_path=schema_path)
 
     def test_poll(self):
-        topic, alert = self.consumer.poll()
+        topic, alert, key = self.consumer.poll()
         self.assertIsNotNone(alert)
         self.assertTrue(fastavro.validate(alert, self.consumer._parsed_schema))
 
@@ -84,11 +84,11 @@ class TestIntegration(unittest.TestCase):
 
 class TestComponents(unittest.TestCase):
 
-    def test_get_alert_schema(self):
-        # download and check if a valid schema is downloaded
-        from fink_client.consumer import _get_alert_schema
-        schema = _get_alert_schema()
-        self.assertIsInstance(schema, dict)
+    # def test_get_alert_schema(self):
+    #     # download and check if a valid schema is downloaded
+    #     from fink_client.consumer import _get_alert_schema
+    #     schema = _get_alert_schema()
+    #     self.assertIsInstance(schema, dict)
 
     def test_get_kafka_config(self):
         from fink_client.consumer import _get_kafka_config
