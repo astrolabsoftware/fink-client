@@ -19,7 +19,7 @@ jobs:
       with:
         args: >
           -Dsonar.organization=astrolabsoftware
-          -Dsonar.projectKey=astrolabsoftware_fink-client
+          -Dsonar.projectKey=fink-client2
           -Dsonar.sources=fink_client/,tests/,fink_client/scripts/
           -Dsonar.test.exclusions=fink_client/htmlcov,tests/htmlcov
           -Dsonar.verbose=true
