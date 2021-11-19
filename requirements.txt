@@ -5,7 +5,7 @@ confluent-kafka
 fastavro
 dash
 dash-bootstrap-components
-astropy
+astropy<=4.3.1
 pandas
 visdcc
 aplpy
