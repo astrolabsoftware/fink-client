@@ -111,6 +111,8 @@ class AlertConsumer:
             specify manually the schema path when instantiating ``AlertConsumer`` (or from fink_consumer).
             """
             raise NotImplementedError(msg)
+
+        self._parsed_schema = _parsed_schema
         avro_alert = io.BytesIO(msg.value())
         alert = _decode_avro_alert(avro_alert, _parsed_schema)
 
