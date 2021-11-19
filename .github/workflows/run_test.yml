@@ -1,0 +1,41 @@
+name: Sentinel
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  test-suite:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.6, 3.7, 3.8]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install add-ons
+      run: |
+        sudo apt-get install python3-testresources
+    - name: Set up env [1/2]
+      run: |
+        echo "FINK_CLIENT_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+    - name: Install Python dependencies
+      run: |
+        pip install --upgrade pip setuptools wheel
+        pip install -r requirements.txt
+        pip install -e .
+        echo "PYTHONPATH="${PYTHONPATH}:${SPARKLIB}:${FINK_CLIENT_HOME}"" >> $GITHUB_ENV
+    - name: Check env
+      run: |
+        echo "FINK_CLIENT_HOME: $FINK_CLIENT_HOME"
+        echo `python -V`
+    - name: Run test suites
+      run: |
+        python -c "import fink_client; print('Fink client version ', fink_client.__version__)"
+        bin/fink_client_test.sh
+        bash <(curl -s https://codecov.io/bash)

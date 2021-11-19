@@ -14,7 +14,6 @@
 # limitations under the License.
 import os
 import glob
-import doctest
 import io
 import json
 import requests
@@ -169,7 +168,7 @@ class AlertReader():
         2
         """
         nest = [self._read_single_alert(fn) for fn in self.filenames[:size]]
-        return [item for sublist in nest for item in sublist]
+        return [item for sublist in nest for item in sublist][:size]
 
     def to_iterator(self) -> Iterable[dict]:
         """ Return an iterator for alert data
@@ -219,7 +218,7 @@ def write_alert(alert: dict, schema: str, path: str, overwrite: bool = False):
     ... # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
     Traceback (most recent call last):
       ...
-    OSError: ./ZTF19acihgng.avro already exists!
+    OSError: ./ZTF19acihgng_1060135832015015002.avro already exists!
     """
     alert_filename = os.path.join(path, "{}_{}.avro".format(alert["objectId"], alert["candidate"]["candid"]))
 
@@ -292,7 +291,7 @@ def get_legal_topic_name(topic: str) -> str:
     legal_topic = ''.join(a.lower() for a in topic if a.isalpha())
     return legal_topic
 
-def _get_alert_schema(schema_path: str = None, key : str = None, timeout: int = 1) -> dict:
+def _get_alert_schema(schema_path: str = None, key: str = None, timeout: int = 1) -> dict:
     """Returns schema for decoding Fink avro alerts
 
     This method downloads the latest schema available on the fink client server
@@ -316,9 +315,12 @@ def _get_alert_schema(schema_path: str = None, key : str = None, timeout: int = 
     Examples
     ----------
     direct download
-    >>> schema = _get_alert_schema()
-    >>> print(type(schema))
-    <class 'dict'>
+    >>> schema = _get_alert_schema() # doctest: +NORMALIZE_WHITESPACE, +ELLIPSIS
+    Traceback (most recent call last):
+      ...
+    NotImplementedError:
+            The message cannot be decoded as there is no key (None). Either specify a
+            key when writing the alert, or specify manually the schema path.
 
     Custom schema
     >>> schema_c = _get_alert_schema(schema_path)
@@ -329,9 +331,7 @@ def _get_alert_schema(schema_path: str = None, key : str = None, timeout: int = 
     >>> schema_c = _get_alert_schema('') # doctest: +NORMALIZE_WHITESPACE, +ELLIPSIS
     Traceback (most recent call last):
      ...
-    OSError: `schema_path` must be None (direct download) or
-    a non-empty string (path to a custom schema).
-    Currently:
+    OSError: `schema_path` must be a non-empty string (path to a avsc file).
     """
     if (schema_path is None) and (key is None):
         msg = """

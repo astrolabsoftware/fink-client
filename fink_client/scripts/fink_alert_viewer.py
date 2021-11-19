@@ -81,7 +81,7 @@ def main():
     title = alert["objectId"]
 
     # loop over filters
-    fig = plt.figure(num=1, figsize=(12,4))
+    fig = plt.figure(num=1, figsize=(12, 4))
 
     # Loop over each filter
     for filt in filter_color.keys():
