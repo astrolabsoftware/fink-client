@@ -8,3 +8,4 @@ omit=
     *setup.py
     *dist/*
     */lib/*
+    fink_client/scripts
