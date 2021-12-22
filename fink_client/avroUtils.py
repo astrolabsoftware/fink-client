@@ -115,16 +115,12 @@ class AlertReader():
         if name is None:
             name = self.path
 
-        isNext = True
         data = []
 
         with open(name, 'rb') as fo:
             avro_reader = reader(fo)
-            while isNext:
-                try:
-                    data.append(avro_reader.next())
-                except StopIteration:
-                    isNext = False
+            for record in avro_reader:
+                data.append(record)
         return data
 
     def to_pandas(self) -> pd.DataFrame:
