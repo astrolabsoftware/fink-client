@@ -56,6 +56,11 @@ class AlertReader():
     >>> print('{} alerts decoded'.format(len(r.to_list())))
     11 alerts decoded
 
+    If there are several alerts in one file, they are all retrieved
+    >>> r = AlertReader(avro_multi_file2)
+    >>> print('{} alerts decoded'.format(len(r.to_list())))
+    3 alerts decoded
+
     """
     def __init__(self, path: str):
         """ Initialise the AlertReader class """
@@ -115,16 +120,12 @@ class AlertReader():
         if name is None:
             name = self.path
 
-        isNext = True
         data = []
 
         with open(name, 'rb') as fo:
             avro_reader = reader(fo)
-            while isNext:
-                try:
-                    data.append(avro_reader.next())
-                except StopIteration:
-                    isNext = False
+            for record in avro_reader:
+                data.append(record)
         return data
 
     def to_pandas(self) -> pd.DataFrame:
@@ -394,6 +395,7 @@ if __name__ == "__main__":
     args = globals()
     args['avro_single_alert'] = 'datatest/ZTF19acihgng.avro'
     args['avro_multi_file'] = 'datatest/avro_multi_alerts.avro'
+    args['avro_multi_file2'] = 'datatest/avro_multi_alerts_other.avro'
     args['avro_folder'] = 'datatest'
     args['schema_path'] = 'schemas/distribution_schema_0p2.avsc'
 
