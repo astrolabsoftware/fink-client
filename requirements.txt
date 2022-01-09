@@ -3,7 +3,7 @@ coveralls
 codecov
 confluent-kafka
 fastavro
-astropy<=4.3.1
+astropy
 pandas
 visdcc
 aplpy

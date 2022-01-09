@@ -19,13 +19,10 @@ import gzip
 import matplotlib.pyplot as plt
 
 from astropy.io import fits
-import aplpy
 
 import numpy as np
 
-def plot_cutout(
-        stamp: bytes, stretch: str = 'arcsinh', vmid: float = None,
-        fig=None, subplot=None, **kwargs) -> aplpy.FITSFigure:
+def plot_cutout(stamp: bytes, fig=None, subplot=None, **kwargs):
     """ Plot one cutout contained in an alert (2D array)
 
     Adapted from ZTF alert tools.
@@ -41,12 +38,17 @@ def plot_cutout(
                 fig = plt.figure(figsize=(4, 4))
             if subplot is None:
                 subplot = (1, 1, 1)
-            if vmid is None:
-                vmid = np.median(hdul[0].data)
-            ffig = aplpy.FITSFigure(
-                hdul[0], figure=fig, subplot=subplot, **kwargs)
-            ffig.show_grayscale(stretch=stretch, vmid=vmid)
-    return ffig
+
+            ax = fig.add_subplot(*subplot)
+
+            # Update graph data for stamps
+            data = np.nan_to_num(hdul[0].data)
+
+            data = data[::-1]
+
+            ax.imshow(data)
+
+    return ax
 
 def show_stamps(alert: dict, fig=None):
     """ Plot the 3 cutouts contained in an alert.
