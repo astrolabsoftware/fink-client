@@ -22,9 +22,7 @@ from astropy.io import fits
 
 import numpy as np
 
-def plot_cutout(
-        stamp: bytes, stretch: str = 'arcsinh', vmid: float = None,
-        fig=None, subplot=None, **kwargs):
+def plot_cutout(stamp: bytes, fig=None, subplot=None, **kwargs):
     """ Plot one cutout contained in an alert (2D array)
 
     Adapted from ZTF alert tools.
@@ -40,8 +38,6 @@ def plot_cutout(
                 fig = plt.figure(figsize=(4, 4))
             if subplot is None:
                 subplot = (1, 1, 1)
-            if vmid is None:
-                vmid = np.median(hdul[0].data)
 
             ax = fig.add_subplot(*subplot)
 
