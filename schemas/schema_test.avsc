@@ -1281,7 +1281,7 @@
       ]
     },
     {
-      "name": "rfscore",
+      "name": "rf_snia_vs_nonia",
       "type": [
         "double",
         "null"
@@ -1304,41 +1304,7 @@
     {
       "name": "mulens",
       "type": [
-        {
-          "type": "record",
-          "name": "mulens",
-          "namespace": "topLevelRecord",
-          "fields": [
-            {
-              "name": "class_1",
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            {
-              "name": "ml_score_1",
-              "type": [
-                "double",
-                "null"
-              ]
-            },
-            {
-              "name": "class_2",
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            {
-              "name": "ml_score_2",
-              "type": [
-                "double",
-                "null"
-              ]
-            }
-          ]
-        },
+        "double",
         "null"
       ]
     },
@@ -1357,7 +1323,7 @@
       ]
     },
     {
-      "name": "knscore",
+      "name": "rf_kn_vs_nonkn",
       "type": [
         "double",
         "null"
