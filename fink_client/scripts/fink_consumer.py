@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019-2020 AstroLab Software
+# Copyright 2019-2022 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -97,10 +97,14 @@ def main():
                 table = [
                     [
                         alert['timestamp'], utc, topic, alert['objectId'],
-                        alert['cdsxmatch'], alert['rfscore']
+                        alert['cdsxmatch'],
+                        alert['candidate']['magpsf']
                     ],
                 ]
-                headers = ['Emitted at (UTC)', 'Received at (UTC)', 'Topic', 'objectId', 'Simbad', 'RF score']
+                headers = [
+                    'Emitted at (UTC)', 'Received at (UTC)',
+                    'Topic', 'objectId', 'Simbad', 'Magnitude'
+                ]
                 print(tabulate(table, headers, tablefmt="pretty"))
             elif args.display:
                 print('No alerts the last {} seconds'.format(maxtimeout))
