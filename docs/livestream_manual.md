@@ -23,17 +23,19 @@ You first need to register your credentials. Upon installation, run on a termina
 fink_client_register \
 	-username <USERNAME> \ # given privately
 	-group_id <GROUP_ID> \ # given privately
-	-mytopics <topic1 topic2 etc> \ # given privately, space separated if several
+	-mytopics <topic1 topic2 etc> \ # see https://fink-broker.readthedocs.io/en/latest/topics/
 	-servers <SERVER> \ # given privately, comma separated if several
 	-maxtimeout 5 \ # in seconds
 	 --verbose
 ```
 
-where `<USERNAME>`, `<GROUP_ID>`, `topics` and `<SERVER>` have been sent to you privately. By default, the credentials are installed in the home:
+where `<USERNAME>`, `<GROUP_ID>`, and `<SERVER>` have been sent to you privately. By default, the credentials are installed in the home:
 
 ```bash
 cat ~/.finkclient/credentials.yml
 ```
+
+For the list of available topics, see [https://fink-broker.readthedocs.io/en/latest/topics/](https://fink-broker.readthedocs.io/en/latest/topics/).
 
 ## First steps: testing the connection
 
@@ -161,7 +163,7 @@ if __name__ == "__main__":
     poll_single_alert(myconfig, topics)
 ```
 
-You only need to update the `myconfig` dictionnary with the connection information sent to you privately, and the `topics` list with the topics you requested. Save the file, and in a terminal walk to where the file has been saved and execute it:
+You only need to update the `myconfig` dictionnary with the connection information sent to you privately, and the `topics` list with the topics you want to access. Save the file, and in a terminal walk to where the file has been saved and execute it:
 
 ```bash
 python my_consumer.py
