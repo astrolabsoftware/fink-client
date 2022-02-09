@@ -1,6 +1,6 @@
 # Fink livestream manual
 
-_date 16/08/2021_
+_date 09/02/2022_
 
 This manual has been tested for `fink-client` version 2+. Other versions might work. In case of trouble, send us an email (contact@fink-broker.org) or open an issue (https://github.com/astrolabsoftware/fink-client).
 
@@ -123,7 +123,7 @@ def poll_single_alert(myconfig, topics) -> None:
 		 		topic,
 		 		alert['objectId'],
 		 		alert['cdsxmatch'],
-		 		alert['rfscore']
+		 		alert['candidate']['magpsf']
 		 	],
 		]
 		headers = [
@@ -132,7 +132,7 @@ def poll_single_alert(myconfig, topics) -> None:
 			'Topic',
 			'objectId',
 			'Simbad',
-			'RF score'
+			'Magnitude'
 		]
 		print(tabulate(table, headers, tablefmt="pretty"))
     else:
@@ -170,11 +170,11 @@ python my_consumer.py
 You should start to see alert flowing! Dummy example:
 
 ```bash
-+----------------------------+---------------------+------------------------------+--------------+---------+----------+
-|      Emitted at (UTC)      |  Received at (UTC)  |            Topic             |   objectId   | Simbad  | RF score |
-+----------------------------+---------------------+------------------------------+--------------+---------+----------+
-| 2021-03-07 06:03:14.002569 | 2021-03-10 22:05:56 | fink_early_sn_candidates_ztf | ZTF21aalekwo | Unknown |  0.913   |
-+----------------------------+---------------------+------------------------------+--------------+---------+----------+
++----------------------------------+---------------------+-------------+--------------+-----------------+--------------------+
+|         Emitted at (UTC)         |  Received at (UTC)  |    Topic    |   objectId   |     Simbad      |     Magnitude      |
++----------------------------------+---------------------+-------------+--------------+-----------------+--------------------+
+| 2021-11-22 08:33:05.999045+00:00 | 2022-02-09 10:32:51 | test_stream | ZTF17aabvtfi | Candidate_TTau* | 18.799415588378906 |
++----------------------------------+---------------------+-------------+--------------+-----------------+--------------------+
 ```
 
 When there is no more alerts available upstream, you will start to see:
