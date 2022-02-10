@@ -1,6 +1,6 @@
 # Fink livestream manual
 
-_date 16/08/2021_
+_date 09/02/2022_
 
 This manual has been tested for `fink-client` version 2+. Other versions might work. In case of trouble, send us an email (contact@fink-broker.org) or open an issue (https://github.com/astrolabsoftware/fink-client).
 
@@ -23,17 +23,19 @@ You first need to register your credentials. Upon installation, run on a termina
 fink_client_register \
 	-username <USERNAME> \ # given privately
 	-group_id <GROUP_ID> \ # given privately
-	-mytopics <topic1 topic2 etc> \ # given privately, space separated if several
+	-mytopics <topic1 topic2 etc> \ # see https://fink-broker.readthedocs.io/en/latest/topics/
 	-servers <SERVER> \ # given privately, comma separated if several
 	-maxtimeout 5 \ # in seconds
 	 --verbose
 ```
 
-where `<USERNAME>`, `<GROUP_ID>`, `topics` and `<SERVER>` have been sent to you privately. By default, the credentials are installed in the home:
+where `<USERNAME>`, `<GROUP_ID>`, and `<SERVER>` have been sent to you privately. By default, the credentials are installed in the home:
 
 ```bash
 cat ~/.finkclient/credentials.yml
 ```
+
+For the list of available topics, see [https://fink-broker.readthedocs.io/en/latest/topics/](https://fink-broker.readthedocs.io/en/latest/topics/).
 
 ## First steps: testing the connection
 
@@ -123,7 +125,7 @@ def poll_single_alert(myconfig, topics) -> None:
 		 		topic,
 		 		alert['objectId'],
 		 		alert['cdsxmatch'],
-		 		alert['rfscore']
+		 		alert['candidate']['magpsf']
 		 	],
 		]
 		headers = [
@@ -132,7 +134,7 @@ def poll_single_alert(myconfig, topics) -> None:
 			'Topic',
 			'objectId',
 			'Simbad',
-			'RF score'
+			'Magnitude'
 		]
 		print(tabulate(table, headers, tablefmt="pretty"))
     else:
@@ -161,7 +163,7 @@ if __name__ == "__main__":
     poll_single_alert(myconfig, topics)
 ```
 
-You only need to update the `myconfig` dictionnary with the connection information sent to you privately, and the `topics` list with the topics you requested. Save the file, and in a terminal walk to where the file has been saved and execute it:
+You only need to update the `myconfig` dictionnary with the connection information sent to you privately, and the `topics` list with the topics you want to access. Save the file, and in a terminal walk to where the file has been saved and execute it:
 
 ```bash
 python my_consumer.py
@@ -170,11 +172,11 @@ python my_consumer.py
 You should start to see alert flowing! Dummy example:
 
 ```bash
-+----------------------------+---------------------+------------------------------+--------------+---------+----------+
-|      Emitted at (UTC)      |  Received at (UTC)  |            Topic             |   objectId   | Simbad  | RF score |
-+----------------------------+---------------------+------------------------------+--------------+---------+----------+
-| 2021-03-07 06:03:14.002569 | 2021-03-10 22:05:56 | fink_early_sn_candidates_ztf | ZTF21aalekwo | Unknown |  0.913   |
-+----------------------------+---------------------+------------------------------+--------------+---------+----------+
++----------------------------------+---------------------+-------------+--------------+-----------------+--------------------+
+|         Emitted at (UTC)         |  Received at (UTC)  |    Topic    |   objectId   |     Simbad      |     Magnitude      |
++----------------------------------+---------------------+-------------+--------------+-----------------+--------------------+
+| 2021-11-22 08:33:05.999045+00:00 | 2022-02-09 10:32:51 | test_stream | ZTF17aabvtfi | Candidate_TTau* | 18.799415588378906 |
++----------------------------------+---------------------+-------------+--------------+-----------------+--------------------+
 ```
 
 When there is no more alerts available upstream, you will start to see:
