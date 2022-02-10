@@ -103,8 +103,14 @@ class AlertConsumer:
         # Get the schema
         if self.schema_path is not None:
             _parsed_schema = _get_alert_schema(schema_path=self.schema_path)
+            alert = self._decode_msg(_parsed_schema, msg)
         elif key is not None:
-            _parsed_schema = _get_alert_schema(key=key)
+            try:
+                _parsed_schema = _get_alert_schema(key=key)
+                alert = self._decode_msg(_parsed_schema, msg)
+            except IndexError:
+                _parsed_schema = _get_alert_schema(key=key + '_replayed')
+                alert = self._decode_msg(_parsed_schema, msg)
         else:
             msg = """
             The message cannot be decoded as there is no key (None). Alternatively
@@ -112,11 +118,27 @@ class AlertConsumer:
             """
             raise NotImplementedError(msg)
 
-        self._parsed_schema = _parsed_schema
-        avro_alert = io.BytesIO(msg.value())
-        alert = _decode_avro_alert(avro_alert, _parsed_schema)
-
         return topic, alert, key
+
+    def _decode_msg(self, parsed_schema, msg) -> dict:
+        """ decode message using parsed schema
+
+        Parameters
+        ----------
+        parsed_schema: dict
+            Dictionary of json format schema for decoding avro alerts from Fink.
+            Output of _get_alert_schema
+        msg: bytes
+            Message received
+
+        Returns
+        ----------
+        alert: dict
+            Decoded message
+        """
+        self._parsed_schema = parsed_schema
+        avro_alert = io.BytesIO(msg.value())
+        return _decode_avro_alert(avro_alert, self._parsed_schema)
 
     def consume(self, num_alerts: int = 1, timeout: float = -1) -> list:
         """ Consume and return list of messages
