@@ -33,7 +33,7 @@ def plot_cutout(stamp: bytes, fig=None, subplot=None, **kwargs):
         Cutout data as raw binary from the alert
     """
     with gzip.open(io.BytesIO(stamp), 'rb') as f:
-        with fits.open(io.BytesIO(f.read())) as hdul:
+        with fits.open(io.BytesIO(f.read()), ignore_missing_simple=True) as hdul:
             if fig is None:
                 fig = plt.figure(figsize=(4, 4))
             if subplot is None:
