@@ -188,6 +188,13 @@ No alerts the last X seconds
 
 Now it is your turn to modify this script to do something meaningful with alerts coming to you!
 
+## Accessing test streams
+
+An alternative to polling live streams, is
+to connect to the Fink test streams. We daily send replayed alerts (one observation night -- 2021-11-07 -- at a random rate for the moment), and you can access it.
+
+For this, you would use your Fink credentials given to you for accessing the livestream service, except that the topic names start with `ftest_` instead of `fink_`. For a list of available topics see [https://fink-broker.readthedocs.io/en/latest/topics/](https://fink-broker.readthedocs.io/en/latest/topics/).
+
 ## Troubleshooting
 
 In case of trouble, send us an email (contact@fink-broker.org) or open an issue (https://github.com/astrolabsoftware/fink-client).
