@@ -5,7 +5,7 @@
 A filter is typically a Python routine that selects which alerts need to be sent based on user-defined criteria. Criteria are based on the alert entries: position, flux, properties, ... and added values by the broker. You can find what is in the alert package in these links:
 
 - Original ZTF data: https://zwickytransientfacility.github.io/ztf-avro-alert/schema.html
-- Added value from Fink: http://134.158.75.151:24000/api
+- Added value from Fink: https://fink-portal.org/api
 
 Filters run directly on our servers, and at the end of the Fink pipelines.
 
@@ -58,8 +58,6 @@ def filter_w_several_input(acol: Any, anothercol: Any) -> pd.Series:
     """ Documentation """
     mask = acol.values == ...
     mask *= anothercol.values == ...
-    
+
     return pd.Series(mask)s
 ```
-
-
