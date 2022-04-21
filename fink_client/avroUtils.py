@@ -16,6 +16,7 @@ import os
 import glob
 import io
 import json
+import gzip
 import requests
 from requests.exceptions import RequestException
 
@@ -31,7 +32,10 @@ from fink_client.tester import regular_unit_tests
 from fink_client import __schema_version__
 
 class AlertReader():
-    """ Class to load alert Avro files
+    """ Class to load alert Avro files.
+
+    It accepts single avro file (.avro), gzipped avro file (.avro.gz), and
+    folders containing several of these.
 
     Parameters
     ----------
@@ -89,17 +93,19 @@ class AlertReader():
         if isinstance(path, list):
             self.filenames = path
         elif os.path.isdir(path):
-            self.filenames = glob.glob(os.path.join(path, '*.avro'))
+            self.filenames = glob.glob(os.path.join(path, '*.avro*'))
         elif path == '':
             print('WARNING: path to avro files is empty')
             self.filenames = []
         elif fastavro.is_avro(path):
             self.filenames = [path]
+        elif path.endswith('avro.gz'):
+            self.filenames = [path]
         else:
             msg = """
             Data path not understood: {}
             You must give an avro file with
-            its extension (.avro), or a folder with avro files.
+            its extension (.avro or .avro.gz), or a folder with avro files.
             """.format(path)
             raise IOError(msg)
 
@@ -129,7 +135,18 @@ class AlertReader():
 
         data = []
 
-        with open(name, 'rb') as fo:
+        if name.endswith('avro'):
+            copen = lambda x: open(x, mode='rb')
+        elif name.endswith('avro.gz'):
+            copen = lambda x: gzip.open(x, mode='rb')
+        else:
+            msg = """
+            Alert filename should end with `avro` or `avro.gz`.
+            Currently trying to read: {}
+            """.format(name)
+            raise NotImplementedError(msg)
+
+        with copen(name) as fo:
             avro_reader = reader(fo)
             for record in avro_reader:
                 data.append(record)
@@ -148,6 +165,10 @@ class AlertReader():
         >>> r = AlertReader(avro_folder)
         >>> df = r.to_pandas()
         >>> assert('objectId' in r.to_pandas().columns)
+
+        >>> r = AlertReader(avro_gzipped)
+        >>> df = r.to_pandas()
+        >>> assert('diaSource' in r.to_pandas().columns)
 
         """
         return pd.DataFrame(self.to_iterator())
@@ -174,6 +195,11 @@ class AlertReader():
         >>> mylist = r.to_list(size=2)
         >>> print(len(mylist))
         2
+
+        >>> r = AlertReader(avro_gzipped)
+        >>> mylist = r.to_list()
+        >>> print(len(mylist))
+        1
         """
         nest = [self._read_single_alert(fn) for fn in self.filenames[:size]]
         return [item for sublist in nest for item in sublist][:size]
@@ -228,7 +254,10 @@ def write_alert(alert: dict, schema: str, path: str, overwrite: bool = False):
       ...
     OSError: ./ZTF19acihgng_1060135832015015002.avro already exists!
     """
-    alert_filename = os.path.join(path, "{}_{}.avro".format(alert["objectId"], alert["candidate"]["candid"]))
+    alert_filename = os.path.join(
+        path,
+        "{}_{}.avro".format(alert["objectId"], alert["candidate"]["candid"])
+    )
 
     if type(schema) == str:
         schema = _get_alert_schema(schema)
@@ -405,6 +434,7 @@ if __name__ == "__main__":
     args['avro_multi_file2'] = 'datatest/avro_multi_alerts_other.avro'
     args['avro_list'] = ['datatest/ZTF19acihgng.avro', 'datatest/ZTF19acyfkzd.avro']
     args['avro_folder'] = 'datatest'
+    args['avro_gzipped'] = 'datatest/alert_mjd60674.0512_obj747_src1494043.avro.gz'
     args['schema_path'] = 'schemas/distribution_schema_0p2.avsc'
 
     regular_unit_tests(global_args=args)
