@@ -2,7 +2,7 @@ coverage>=4.2
 coveralls
 codecov
 confluent-kafka
-fastavro
+fastavro==1.6.0
 astropy
 pandas
 visdcc
