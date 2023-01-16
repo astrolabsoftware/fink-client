@@ -6,7 +6,5 @@ fastavro==1.6.0
 astropy
 numpy
 pandas
-visdcc
-aplpy
 pyyaml
 tabulate
