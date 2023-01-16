@@ -1,9 +1,10 @@
 coverage>=4.2
 coveralls
 codecov
-confluent-kafka
+confluent-kafka==1.9.2
 fastavro==1.6.0
 astropy
+numpy
 pandas
 visdcc
 aplpy

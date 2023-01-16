@@ -216,6 +216,8 @@ class AlertReader():
         ----------
         >>> r = AlertReader(avro_folder)
         >>> myiterator = r.to_iterator()
+        >>> next(myiterator).keys()
+
         >>> assert('objectId' in next(myiterator).keys())
 
         """
