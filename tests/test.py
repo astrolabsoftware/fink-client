@@ -34,7 +34,7 @@ class TestIntegration(unittest.TestCase):
             os.path.dirname(__file__), 'data'))
         schema_path = os.path.abspath(os.path.join(
             os.path.dirname(__file__),
-            '../schemas/distribution_schema_0p2.avsc'))
+            '../schemas/tests/distribution_schema_0p2.avsc'))
 
         r = AlertReader(data_path)
         alerts = r.to_list()

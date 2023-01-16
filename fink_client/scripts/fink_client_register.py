@@ -67,3 +67,7 @@ def main():
     # check credentials are correct
     if args.verbose:
         print(load_credentials(args.tmp))
+
+
+if __name__ == "__main__":
+    main()

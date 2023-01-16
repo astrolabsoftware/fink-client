@@ -434,7 +434,7 @@ if __name__ == "__main__":
     args['avro_multi_file2'] = 'datatest/avro_multi_alerts_other.avro'
     args['avro_list'] = ['datatest/ZTF19acihgng.avro', 'datatest/ZTF19acyfkzd.avro']
     args['avro_folder'] = 'datatest'
-    args['avro_gzipped'] = 'datatest/alert_mjd60674.0512_obj747_src1494043.avro.gz'
-    args['schema_path'] = 'schemas/distribution_schema_0p2.avsc'
+    args['avro_gzipped'] = 'datatest/elasticc/alert_mjd60674.0512_obj747_src1494043.avro.gz'
+    args['schema_path'] = 'schemas/tests/distribution_schema_0p2.avsc'
 
     regular_unit_tests(global_args=args)

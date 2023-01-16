@@ -68,3 +68,4 @@ optional arguments:
 ```
 
 Learn how to use fink-client by following the dedicated [tutorial](https://github.com/astrolabsoftware/fink-client-tutorial). It should not take long to learn it!
+
