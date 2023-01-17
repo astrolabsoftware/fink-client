@@ -5,7 +5,7 @@ confluent-kafka==1.9.2
 fastavro==1.6.0
 astropy
 numpy
-pyarrow
+pyarrow>=10.0.1
 pandas
 pyyaml
 tabulate
