@@ -69,6 +69,8 @@ optional arguments:
   -filename FILENAME  Path to an alert data file (avro format)
 ```
 
+More information at [docs/livestream](docs/livestream_manual.md).
+
 ## Data Transfer usage
 
 If you requested data using the [Data Transfer service](https://fink-portal.org/download), you can easily poll your stream using:
@@ -94,3 +96,5 @@ optional arguments:
   --verbose             If specified, print on screen information about the consuming.
 
 ```
+
+More information at [docs/datatransfer](docs/datatransfer.md).
