@@ -104,3 +104,7 @@ pdf = pd.read_parquet('myalertfolder')
 ## Troubleshooting
 
 In case of trouble, send us an email (contact@fink-broker.org) or open an issue (https://github.com/astrolabsoftware/fink-client).
+
+### Known bugs
+
+1. Data from 2019/2020/2021 and 2022/2023 are not compatible (different schemas). We will resolve the problem soon, but in the meantime, do not mix data from the two periods in a single query. 
