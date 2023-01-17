@@ -11,7 +11,7 @@
 
 ## Installation
 
-`fink_client` requires a version of Python 3.7+. To install it, just run
+`fink_client` requires a version of Python 3.9+. To install it, just run
 
 ```bash
 pip install fink-client --upgrade
