@@ -21,7 +21,6 @@ import json
 import argparse
 
 import pyarrow as pa
-import pyarrow.dataset as ds
 import fastavro
 import confluent_kafka
 
