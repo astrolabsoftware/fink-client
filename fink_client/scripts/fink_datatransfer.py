@@ -21,6 +21,7 @@ import json
 import argparse
 
 import pyarrow as pa
+import pyarrow.dataset as ds
 import fastavro
 import confluent_kafka
 
@@ -83,6 +84,9 @@ def main():
     # Time to wait before polling again if no alerts
     maxtimeout = conf['maxtimeout']
 
+    if args.limit < args.batchsize:
+        args.batchsize = args.limit
+
     # Instantiate a consumer
     consumer = confluent_kafka.Consumer(kafka_config)
 
@@ -132,7 +136,7 @@ def main():
                 elif args.partitionby == 'tnsclass':
                     partitioning = ['tnsclass']
 
-                pa.dataset.write_dataset(
+                ds.write_dataset(
                     table,
                     args.outdir,
                     schema=table_schema,
