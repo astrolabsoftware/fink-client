@@ -84,7 +84,7 @@ def main():
     # Time to wait before polling again if no alerts
     maxtimeout = conf['maxtimeout']
 
-    if args.limit < args.batchsize:
+    if (args.limit is not None) and (args.limit < args.batchsize):
         args.batchsize = args.limit
 
     # Instantiate a consumer
