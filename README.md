@@ -7,15 +7,17 @@
 
 # Fink client
 
-`fink-client` is a light package to manipulate catalogs and alerts issued from the [fink broker](https://github.com/astrolabsoftware/fink-broker) programmatically. Learn how to connect and use it by checking the [documentation](docs/).
+`fink-client` is a light package to manipulate catalogs and alerts issued from the [fink broker](https://github.com/astrolabsoftware/fink-broker) programmatically. It is used in the context of 2 major Fink services: Livestream and Data Transfer.
 
 ## Installation
 
-`fink_client` requires a version of Python 3.7+. To install it, just run
+`fink_client` requires a version of Python 3.9+. To install it, just run
 
 ```bash
-pip install fink-client
+pip install fink-client --upgrade
 ```
+
+Learn how to connect and use it by checking the [documentation](docs/).
 
 ## Registration
 
@@ -27,7 +29,7 @@ In order to connect and poll alerts from Fink, you need to get your credentials:
   fink_client_register -username <USERNAME> -group_id <GROUP_ID> ...
   ```
 
-## Usage
+## Livestream usage
 
 Once you have your credentials, you are ready to poll streams!
 
@@ -36,7 +38,7 @@ fink_consumer -h
 usage: fink_consumer [-h] [--display] [-limit LIMIT] [--available_topics]
                      [--save] [-outdir OUTDIR] [-schema SCHEMA]
 
-Kafka consumer to listen and archive Fink streams
+Kafka consumer to listen and archive Fink streams from the Livestream service
 
 optional arguments:
   -h, --help          show this help message and exit
@@ -67,5 +69,32 @@ optional arguments:
   -filename FILENAME  Path to an alert data file (avro format)
 ```
 
-Learn how to use fink-client by following the dedicated [tutorial](https://github.com/astrolabsoftware/fink-client-tutorial). It should not take long to learn it!
+More information at [docs/livestream](docs/livestream_manual.md).
 
+## Data Transfer usage
+
+If you requested data using the [Data Transfer service](https://fink-portal.org/download), you can easily poll your stream using:
+
+```bash
+fink_datatransfer -h
+usage: fink_datatransfer [-h] [-topic TOPIC] [-limit LIMIT] [-outdir OUTDIR] [-partitionby PARTITIONBY] [-batchsize BATCHSIZE] [--restart_from_beginning]
+                            [--verbose]
+
+Kafka consumer to listen and archive Fink streams from the data transfer service
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -topic TOPIC          Topic name for the stream that contains the data.
+  -limit LIMIT          If specified, download only `limit` alerts from the stream. Default is None, that is download all alerts.
+  -outdir OUTDIR        Folder to store incoming alerts. It will be created if it does not exist.
+  -partitionby PARTITIONBY
+                        Partition data by `time` (year=YYYY/month=MM/day=DD), or `finkclass` (finkclass=CLASS), or `tnsclass` (tnsclass=CLASS). Default is
+                        time.
+  -batchsize BATCHSIZE  Maximum number of alert within the `maxtimeout` (see conf). Default is 1000 alerts.
+  --restart_from_beginning
+                        If specified, restart downloading from the 1st alert in the stream. Default is False.
+  --verbose             If specified, print on screen information about the consuming.
+
+```
+
+More information at [docs/datatransfer](docs/datatransfer.md).

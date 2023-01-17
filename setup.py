@@ -1,4 +1,4 @@
-# Copyright 2019 AstroLab Software
+# Copyright 2019-2023 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,16 +37,17 @@ setuptools.setup(
         'console_scripts': [
             'fink_alert_viewer=fink_client.scripts.fink_alert_viewer:main',
             'fink_consumer=fink_client.scripts.fink_consumer:main',
-            'fink_client_register=fink_client.scripts.fink_client_register:main'
+            'fink_client_register=fink_client.scripts.fink_client_register:main',
+            'fink_datatransfer=fink_client.scripts.fink_datatransfer:main'
         ]
     },
     scripts=['bin/fink_client_test.sh'],
     classifiers=[
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: Unix",
-        "Development Status :: 4 - Beta",
+        "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Science/Research",
     ],
     project_urls={
