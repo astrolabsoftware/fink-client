@@ -42,7 +42,7 @@ For the list of available topics, see [https://fink-broker.readthedocs.io/en/lat
 Processed alerts are stored 1 week on our servers, which means if you forget to poll data, you'll be able to retrieve it up to one week after emission. This also means on your first connection, you will have one week of alert to retrieve. Before you get all of them, let's retrieve the first available one to check the connection. On a terminal, run the following
 
 ```bash
-# access help using `fink_consumer-h`
+# access help using `fink_consumer -h`
 fink_consumer --display -limit 1
 ```
 
