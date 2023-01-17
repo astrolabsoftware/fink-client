@@ -38,7 +38,7 @@ setuptools.setup(
             'fink_alert_viewer=fink_client.scripts.fink_alert_viewer:main',
             'fink_consumer=fink_client.scripts.fink_consumer:main',
             'fink_client_register=fink_client.scripts.fink_client_register:main',
-            'fink_client_register=fink_client.scripts.fink_datatransfer:main'
+            'fink_datatransfer=fink_client.scripts.fink_datatransfer:main'
         ]
     },
     scripts=['bin/fink_client_test.sh'],
