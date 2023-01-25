@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import io
+import json
+import fastavro
 import confluent_kafka
 
 from fink_client.avroUtils import write_alert
@@ -50,7 +52,6 @@ class AlertConsumer:
         self._topics = topics
         self._kafka_config = _get_kafka_config(config)
         self.schema_path = schema_path
-        # self._parsed_schema = _get_alert_schema(schema_path=schema_path)
         self._consumer = confluent_kafka.Consumer(self._kafka_config)
         self._consumer.subscribe(self._topics)
 
@@ -93,30 +94,34 @@ class AlertConsumer:
 
         # decode the key if it is bytes
         key = msg.key()
+
         if type(key) == bytes:
             key = key.decode('utf8')
-
         if key is None:
-            # backward compatibility
-            key = '1.0_0.4.3'
+            # compatibility with previous scheme
+            key = ""
 
-        # Get the schema
-        if self.schema_path is not None:
-            _parsed_schema = _get_alert_schema(schema_path=self.schema_path)
+        try:
+            _parsed_schema = fastavro.schema.parse_schema(json.loads(key))
             alert = self._decode_msg(_parsed_schema, msg)
-        elif key is not None:
-            try:
-                _parsed_schema = _get_alert_schema(key=key)
+        except json.JSONDecodeError:
+            # Old way
+            if self.schema_path is not None:
+                _parsed_schema = _get_alert_schema(schema_path=self.schema_path)
                 alert = self._decode_msg(_parsed_schema, msg)
-            except IndexError:
-                _parsed_schema = _get_alert_schema(key=key + '_replayed')
-                alert = self._decode_msg(_parsed_schema, msg)
-        else:
-            msg = """
-            The message cannot be decoded as there is no key (None). Alternatively
-            specify manually the schema path when instantiating ``AlertConsumer`` (or from fink_consumer).
-            """
-            raise NotImplementedError(msg)
+            elif key is not None:
+                try:
+                    _parsed_schema = _get_alert_schema(key=key)
+                    alert = self._decode_msg(_parsed_schema, msg)
+                except IndexError:
+                    _parsed_schema = _get_alert_schema(key=key + '_replayed')
+                    alert = self._decode_msg(_parsed_schema, msg)
+            else:
+                msg = """
+                The message cannot be decoded as there is no key (None). Alternatively
+                specify manually the schema path when instantiating ``AlertConsumer`` (or from fink_consumer).
+                """
+                raise NotImplementedError(msg)
 
         return topic, alert, key
 
@@ -161,31 +166,42 @@ class AlertConsumer:
         msg_list = self._consumer.consume(num_alerts, timeout)
 
         for msg in msg_list:
+            if msg is None:
+                alerts.append((None, None, None))
+                continue
+
             topic = msg.topic()
 
             # decode the key if it is bytes
             key = msg.key()
+
             if type(key) == bytes:
                 key = key.decode('utf8')
-
             if key is None:
-                # backward compatibility
-                key = '1.0_0.4.3'
+                # compatibility with previous scheme
+                key = ""
 
-            # Get the schema
-            if self.schema_path is not None:
-                _parsed_schema = _get_alert_schema(schema_path=self.schema_path)
-            elif key is not None:
-                _parsed_schema = _get_alert_schema(key=key)
-            else:
-                msg = """
-                The message cannot be decoded as there is no key (None). Either specify a
-                key when writing the alert, or specify manually the schema path when
-                instantiating ``AlertConsumer`` (or from fink_consumer).
-                """
-                raise NotImplementedError(msg)
-            avro_alert = io.BytesIO(msg.value())
-            alert = _decode_avro_alert(avro_alert, _parsed_schema)
+            try:
+                _parsed_schema = fastavro.schema.parse_schema(json.loads(key))
+                alert = self._decode_msg(_parsed_schema, msg)
+            except json.JSONDecodeError:
+                # Old way
+                if self.schema_path is not None:
+                    _parsed_schema = _get_alert_schema(schema_path=self.schema_path)
+                    alert = self._decode_msg(_parsed_schema, msg)
+                elif key is not None:
+                    try:
+                        _parsed_schema = _get_alert_schema(key=key)
+                        alert = self._decode_msg(_parsed_schema, msg)
+                    except IndexError:
+                        _parsed_schema = _get_alert_schema(key=key + '_replayed')
+                        alert = self._decode_msg(_parsed_schema, msg)
+                else:
+                    msg = """
+                    The message cannot be decoded as there is no key (None). Alternatively
+                    specify manually the schema path when instantiating ``AlertConsumer`` (or from fink_consumer).
+                    """
+                    raise NotImplementedError(msg)
 
             alerts.append((topic, alert, key))
 
@@ -217,20 +233,7 @@ class AlertConsumer:
         topic, alert, key = self.poll(timeout)
 
         if topic is not None:
-            # Get the schema
-            if self.schema_path is not None:
-                _parsed_schema = _get_alert_schema(schema_path=self.schema_path)
-            elif key is not None:
-                _parsed_schema = _get_alert_schema(key=key)
-            else:
-                msg = """
-                The message cannot be written as there is no key (None). Either specify a
-                key when writing the alert, or specify manually the schema path when
-                instantiating ``AlertConsumer`` (or from fink_consumer).
-                """
-                raise NotImplementedError(msg)
-            # print('Alert written at {}'.format(outdir))
-            write_alert(alert, _parsed_schema, outdir, overwrite=overwrite)
+            write_alert(alert, self._parsed_schema, outdir, overwrite=overwrite)
 
         return topic, alert, key
 

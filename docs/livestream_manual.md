@@ -1,15 +1,15 @@
 # Fink livestream manual
 
-_date 11/02/2022_
+_date 25/01/2023_
 
-This manual has been tested for `fink-client` version 2.10. Other versions might work. In case of trouble, send us an email (contact@fink-broker.org) or open an issue (https://github.com/astrolabsoftware/fink-client).
+This manual has been tested for `fink-client` version 4.0. Other versions might work. In case of trouble, send us an email (contact@fink-broker.org) or open an issue (https://github.com/astrolabsoftware/fink-client).
 
 ## Installation of fink-client
 
 From a terminal, you can install fink-client simply using `pip`:
 
 ```
-pip install fink-client
+pip install fink-client --upgrade
 ```
 
 This should install all necessary dependencies.
