@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019-2022 AstroLab Software
+# Copyright 2019-2023 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,7 +44,7 @@ def main():
         help="Folder to store incoming alerts if --save is set. It must exist.")
     parser.add_argument(
         '-schema', type=str, default=None,
-        help="Avro schema to decode the incoming alerts. Default is None (latest version downloaded from server)")
+        help="Avro schema to decode the incoming alerts. Default is None (version taken from each alert)")
     args = parser.parse_args(None)
 
     # load user configuration
