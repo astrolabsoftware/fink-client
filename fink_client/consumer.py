@@ -97,6 +97,9 @@ class AlertConsumer:
 
         if type(key) == bytes:
             key = key.decode('utf8')
+        if key is None:
+            # compatibility with previous scheme
+            key = ""
 
         try:
             _parsed_schema = fastavro.schema.parse_schema(json.loads(key))
@@ -163,12 +166,20 @@ class AlertConsumer:
         msg_list = self._consumer.consume(num_alerts, timeout)
 
         for msg in msg_list:
+            if msg is None:
+                alerts.append((None, None, None))
+                continue
+
             topic = msg.topic()
 
             # decode the key if it is bytes
             key = msg.key()
+
             if type(key) == bytes:
                 key = key.decode('utf8')
+            if key is None:
+                # compatibility with previous scheme
+                key = ""
 
             try:
                 _parsed_schema = fastavro.schema.parse_schema(json.loads(key))
