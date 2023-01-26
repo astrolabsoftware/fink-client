@@ -21,7 +21,7 @@ import json
 import argparse
 
 import pyarrow as pa
-import pyarrow.dataset as ds
+import pyarrow.parquet as pq
 import fastavro
 import confluent_kafka
 
@@ -136,13 +136,12 @@ def main():
                 elif args.partitionby == 'tnsclass':
                     partitioning = ['tnsclass']
 
-                ds.write_dataset(
+                pq.write_to_dataset(
                     table,
                     args.outdir,
                     schema=table_schema,
                     basename_template='part-{{i}}-{}.parquet'.format(poll_number),
-                    format="parquet",
-                    partitioning=partitioning,
+                    partition_cols=partitioning,
                     existing_data_behavior='overwrite_or_ignore'
                 )
 
