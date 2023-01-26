@@ -1,8 +1,8 @@
 # Fink data transfer manual
 
-_date 17/01/2023_
+_date 26/01/2023_
 
-This manual has been tested for `fink-client` version 3.0. In case of trouble, send us an email (contact@fink-broker.org) or open an issue (https://github.com/astrolabsoftware/fink-client).
+This manual has been tested for `fink-client` version 4.1. In case of trouble, send us an email (contact@fink-broker.org) or open an issue (https://github.com/astrolabsoftware/fink-client).
 
 ## Installation of fink-client
 
@@ -108,3 +108,4 @@ In case of trouble, send us an email (contact@fink-broker.org) or open an issue 
 ### Known bugs
 
 1. Data from 2019/2020/2021 and 2022/2023 are not compatible (different schemas). We will resolve the problem soon, but in the meantime, do not mix data from the two periods in a single query. 
+2. With version 4.0, you wouldn't have the partitioning column when reading in a dataframe. This has been corrected in 4.1.
