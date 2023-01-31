@@ -17,7 +17,9 @@
 import sys
 import os
 import io
+import glob
 import json
+import shutil
 import argparse
 
 import pyarrow as pa
@@ -56,8 +58,8 @@ def main():
         help="If specified, print on screen information about the consuming.")
     args = parser.parse_args(None)
 
-    if args.partitionby not in ['time', 'finkclass', 'tnsclass']:
-        print("{} is an unknown partitioning. `-partitionby` should be in ['time', 'finkclass', 'tnsclass']".format(args.partitionby))
+    if args.partitionby not in ['time', 'finkclass', 'tnsclass', 'classId']:
+        print("{} is an unknown partitioning. `-partitionby` should be in ['time', 'finkclass', 'tnsclass', 'classId']".format(args.partitionby))
         sys.exit()
 
     # load user configuration
@@ -135,6 +137,8 @@ def main():
                     partitioning = ['finkclass']
                 elif args.partitionby == 'tnsclass':
                     partitioning = ['tnsclass']
+                elif args.partitionby == 'classId':
+                    partitioning = ['classId']
 
                 pq.write_to_dataset(
                     table,
@@ -154,6 +158,13 @@ def main():
         sys.stderr.write('%% Aborted by user\n')
     finally:
         consumer.close()
+
+    # remove empty partition
+    list_of_dirs = glob.glob(os.path.join(args.outdir, '*'))
+    for d_ in list_of_dirs:
+        if '__HIVE_DEFAULT_PARTITION__' in d_:
+            print('Removing empty partition: {}'.format(d_))
+            shutil.rmtree(d_)
 
 
 if __name__ == "__main__":
