@@ -46,7 +46,7 @@ def main():
         help="Folder to store incoming alerts. It will be created if it does not exist.")
     parser.add_argument(
         '-partitionby', type=str, default='time',
-        help="Partition data by `time` (year=YYYY/month=MM/day=DD), or `finkclass` (finkclass=CLASS), or `tnsclass` (tnsclass=CLASS). Default is time.")
+        help="Partition data by `time` (year=YYYY/month=MM/day=DD), or `finkclass` (finkclass=CLASS), or `tnsclass` (tnsclass=CLASS). `classId` is also available for ELASTiCC data. Default is time.")
     parser.add_argument(
         '-batchsize', type=int, default=1000,
         help="Maximum number of alert within the `maxtimeout` (see conf). Default is 1000 alerts.")
