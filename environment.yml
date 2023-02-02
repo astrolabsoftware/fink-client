@@ -1,0 +1,19 @@
+name: fink-client
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python>=3.9
+  - coverage>=4.2
+  - coveralls
+  - codecov
+  - python-confluent-kafka>=1.9.2
+  - fastavro=1.6.0
+  - astropy
+  - numpy
+  - pyarrow>=10.0.1
+  - pandas
+  - pyyaml
+  - tabulate
+  - matplotlib
+
