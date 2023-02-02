@@ -7,7 +7,7 @@ dependencies:
   - coverage>=4.2
   - coveralls
   - codecov
-  - python-confluent-kafka=1.9.2
+  - python-confluent-kafka>=1.9.2
   - fastavro=1.6.0
   - astropy
   - numpy
@@ -16,3 +16,4 @@ dependencies:
   - pyyaml
   - tabulate
   - matplotlib
+
