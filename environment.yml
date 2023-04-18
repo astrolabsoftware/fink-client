@@ -15,4 +15,5 @@ dependencies:
   - pyyaml
   - tabulate
   - matplotlib
+  - tqdm
 
