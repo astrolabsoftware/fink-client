@@ -269,7 +269,27 @@ class AlertConsumer:
 
 
 def return_offsets(consumer, topic, waitfor=1, timeout=10, verbose=False):
-    """
+    """ Poll servers to get the total committed offsets, and remaining lag
+
+    Parameters
+    ----------
+    consumer: confluent_kafka.Consumer
+        Kafka consumer
+    topic: str
+        Topic name
+    waitfor: int, optional
+        Time in second to wait before polling. Default is 1 second.
+    timeout: int, optional
+        Timeout in second when polling the servers. Default is 10.
+    verbose: bool, optional
+        If True, prints useful table. Default is False.
+
+    Returns
+    ---------
+    total_offsets: int
+        Total number of messages committed across all partitions
+    total_lag: int
+        Remaining messages in the topic across all partitions.
     """
     time.sleep(waitfor)
     # Get the topic's partitions
