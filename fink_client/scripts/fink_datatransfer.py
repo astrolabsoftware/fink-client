@@ -19,6 +19,7 @@ import os
 import io
 import json
 import argparse
+import logging
 
 from tqdm import tqdm, trange
 
@@ -37,7 +38,7 @@ from fink_client.configuration import load_credentials
 from fink_client.consumer import return_offsets
 
 
-def print_offsets(kafka_config, topic, maxtimeout=10):
+def print_offsets(kafka_config, topic, maxtimeout=10, verbose=True):
     """ Wrapper around `consumer.return_offsets`
 
     If the server is rebalancing the offsets, it will exit the program.
@@ -62,7 +63,7 @@ def print_offsets(kafka_config, topic, maxtimeout=10):
 
     topics = ['{}'.format(topic)]
     consumer.subscribe(topics)
-    total_offset, total_lag = return_offsets(consumer, topic, timeout=maxtimeout, waitfor=0, verbose=True)
+    total_offset, total_lag = return_offsets(consumer, topic, timeout=maxtimeout, waitfor=0, verbose=verbose)
     if (total_offset, total_lag) == (-1, -1):
         print("Warning: Consumer group '{}' is rebalancing. Please wait.".format(kafka_config['group.id']))
         sys.exit()
@@ -156,13 +157,14 @@ def poll(processId, schema, kafka_config, args):
 
     # Subscribe to schema topic
     topics = ['{}'.format(args.topic)]
-    consumer.subscribe(topics)
+    consumer.subscribe(topics, on_assign=my_assign)
 
     # infinite loop
     maxpoll = args.limit if args.limit is not None else 1e10
     initial = int(args.total_offset/args.nconsumers)
     total = initial + int(args.total_lag/args.nconsumers)
-    with trange(total, position=processId, initial=initial, colour='#F5622E', unit='alerts') as pbar:
+    disable = not args.verbose
+    with trange(total, position=processId, initial=initial, colour='#F5622E', unit='alerts', disable=disable) as pbar:
         try:
             poll_number = 0
             while poll_number < maxpoll:
@@ -231,10 +233,8 @@ def poll(processId, schema, kafka_config, args):
 
                     poll_number += len(msgs)
                     pbar.update(len(msgs))
-                    if args.verbose:
-                        print('[{}] Number of alerts polled: {}'.format(processId, poll_number))
                 else:
-                    print('[{}] No alerts the last {} seconds ({} polled)'.format(processId, args.maxtimeout, poll_number))
+                    logging.info('[{}] No alerts the last {} seconds ({} polled)'.format(processId, args.maxtimeout, poll_number))
         except KeyboardInterrupt:
             sys.stderr.write('%% Aborted by user\n')
             consumer.close()
@@ -285,12 +285,6 @@ def main():
     if args.maxtimeout is None:
         args.maxtimeout = conf['maxtimeout']
 
-    # if args.restart_from_beginning:
-    #     # resetting the group ID acts as a new consumer
-    #     group_id = conf['group_id'] + '_{}'.format(np.random.randint(1e6))
-    # else:
-    #     group_id = conf['group_id']
-
     kafka_config = {
         'bootstrap.servers': conf['servers'],
         'group.id': conf['group_id'],
@@ -298,16 +292,17 @@ def main():
     }
 
     if args.restart_from_beginning:
-        reset_offset(kafka_config, args.topic)
+        total_lag, total_offset = print_offsets(kafka_config, args.topic, args.maxtimeout, verbose=False)
+        args.total_lag = total_offset
+        args.total_offset = 0
+    else:
+        total_lag, total_offset = print_offsets(kafka_config, args.topic, args.maxtimeout)
+        args.total_lag = total_lag
+        args.total_offset = total_offset
+        if total_lag == 0:
+            print("All alerts have been polled. Exiting.")
+            sys.exit()
 
-    total_lag, total_offset = print_offsets(kafka_config, args.topic, args.maxtimeout)
-
-    if total_lag == 0:
-        print("All alerts have been polled. Exiting.")
-        sys.exit()
-
-    args.total_lag = total_lag
-    args.total_offset = total_offset
 
     if not os.path.isdir(args.outdir):
         os.makedirs(args.outdir, exist_ok=True)
