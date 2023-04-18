@@ -17,10 +17,9 @@
 import sys
 import os
 import io
-import glob
 import json
-import time
 import argparse
+
 from tqdm import tqdm, trange
 
 import pyarrow as pa
@@ -31,18 +30,39 @@ import confluent_kafka
 import numpy as np
 import pandas as pd
 
-from multiprocessing import Pool, Process, RLock
+from multiprocessing import Pool, RLock
 
 from fink_client.configuration import load_credentials
 
 from fink_client.consumer import return_offsets
 
-def print_offsets(kafka_config, timeout, topic):
+
+def print_offsets(kafka_config, topic, maxtimeout=10):
+    """ Wrapper around `consumer.return_offsets`
+
+    If the server is rebalancing the offsets, it will exit the program.
+
+    Parameters
+    ----------
+    kafka_config: dic
+        Dictionary with consumer parameters
+    topic: str
+        Topic name
+    maxtimeout: int, optional
+        Timeout in second, when polling the servers
+
+    Returns
+    ----------
+    total_offsets: int
+        Total number of messages committed across all partitions
+    total_lag: int
+        Remaining messages in the topic across all partitions.
+    """
     consumer = confluent_kafka.Consumer(kafka_config)
 
     topics = ['{}'.format(topic)]
     consumer.subscribe(topics)
-    total_offset, total_lag = return_offsets(consumer, topic, timeout=timeout, waitfor=0, verbose=True)
+    total_offset, total_lag = return_offsets(consumer, topic, timeout=maxtimeout, waitfor=0, verbose=True)
     if (total_offset, total_lag) == (-1, -1):
         print("Warning: Consumer group '{}' is rebalancing. Please wait.".format(kafka_config['group.id']))
         sys.exit()
@@ -50,8 +70,27 @@ def print_offsets(kafka_config, timeout, topic):
 
     return total_lag, total_offset
 
+
 def get_schema(kafka_config, topic, maxtimeout):
-    """
+    """ Poll the schema data from the schema topic
+
+    Parameters
+    ----------
+    kafka_config: dic
+        Dictionary with consumer parameters
+    topic: str
+        Topic name
+    timeout: int, optional
+        Timeout in second, when polling the servers
+
+    Returns
+    ----------
+    schema: None or dic
+        Schema data. None if the poll was not successful.
+        Reasons to get None:
+            1. timeout has been reached (increase timeout)
+            2. topic is empty (produce new data)
+            3. topic does not exist (create the topic)
     """
     # Instantiate a consumer
     consumer_schema = confluent_kafka.Consumer(kafka_config)
@@ -71,27 +110,40 @@ def get_schema(kafka_config, topic, maxtimeout):
 
     return schema
 
-def debug(processId, schema, kafka_config, args):
-    """
-    """
-    print('[{}] -- {}'.format(processId, args.topic))
 
 def my_assign(consumer, partitions):
-    """
+    """ Function to reset offsets when (re)polling
+
+    It must be passed when subscribing to a topic:
+        `consumer.subscribe(topics, on_assign=my_assign)`
+
+    Parameters
+    ----------
+    consumer: confluent_kafka.Consumer
+        Kafka consumer
+    partitions: Kafka partitions
+        Internal object to deal with partitions
     """
     for p in partitions:
         p.offset = 0
-    # print('assign', partitions)
     consumer.assign(partitions)
 
+
 def poll(processId, schema, kafka_config, args):
+    """ Poll data from Kafka servers
+
+    Parameters
+    ----------
+    processId: int
+        ID of the process used for multiprocessing
+    schema: dict
+        Alert schema
+    kafka_config: dict
+        Configuration to instantiate a consumer
+    args: dict
+        Other arguments (topic, maxtimeout, total_offset, total_lag) required for the processing
     """
-    """
-    # print('module name:', __name__)
-    # print('parent process:', os.getppid())
-    # print('process id:', os.getpid())
     # Instantiate a consumer
-    # kafka_config['client.id'] += '_{}'.format(processId)
     consumer = confluent_kafka.Consumer(kafka_config)
 
     # Subscribe to schema topic
@@ -181,6 +233,7 @@ def poll(processId, schema, kafka_config, args):
         finally:
             consumer.close()
 
+
 def main():
     """ """
     parser = argparse.ArgumentParser(description=__doc__)
@@ -236,13 +289,10 @@ def main():
     kafka_config = {
         'bootstrap.servers': conf['servers'],
         'group.id': group_id,
-        "auto.offset.reset": "earliest",
-        # "max.partition.fetch.bytes": 0.2 * 1024 * 1024,
-        # 'fetch.min.bytes': 100000,
-        # 'fetch.wait.max.ms': 0
+        "auto.offset.reset": "earliest"
     }
 
-    total_lag, total_offset = print_offsets(kafka_config, args.maxtimeout, args.topic)
+    total_lag, total_offset = print_offsets(kafka_config, args.topic, args.maxtimeout)
 
     if total_lag == 0:
         print("All alerts have been polled. Exiting.")
@@ -259,7 +309,7 @@ def main():
 
     schema = get_schema(kafka_config, args.topic, args.maxtimeout)
     if schema is None:
-        #TBD: raise error
+        # TBD: raise error
         print('No schema found -- wait a few seconds and relaunch. If the error persists, maybe the queue is empty.')
     else:
         processIds = [i for i in range(args.nconsumers)]
@@ -272,7 +322,7 @@ def main():
         try:
             pool.starmap(poll, zip(processIds, schemas, kafka_configs, args_list))
             pool.close()
-            print_offsets(kafka_config, args.maxtimeout, args.topic)
+            print_offsets(kafka_config, args.topic, args.maxtimeout)
         except KeyboardInterrupt:
             pool.terminate()
             sys.stderr.write('%% Aborted by user\n')
