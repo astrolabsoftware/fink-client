@@ -128,6 +128,14 @@ def my_assign(consumer, partitions):
         p.offset = 0
     consumer.assign(partitions)
 
+def reset_offset(kafka_config, topic):
+    """
+    """
+    consumer = confluent_kafka.Consumer(kafka_config)
+    topics = ['{}'.format(topic)]
+    consumer.subscribe(topics, on_assign=my_assign)
+    consumer.close()
+
 
 def poll(processId, schema, kafka_config, args):
     """ Poll data from Kafka servers
@@ -264,9 +272,6 @@ def main():
     parser.add_argument(
         '--verbose', action='store_true',
         help="If specified, print on screen information about the consuming.")
-    parser.add_argument(
-        '--check_offsets', action='store_true',
-        help="Check offset status.")
     args = parser.parse_args(None)
 
     if args.partitionby not in ['time', 'finkclass', 'tnsclass', 'classId']:
@@ -280,17 +285,20 @@ def main():
     if args.maxtimeout is None:
         args.maxtimeout = conf['maxtimeout']
 
-    if args.restart_from_beginning:
-        # resetting the group ID acts as a new consumer
-        group_id = conf['group_id'] + '_{}'.format(np.random.randint(1e6))
-    else:
-        group_id = conf['group_id']
+    # if args.restart_from_beginning:
+    #     # resetting the group ID acts as a new consumer
+    #     group_id = conf['group_id'] + '_{}'.format(np.random.randint(1e6))
+    # else:
+    #     group_id = conf['group_id']
 
     kafka_config = {
         'bootstrap.servers': conf['servers'],
-        'group.id': group_id,
+        'group.id': conf['group_id'],
         "auto.offset.reset": "earliest"
     }
+
+    if args.restart_from_beginning:
+        reset_offset(kafka_config, args.topic)
 
     total_lag, total_offset = print_offsets(kafka_config, args.topic, args.maxtimeout)
 
