@@ -331,15 +331,17 @@ def return_offsets(consumer, topic, waitfor=1, timeout=10, verbose=False):
             # The actual message count may be lower due to compaction
             # and record deletions.
             lag = "%d" % (hi - lo)
+            partition.offset = 0
         else:
             lag = "%d" % (hi - partition.offset)
 
-        if verbose and partition.offset >= 0:
-            partition_offset = partition.offset
-            partition_lag = int(lag)
 
-            total_offsets += partition_offset
-            total_lag += int(lag)
+        partition_offset = partition.offset
+        partition_lag = int(lag)
+
+        total_offsets += partition_offset
+        total_lag += int(lag)
+        if verbose:
             print("%-50s  %9s  %9s" % (
                 "{} [{}]".format(partition.topic, partition.partition), offset, lag))
     if verbose:
