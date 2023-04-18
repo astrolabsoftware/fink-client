@@ -1,6 +1,5 @@
 coverage>=4.2
 coveralls
-codecov
 confluent-kafka==2.0.2
 fastavro==1.6.0
 astropy
