@@ -13,25 +13,27 @@
 
 `fink_client` requires a version of Python 3.9+.
 
-### install with pip
+### Install with pip
 
 ```bash
 pip install fink-client --upgrade
 ```
 
-### install within a conda environment
+### Use or develop in a controlled environment
 
 ```bash
 git clone https://github.com/astrolabsoftware/fink-client.git
 cd fink-client
 conda env create -f environment.yml
-# install the latest release
-pip install fink-client
+conda activate fink-client
+```
+
+and then install it locally:
+
+```bash
 # install for development
 pip install -e .
 ```
-
-Learn how to connect and use it by checking the [documentation](docs/).
 
 ## Registration
 
