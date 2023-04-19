@@ -161,8 +161,8 @@ def poll(processId, schema, kafka_config, args):
 
     # infinite loop
     maxpoll = args.limit if args.limit is not None else 1e10
-    initial = int(args.total_offset/args.nconsumers)
-    total = initial + int(args.total_lag/args.nconsumers)
+    initial = int(args.total_offset / args.nconsumers)
+    total = initial + int(args.total_lag / args.nconsumers)
     disable = not args.verbose
     with trange(total, position=processId, initial=initial, colour='#F5622E', unit='alerts', disable=disable) as pbar:
         try:
@@ -302,7 +302,6 @@ def main():
         if total_lag == 0:
             print("All alerts have been polled. Exiting.")
             sys.exit()
-
 
     if not os.path.isdir(args.outdir):
         os.makedirs(args.outdir, exist_ok=True)
