@@ -15,6 +15,7 @@
 # limitations under the License.
 import io
 import json
+import time
 import fastavro
 import confluent_kafka
 
@@ -266,6 +267,87 @@ class AlertConsumer:
         """Close connection to Fink broker"""
         self._consumer.close()
 
+
+def return_offsets(consumer, topic, waitfor=1, timeout=10, verbose=False):
+    """ Poll servers to get the total committed offsets, and remaining lag
+
+    Parameters
+    ----------
+    consumer: confluent_kafka.Consumer
+        Kafka consumer
+    topic: str
+        Topic name
+    waitfor: int, optional
+        Time in second to wait before polling. Default is 1 second.
+    timeout: int, optional
+        Timeout in second when polling the servers. Default is 10.
+    verbose: bool, optional
+        If True, prints useful table. Default is False.
+
+    Returns
+    ---------
+    total_offsets: int
+        Total number of messages committed across all partitions
+    total_lag: int
+        Remaining messages in the topic across all partitions.
+    """
+    time.sleep(waitfor)
+    # Get the topic's partitions
+    metadata = consumer.list_topics(topic, timeout=timeout)
+    if metadata.topics[topic].error is not None:
+        raise confluent_kafka.KafkaException(metadata.topics[topic].error)
+
+    # Construct TopicPartition list of partitions to query
+    partitions = [confluent_kafka.TopicPartition(topic, p) for p in metadata.topics[topic].partitions]
+
+    # Query committed offsets for this group and the given partitions
+    try:
+        committed = consumer.committed(partitions, timeout=timeout)
+    except confluent_kafka.KafkaException as exception:
+        kafka_error = exception.args[0]
+        if kafka_error.code() == confluent_kafka.KafkaError._TIMED_OUT:
+            return -1, -1
+        else:
+            return 0, 0
+
+    total_offsets = 0
+    total_lag = 0
+    if verbose:
+        print("%-50s  %9s  %9s" % ("Topic [Partition]", "Committed", "Lag"))
+        print("=" * 72)
+    for partition in committed:
+        # Get the partitions low and high watermark offsets.
+        (lo, hi) = consumer.get_watermark_offsets(partition, timeout=timeout, cached=False)
+
+        if partition.offset == confluent_kafka.OFFSET_INVALID:
+            offset = "-"
+        else:
+            offset = "%d" % (partition.offset)
+
+        if hi < 0:
+            lag = "no hwmark"  # Unlikely
+        elif partition.offset < 0:
+            # No committed offset, show total message count as lag.
+            # The actual message count may be lower due to compaction
+            # and record deletions.
+            lag = "%d" % (hi - lo)
+            partition.offset = 0
+        else:
+            lag = "%d" % (hi - partition.offset)
+
+        total_offsets = partition.offset
+        total_lag = int(lag)
+
+        if verbose:
+            print("%-50s  %9s  %9s" % (
+                "{} [{}]".format(partition.topic, partition.partition), offset, lag))
+    if verbose:
+        print("-" * 72)
+        print("%-50s  %9s  %9s" % (
+            "Total", total_offsets, total_lag))
+        print("-" * 72)
+
+    return total_offsets, total_lag
 
 def _get_kafka_config(config: dict) -> dict:
     """Returns configurations for a consumer instance

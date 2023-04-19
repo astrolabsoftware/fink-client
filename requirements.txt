@@ -9,3 +9,4 @@ pandas
 pyyaml
 tabulate
 matplotlib
+tqdm
