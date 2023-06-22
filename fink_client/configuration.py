@@ -107,7 +107,8 @@ def load_credentials(tmp: bool = False) -> dict:
     To get your credentials, and use fink-client you need to:
       1. subscribe to one or more Fink streams at
         https://forms.gle/2td4jysT4e9pkf889
-      2. run `fink_client_registration` to register
+      2. run `fink_client_register` to register
+    See https://fink-broker.readthedocs.io/en/latest/services/data_transfer/
 
     """
     if tmp:
@@ -123,7 +124,8 @@ def load_credentials(tmp: bool = False) -> dict:
         To get your credentials, and use fink-client you need to:
           1. subscribe to one or more Fink streams at
             https://forms.gle/2td4jysT4e9pkf889
-          2. run `fink_client_registration` to register
+          2. run `fink_client_register` to register
+        See https://fink-broker.readthedocs.io/en/latest/services/data_transfer/
         """
         raise IOError(msg)
 
