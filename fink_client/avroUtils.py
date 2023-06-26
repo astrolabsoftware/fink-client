@@ -242,13 +242,13 @@ def write_alert(alert: dict, schema: str, path: str, overwrite: bool = False, id
     >>> alert = r.to_list(size=1)[0]
 
     Write the alert on disk
-    >>> write_alert(alert, schema_path, ".", overwrite=True, "objectId", "candid")
+    >>> write_alert(alert, schema_path, ".", overwrite=True, id1="objectId", id2="candid")
 
     For test purposes, you can overwrite alert data on disk, but that should
     not happen in production as alert ID must be unique! Hence the writer will
     raise an exception if overwrite is not specified (default).
     >>> write_alert(
-    ...     alert, schema_path, ".", overwrite=False, "objectId", "candid")
+    ...     alert, schema_path, ".", overwrite=False, id1="objectId", id2="candid")
     ... # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
     Traceback (most recent call last):
       ...

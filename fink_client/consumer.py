@@ -235,9 +235,9 @@ class AlertConsumer:
 
         if topic is not None:
             write_alert(
-                alert, 
-                self._parsed_schema, 
-                outdir, 
+                alert,
+                self._parsed_schema,
+                outdir,
                 overwrite=overwrite,
                 id1=id1,
                 id2=id2
