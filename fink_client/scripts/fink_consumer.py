@@ -45,6 +45,10 @@ def main():
     parser.add_argument(
         '-schema', type=str, default=None,
         help="Avro schema to decode the incoming alerts. Default is None (version taken from each alert)")
+    parser.add_argument(
+        '--mma', action='store_true',
+        help="If specified, format output for the Multi-Messenger Astronomy alert schema. Required for fink_grb_* topics."
+    )
     args = parser.parse_args(None)
 
     # load user configuration
@@ -79,10 +83,18 @@ def main():
         while poll_number < maxpoll:
             if args.save:
                 # Save alerts on disk
+                if args.mma:
+                    id1 = 'observatory'
+                    id2 = 'triggerId'
+                else:
+                    id1 = 'objectId'
+                    id2 = 'candid'
                 topic, alert, key = consumer.poll_and_write(
                     outdir=args.outdir,
                     timeout=maxtimeout,
-                    overwrite=True
+                    overwrite=True,
+                    id1=id1,
+                    id2=id2
                 )
             else:
                 # TODO: this is useless to get it and done nothing
@@ -94,17 +106,21 @@ def main():
 
             if args.display and topic is not None:
                 utc = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())
-                table = [
-                    [
-                        alert['timestamp'], utc, topic, alert['objectId'],
-                        alert['cdsxmatch'],
-                        alert['candidate']['magpsf']
-                    ],
-                ]
-                headers = [
-                    'Emitted at (UTC)', 'Received at (UTC)',
-                    'Topic', 'objectId', 'Simbad', 'Magnitude'
-                ]
+                if args.mma:
+                    table = [[alert['objectId'], alert['fink_class'], topic, alert['rate'], alert['observatory'], alert['triggerId']]]
+                    headers = ['ObjectId', 'Classification', 'Topic', 'Rate (mag/day)', 'Observatory', 'Trigger ID']
+                else:
+                    table = [
+                        [
+                            alert['timestamp'], utc, topic, alert['objectId'],
+                            alert['cdsxmatch'],
+                            alert['candidate']['magpsf']
+                        ],
+                    ]
+                    headers = [
+                        'Emitted at (UTC)', 'Received at (UTC)',
+                        'Topic', 'objectId', 'Simbad', 'Magnitude'
+                    ]
                 print(tabulate(table, headers, tablefmt="pretty"))
             elif args.display:
                 print('No alerts the last {} seconds'.format(maxtimeout))

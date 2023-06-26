@@ -210,7 +210,7 @@ class AlertConsumer:
 
     def poll_and_write(
             self, outdir: str, timeout: float = -1,
-            overwrite: bool = False) -> (str, dict):
+            overwrite: bool = False, id1: str = '', id2: str = '') -> (str, dict):
         """ Consume one message from Fink server, save alert on disk and
         return (topic, alert, key)
 
@@ -234,7 +234,14 @@ class AlertConsumer:
         topic, alert, key = self.poll(timeout)
 
         if topic is not None:
-            write_alert(alert, self._parsed_schema, outdir, overwrite=overwrite)
+            write_alert(
+                alert, 
+                self._parsed_schema, 
+                outdir, 
+                overwrite=overwrite,
+                id1=id1,
+                id2=id2
+            )
 
         return topic, alert, key
 

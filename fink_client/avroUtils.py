@@ -223,7 +223,7 @@ class AlertReader():
             for alert in self._read_single_alert(fn):
                 yield alert
 
-def write_alert(alert: dict, schema: str, path: str, overwrite: bool = False):
+def write_alert(alert: dict, schema: str, path: str, overwrite: bool = False, id1: str = '', id2: str = ''):
     """ Write avro alert on disk
 
     Parameters
@@ -242,13 +242,13 @@ def write_alert(alert: dict, schema: str, path: str, overwrite: bool = False):
     >>> alert = r.to_list(size=1)[0]
 
     Write the alert on disk
-    >>> write_alert(alert, schema_path, ".", overwrite=True)
+    >>> write_alert(alert, schema_path, ".", overwrite=True, "objectId", "candid")
 
     For test purposes, you can overwrite alert data on disk, but that should
     not happen in production as alert ID must be unique! Hence the writer will
     raise an exception if overwrite is not specified (default).
     >>> write_alert(
-    ...     alert, schema_path, ".", overwrite=False)
+    ...     alert, schema_path, ".", overwrite=False, "objectId", "candid")
     ... # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
     Traceback (most recent call last):
       ...
@@ -256,7 +256,7 @@ def write_alert(alert: dict, schema: str, path: str, overwrite: bool = False):
     """
     alert_filename = os.path.join(
         path,
-        "{}_{}.avro".format(alert["objectId"], alert["candidate"]["candid"])
+        "{}_{}.avro".format(alert[id1], alert[id2])
     )
 
     if type(schema) == str:

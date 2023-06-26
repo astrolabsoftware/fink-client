@@ -322,6 +322,7 @@ def main():
         tqdm.set_lock(RLock())
         pool = Pool(processes=args.nconsumers, initializer=tqdm.set_lock, initargs=(tqdm.get_lock(),))
         try:
+            #pool.starmap_async
             pool.starmap(poll, zip(processIds, schemas, kafka_configs, args_list))
             pool.close()
             print_offsets(kafka_config, args.topic, args.maxtimeout)
