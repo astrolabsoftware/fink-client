@@ -334,7 +334,7 @@ def return_offsets(consumer, topic, waitfor=1, timeout=10, verbose=False):
             partition.offset = 0
         else:
             lag = "%d" % (hi - partition.offset)
-
+        #
         total_offsets = partition.offset
         total_lag = int(lag)
 
