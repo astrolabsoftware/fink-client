@@ -11,11 +11,9 @@ dependencies:
   - astropy
   - numpy<1.25
   - pyarrow>=10.0.1
+  - fastavro==1.6.0
   - pandas
   - pyyaml
   - tabulate
   - matplotlib
   - tqdm
-  - pip:
-    - fastavro==1.6.0 --install-options='--no-build-isolation'
-

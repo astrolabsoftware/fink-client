@@ -2,7 +2,7 @@ coverage>=4.2
 Cython<3
 coveralls
 confluent-kafka==2.0.2
-fastavro==1.6.0 --install-options='--no-build-isolation'
+fastavro==1.6.0
 astropy
 numpy<1.25
 pyarrow>=10.0.1
