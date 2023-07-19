@@ -15,6 +15,7 @@
 # limitations under the License.
 """ Kafka consumer to listen and archive Fink streams from the Livestream service """
 import sys
+import os
 
 import argparse
 import time
