@@ -1,7 +1,7 @@
 coverage>=4.2
 coveralls
 confluent-kafka==2.0.2
-fastavro==1.6.0
+fastavro==1.6.0 --install-option='--no-build-isolation'
 astropy
 numpy<1.25
 pyarrow>=10.0.1

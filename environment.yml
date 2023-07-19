@@ -7,7 +7,6 @@ dependencies:
   - coverage>=4.2
   - coveralls
   - python-confluent-kafka>=1.9.2
-  - fastavro=1.6.0
   - astropy
   - numpy<1.25
   - pyarrow>=10.0.1
@@ -16,4 +15,6 @@ dependencies:
   - tabulate
   - matplotlib
   - tqdm
+  - pip:
+    - fastavro==1.6.0 --install-option='--no-build-isolation'
 
