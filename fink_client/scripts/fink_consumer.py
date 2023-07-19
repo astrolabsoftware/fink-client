@@ -23,6 +23,7 @@ from tabulate import tabulate
 
 from fink_client.consumer import AlertConsumer
 from fink_client.configuration import load_credentials
+from fink_client.configuration import mm_topic_names
 
 def main():
     """ """
@@ -44,10 +45,7 @@ def main():
         help="Folder to store incoming alerts if --save is set. It must exist.")
     parser.add_argument(
         '-schema', type=str, default=None,
-        help="Avro schema to decode the incoming alerts. Default is None (version taken from each alert)")
-    parser.add_argument(
-        '--mma', action='store_true',
-        help="If specified, format output for the Multi-Messenger Astronomy alert schema. Required for fink_grb_* topics."
+        help="Avro schema to decode the incoming alerts. Default is None (version taken from each alert)"
     )
     args = parser.parse_args(None)
 
@@ -83,18 +81,10 @@ def main():
         while poll_number < maxpoll:
             if args.save:
                 # Save alerts on disk
-                if args.mma:
-                    id1 = 'observatory'
-                    id2 = 'triggerId'
-                else:
-                    id1 = 'objectId'
-                    id2 = 'candid'
                 topic, alert, key = consumer.poll_and_write(
                     outdir=args.outdir,
                     timeout=maxtimeout,
-                    overwrite=True,
-                    id1=id1,
-                    id2=id2
+                    overwrite=True
                 )
             else:
                 # TODO: this is useless to get it and done nothing
@@ -103,10 +93,11 @@ def main():
 
             if topic is not None:
                 poll_number += 1
+                is_mma = topic in mm_topic_names()
 
             if args.display and topic is not None:
                 utc = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())
-                if args.mma:
+                if is_mma:
                     table = [[alert['objectId'], alert['fink_class'], topic, alert['rate'], alert['observatory'], alert['triggerId']]]
                     headers = ['ObjectId', 'Classification', 'Topic', 'Rate (mag/day)', 'Observatory', 'Trigger ID']
                 else:

@@ -134,6 +134,17 @@ def load_credentials(tmp: bool = False) -> dict:
 
     return creds
 
+def mm_topic_names():
+    """ Return list of topics with MMA schema
+    """
+    out = [
+        'fink_grb_bronze',
+        'fink_grb_silver',
+        'fink_grb_gold',
+        'fink_gw_bronze',
+    ]
+    return out
+
 
 if __name__ == "__main__":
     """ Run the test suite """

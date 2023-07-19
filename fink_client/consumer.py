@@ -22,6 +22,7 @@ import confluent_kafka
 from fink_client.avroUtils import write_alert
 from fink_client.avroUtils import _get_alert_schema
 from fink_client.avroUtils import _decode_avro_alert
+from fink_client.configuration import mm_topic_names
 
 class AlertError(Exception):
     pass
@@ -232,6 +233,14 @@ class AlertConsumer:
 
         """
         topic, alert, key = self.poll(timeout)
+        is_mma = topic in mm_topic_names()
+
+        if is_mma:
+            id1 = 'objectId'
+            id2 = 'triggerId'
+        else:
+            id1 = 'objectId'
+            id2 = 'candid'
 
         if topic is not None:
             write_alert(
