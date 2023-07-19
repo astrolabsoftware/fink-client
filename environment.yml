@@ -4,6 +4,7 @@ channels:
   - conda-forge
 dependencies:
   - python>=3.9
+  - Cython<3
   - coverage>=4.2
   - coveralls
   - python-confluent-kafka>=1.9.2
@@ -16,5 +17,5 @@ dependencies:
   - matplotlib
   - tqdm
   - pip:
-    - fastavro==1.6.0 --install-option='--no-build-isolation'
+    - fastavro==1.6.0 --install-options='--no-build-isolation'
 
