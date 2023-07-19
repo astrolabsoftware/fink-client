@@ -74,6 +74,9 @@ def main():
     # Time to wait before polling again if no alerts
     maxtimeout = conf['maxtimeout']
 
+    if not os.path.isdir(args.outdir):
+        os.makedirs(args.outdir, exist_ok=True)
+
     # infinite loop
     maxpoll = args.limit if args.limit else 1e10
     try:

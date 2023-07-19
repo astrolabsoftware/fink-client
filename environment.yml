@@ -4,6 +4,7 @@ channels:
   - conda-forge
 dependencies:
   - python>=3.9
+  - Cython<3
   - coverage>=4.2
   - coveralls
   - python-confluent-kafka>=1.9.2
