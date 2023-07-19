@@ -7,7 +7,7 @@ dependencies:
   - coverage>=4.2
   - coveralls
   - python-confluent-kafka>=1.9.2
-  - fastavro=1.6.0
+  - fastavro=1.8.1
   - astropy
   - numpy
   - pyarrow>=10.0.1
