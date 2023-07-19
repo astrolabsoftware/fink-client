@@ -1,9 +1,9 @@
 coverage>=4.2
 coveralls
 confluent-kafka==2.0.2
-fastavro==1.8.1
+fastavro==1.6.0
 astropy
-numpy
+numpy<1.25
 pyarrow>=10.0.1
 pandas
 pyyaml
