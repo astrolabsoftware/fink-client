@@ -19,19 +19,35 @@
 pip install fink-client --upgrade
 ```
 
+You will also need to install `fastavro==1.6.0` separately (versions above are not compatible with alert schema):
+
+```
+# fastavro 1.6.1 requires Cython<3
+pip install "Cython<3"
+pip install --no-build-isolation "fastavro==1.6.0"
+```
+
 ### Use or develop in a controlled environment
+
+For usage:
+
+```bash
+conda env create -f https://raw.githubusercontent.com/astrolabsoftware/fink-client/master/environment.yml
+conda activate fink-client
+pip install "Cython<3"
+pip install --no-build-isolation "fastavro==1.6.0"
+pip install fink-client --upgrade
+```
+
+For development:
 
 ```bash
 git clone https://github.com/astrolabsoftware/fink-client.git
 cd fink-client
 conda env create -f environment.yml
 conda activate fink-client
-```
-
-and then install it locally:
-
-```bash
-# install for development
+pip install "Cython<3"
+pip install --no-build-isolation "fastavro==1.6.0"
 pip install -e .
 ```
 
