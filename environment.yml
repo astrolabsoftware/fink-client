@@ -4,16 +4,16 @@ channels:
   - conda-forge
 dependencies:
   - python>=3.9
+  - Cython<3
   - coverage>=4.2
   - coveralls
   - python-confluent-kafka>=1.9.2
-  - fastavro=1.6.0
   - astropy
-  - numpy
+  - numpy<1.25
   - pyarrow>=10.0.1
+    #- fastavro==1.6.0
   - pandas
   - pyyaml
   - tabulate
   - matplotlib
   - tqdm
-

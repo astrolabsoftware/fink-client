@@ -15,6 +15,7 @@
 # limitations under the License.
 """ Kafka consumer to listen and archive Fink streams from the Livestream service """
 import sys
+import os
 
 import argparse
 import time
@@ -23,6 +24,7 @@ from tabulate import tabulate
 
 from fink_client.consumer import AlertConsumer
 from fink_client.configuration import load_credentials
+from fink_client.configuration import mm_topic_names
 
 def main():
     """ """
@@ -44,7 +46,8 @@ def main():
         help="Folder to store incoming alerts if --save is set. It must exist.")
     parser.add_argument(
         '-schema', type=str, default=None,
-        help="Avro schema to decode the incoming alerts. Default is None (version taken from each alert)")
+        help="Avro schema to decode the incoming alerts. Default is None (version taken from each alert)"
+    )
     args = parser.parse_args(None)
 
     # load user configuration
@@ -72,6 +75,9 @@ def main():
     # Time to wait before polling again if no alerts
     maxtimeout = conf['maxtimeout']
 
+    if not os.path.isdir(args.outdir):
+        os.makedirs(args.outdir, exist_ok=True)
+
     # infinite loop
     maxpoll = args.limit if args.limit else 1e10
     try:
@@ -91,20 +97,25 @@ def main():
 
             if topic is not None:
                 poll_number += 1
+                is_mma = topic in mm_topic_names()
 
             if args.display and topic is not None:
                 utc = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())
-                table = [
-                    [
-                        alert['timestamp'], utc, topic, alert['objectId'],
-                        alert['cdsxmatch'],
-                        alert['candidate']['magpsf']
-                    ],
-                ]
-                headers = [
-                    'Emitted at (UTC)', 'Received at (UTC)',
-                    'Topic', 'objectId', 'Simbad', 'Magnitude'
-                ]
+                if is_mma:
+                    table = [[alert['objectId'], alert['fink_class'], topic, alert['rate'], alert['observatory'], alert['triggerId']]]
+                    headers = ['ObjectId', 'Classification', 'Topic', 'Rate (mag/day)', 'Observatory', 'Trigger ID']
+                else:
+                    table = [
+                        [
+                            alert['timestamp'], utc, topic, alert['objectId'],
+                            alert['cdsxmatch'],
+                            alert['candidate']['magpsf']
+                        ],
+                    ]
+                    headers = [
+                        'Emitted at (UTC)', 'Received at (UTC)',
+                        'Topic', 'objectId', 'Simbad', 'Magnitude'
+                    ]
                 print(tabulate(table, headers, tablefmt="pretty"))
             elif args.display:
                 print('No alerts the last {} seconds'.format(maxtimeout))
