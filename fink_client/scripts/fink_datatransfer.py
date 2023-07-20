@@ -1,18 +1,3 @@
-#!/usr/bin/env python
-# Copyright 2023 AstroLab Software
-# Author: Julien Peloton
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 """ Kafka consumer to listen and archive Fink streams from the data transfer service """
 import sys
 import os
@@ -21,7 +6,7 @@ import json
 import argparse
 import logging
 
-from tqdm import tqdm, trange
+from tqdm import trange
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -31,12 +16,13 @@ import confluent_kafka
 import numpy as np
 import pandas as pd
 
-from multiprocessing import Pool, RLock
+from multiprocessing import Process, Queue
 
 from fink_client.configuration import load_credentials
 
 from fink_client.consumer import return_offsets
 
+import time
 
 def print_offsets(kafka_config, topic, maxtimeout=10, verbose=True):
     """ Wrapper around `consumer.return_offsets`
@@ -70,7 +56,6 @@ def print_offsets(kafka_config, topic, maxtimeout=10, verbose=True):
     consumer.close()
 
     return total_lag, total_offset
-
 
 def get_schema(kafka_config, topic, maxtimeout):
     """ Poll the schema data from the schema topic
@@ -111,7 +96,6 @@ def get_schema(kafka_config, topic, maxtimeout):
 
     return schema
 
-
 def my_assign(consumer, partitions):
     """ Function to reset offsets when (re)polling
 
@@ -137,14 +121,75 @@ def reset_offset(kafka_config, topic):
     consumer.subscribe(topics, on_assign=my_assign)
     consumer.close()
 
+def return_partition_offset(consumer, topic, partition):
+    """ Return the offset and the remaining lag of a partition
+    
+    consumer: confluent_kafka.Consumer
+        Kafka consumer
+    topic: str
+        Topic name
+    partition: int
+        The partition
 
-def poll(processId, schema, kafka_config, args):
+    Returns
+    ----------
+    offset : int
+        Total number of offsets in the topic
+    """
+
+    topicPartition = confluent_kafka.TopicPartition(topic, partition)
+    low_offset, high_offset = consumer.get_watermark_offsets(topicPartition)
+    partition_size = high_offset - low_offset
+    
+    return partition_size
+
+def return_npartitions(topic,kafka_config):
+    """ Function to get the number partition
+        
+        Parameters
+        ----------
+        kafka_config: dic
+            Dictionary with consumer parameters
+        topic: str
+            Topic name
+
+        Returns
+        ----------
+        nbpartitions: int
+            Number of partitions in the topic
+        
+    """
+    consumer = confluent_kafka.Consumer(kafka_config)
+
+    # Details to get
+    nbpartitions = 0
+    try:
+        # Obtenez les métadonnées du topic
+        metadata = consumer.list_topics(topic=topic)
+
+        if metadata.topics and topic in metadata.topics:
+            partitions = metadata.topics[topic].partitions
+            nbpartitions = len(partitions)
+        else:
+            print("Le topic", topic, "n'existe pas.")
+            
+    except confluent_kafka.KafkaException as e:
+        print(f"Erreur lors de la récupération du nombre de partitions du topic: {e}")
+
+    consumer.close()
+
+    return nbpartitions
+
+
+def poll(processId, queue, schema, kafka_config, args):
     """ Poll data from Kafka servers
 
     Parameters
     ----------
     processId: int
         ID of the process used for multiprocessing
+    queue: Multiprocessing.Queue
+        Shared queue between processes where are stocked partitions and the last offset of the partition
     schema: dict
         Alert schema
     kafka_config: dict
@@ -154,93 +199,121 @@ def poll(processId, schema, kafka_config, args):
     """
     # Instantiate a consumer
     consumer = confluent_kafka.Consumer(kafka_config)
-
+    
     # Subscribe to schema topic
-    topics = ['{}'.format(args.topic)]
-    consumer.subscribe(topics, on_assign=my_assign)
+    #topics = ['{}'.format(args.topic)]
 
     # infinite loop
-    maxpoll = args.limit if args.limit is not None else 1e10
-    initial = int(args.total_offset / args.nconsumers)
-    total = initial + int(args.total_lag / args.nconsumers)
+    maxpoll = int(args.limit / args.nconsumers) if args.limit is not None else 1e10
     disable = not args.verbose
-    with trange(total, position=processId, initial=initial, colour='#F5622E', unit='alerts', disable=disable) as pbar:
-        try:
-            poll_number = 0
-            while poll_number < maxpoll:
-                msgs = consumer.consume(args.batchsize, args.maxtimeout)
 
-                # Decode the message
-                if msgs is not None:
-                    if len(msgs) == 0:
-                        print('[{}] No alerts the last {} seconds ({} polled)... Exiting'.format(processId, args.maxtimeout, poll_number))
-                        break
-                    pdf = pd.DataFrame.from_records(
-                        [fastavro.schemaless_reader(io.BytesIO(msg.value()), schema) for msg in msgs],
-                    )
-                    if pdf.empty:
-                        print('[{}] No alerts the last {} seconds ({} polled)... Exiting'.format(processId, args.maxtimeout, poll_number))
-                        break
+    poll_number = 0
+    
+    while not queue.empty() and poll_number < maxpoll:
+        # Getting a partition from the queue
+        partition = queue.get()
+        tp = confluent_kafka.TopicPartition(args.topic, partition["partition"], offset=partition["offset"])
+        consumer.assign([tp])
+        # Getting the total number of alert in the partition
+        offset = return_partition_offset(consumer, args.topic,partition["partition"])
+        # Resuming from the last consumed alert
+        initial = partition["offset"]
 
-                    # known mismatches between partitions
-                    # see https://github.com/astrolabsoftware/fink-client/issues/165
-                    if 'cats_broad_max_prob' in pdf.columns:
-                        pdf['cats_broad_max_prob'] = pdf['cats_broad_max_prob'].astype('float')
+        max_end_check = 4
 
-                    if 'cats_broad_class' in pdf.columns:
-                        pdf['cats_broad_class'] = pdf['cats_broad_class'].astype('float')
+        if offset == initial :
+            if partition["status"] < max_end_check:
+                # After checking max_end_check time the partition with no modification, it is supposed finished
+                queue.put({
+                    "partition" : partition["partition"],
+                    "offset" : partition["offset"],
+                    "status" : partition["status"] + 1
+                })
+            
+        else :  
+            poll_number = initial
+            total = offset
+            with trange(total, position=processId, initial=initial, colour='#F5622E', unit='alerts', disable=disable) as pbar:
+                try:
+                    while poll_number < maxpoll:
+                        msgs = consumer.consume(args.batchsize, args.maxtimeout)
+                        # Decode the message
+                        if msgs is not None:
+                            if len(msgs) == 0:
+                                print('[{}] No alerts the last {} seconds ({} polled)... Have to exit(1)\n'.format(processId, args.maxtimeout, poll_number))
+                                # Alerts can be added in the partition later, putting it again in the queue and changing the offset to continue from where we stopped
+                                queue.put({
+                                    "partition" : partition["partition"],
+                                    "offset" : poll_number,
+                                    "status" : 0
+                                })
+                                break
+                            
+                            pdf = pd.DataFrame.from_records(
+                                [fastavro.schemaless_reader(io.BytesIO(msg.value()), schema) for msg in msgs],
+                            )
+                            if pdf.empty:
+                                #print('[{}] No alerts the last {} seconds ({} polled)... Exiting\n'.format(processId, args.maxtimeout, poll_number))
+                                break
 
-                    if 'tracklet' in pdf.columns:
-                        pdf['tracklet'] = pdf['tracklet'].astype('str')
+                            # known mismatches between partitions
+                            # see https://github.com/astrolabsoftware/fink-client/issues/165
+                            if 'cats_broad_max_prob' in pdf.columns:
+                                pdf['cats_broad_max_prob'] = pdf['cats_broad_max_prob'].astype('float')
 
-                    # if 'jd' in pdf.columns:
-                    #     # create columns year, month, day
+                            if 'cats_broad_class' in pdf.columns:
+                                pdf['cats_broad_class'] = pdf['cats_broad_class'].astype('float')
 
-                    table = pa.Table.from_pandas(pdf)
+                            if 'tracklet' in pdf.columns:
+                                pdf['tracklet'] = pdf['tracklet'].astype('str')
 
-                    if poll_number == 0:
-                        table_schema = table.schema
+                            # if 'jd' in pdf.columns:
+                            #     # create columns year, month, day
 
-                    if args.partitionby == 'time':
-                        partitioning = ['year', 'month', 'day']
-                    elif args.partitionby == 'finkclass':
-                        partitioning = ['finkclass']
-                    elif args.partitionby == 'tnsclass':
-                        partitioning = ['tnsclass']
-                    elif args.partitionby == 'classId':
-                        partitioning = ['classId']
+                            table = pa.Table.from_pandas(pdf)
 
-                    try:
-                        pq.write_to_dataset(
-                            table,
-                            args.outdir,
-                            schema=table_schema,
-                            basename_template='part-{}-{{i}}-{}.parquet'.format(processId, poll_number),
-                            partition_cols=partitioning,
-                            existing_data_behavior='overwrite_or_ignore'
-                        )
-                    except pa.lib.ArrowTypeError:
-                        print('Schema mismatch detected')
-                        table_schema_ = table.schema
-                        pq.write_to_dataset(
-                            table,
-                            args.outdir,
-                            schema=table_schema_,
-                            basename_template='part-{}-{{i}}-{}.parquet'.format(processId, poll_number),
-                            partition_cols=partitioning,
-                            existing_data_behavior='overwrite_or_ignore'
-                        )
+                            if poll_number == 0:
+                                table_schema = table.schema
 
-                    poll_number += len(msgs)
-                    pbar.update(len(msgs))
-                else:
-                    logging.info('[{}] No alerts the last {} seconds ({} polled)'.format(processId, args.maxtimeout, poll_number))
-        except KeyboardInterrupt:
-            sys.stderr.write('%% Aborted by user\n')
-            consumer.close()
-        finally:
-            consumer.close()
+                            if args.partitionby == 'time':
+                                partitioning = ['year', 'month', 'day']
+                            elif args.partitionby == 'finkclass':
+                                partitioning = ['finkclass']
+                            elif args.partitionby == 'tnsclass':
+                                partitioning = ['tnsclass']
+                            elif args.partitionby == 'classId':
+                                partitioning = ['classId']
 
+                            try:
+                                pq.write_to_dataset(
+                                    table,
+                                    args.outdir,
+                                    schema=table_schema,
+                                    basename_template='part-{}-{{i}}-{}.parquet'.format(processId, poll_number),
+                                    partition_cols=partitioning,
+                                    existing_data_behavior='overwrite_or_ignore'
+                                )
+                            except pa.lib.ArrowTypeError:
+                                print('Schema mismatch detected')
+                                table_schema_ = table.schema
+                                pq.write_to_dataset(
+                                    table,
+                                    args.outdir,
+                                    schema=table_schema_,
+                                    basename_template='part-{}-{{i}}-{}.parquet'.format(processId, poll_number),
+                                    partition_cols=partitioning,
+                                    existing_data_behavior='overwrite_or_ignore'
+                                )
+
+                            poll_number += len(msgs)
+                            pbar.update(len(msgs))
+                        else:
+                            logging.info('[{}] No alerts the last {} seconds ({} polled)\n'.format(processId, args.maxtimeout, poll_number))
+                except KeyboardInterrupt:
+                    sys.stderr.write('%% Aborted by user\n')
+                    consumer.close()
+                
+    consumer.close() 
 
 def main():
     """ """
@@ -264,7 +337,7 @@ def main():
         '-nconsumers', type=int, default=1,
         help="Number of parallel consumer to use. Default is 1.")
     parser.add_argument(
-        '-maxtimeout', type=int, default=None,
+        '-maxtimeout', type=float, default=None,
         help="Overwrite the default timeout (in seconds) from user configuration. Default is None.")
     parser.add_argument(
         '--restart_from_beginning', action='store_true',
@@ -314,23 +387,40 @@ def main():
         # TBD: raise error
         print('No schema found -- wait a few seconds and relaunch. If the error persists, maybe the queue is empty.')
     else:
-        processIds = [i for i in range(args.nconsumers)]
-        schemas = np.tile(schema, args.nconsumers)
-        kafka_configs = np.tile(kafka_config, args.nconsumers)
-        args_list = np.tile(args, args.nconsumers)
+        # processIds = [i for i in range(args.nconsumers)]
+        # schemas = np.tile(schema, args.nconsumers)
+        # kafka_configs = np.tile(kafka_config, args.nconsumers)
+        # args_list = np.tile(args, args.nconsumers)
+        
+        nbpart = return_npartitions(args.topic, kafka_config)
+        print("Le nombre de partitions du topic", args.topic, "est", nbpart)
+          
+        available = Queue()
+        # Queue loading
+        for key in range(nbpart):
+            available.put({
+                "partition": key,
+                "offset": 0,
+                "status": 0
+            })
 
-        tqdm.set_lock(RLock())
-        pool = Pool(processes=args.nconsumers, initializer=tqdm.set_lock, initargs=(tqdm.get_lock(),))
-        try:
-            pool.starmap(poll, zip(processIds, schemas, kafka_configs, args_list))
-            pool.close()
-            print_offsets(kafka_config, args.topic, args.maxtimeout)
-        except KeyboardInterrupt:
-            pool.terminate()
-            sys.stderr.write('%% Aborted by user\n')
-        finally:
-            pool.join()
+        # Processes Creation
+        procs = []
+        for i in range(args.nconsumers):
+            proc = Process(target=poll, args=(i, available, schema, kafka_config, args))
+            procs.append(proc)
+            proc.start()
 
+        for proc in procs:
+            proc.join()
+
+        print_offsets(kafka_config, args.topic, args.maxtimeout)
+        
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
