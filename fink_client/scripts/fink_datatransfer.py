@@ -127,7 +127,7 @@ def reset_offset(kafka_config, topic):
 
 def return_partition_offset(consumer, topic, partition):
     """ Return the offset and the remaining lag of a partition
-    
+
     consumer: confluent_kafka.Consumer
         Kafka consumer
     topic: str
@@ -144,13 +144,13 @@ def return_partition_offset(consumer, topic, partition):
     topicPartition = confluent_kafka.TopicPartition(topic, partition)
     low_offset, high_offset = consumer.get_watermark_offsets(topicPartition)
     partition_size = high_offset - low_offset
-    
+
     return partition_size
 
 
 def return_npartitions(topic, kafka_config):
     """ Function to get the number partition
-        
+
         Parameters
         ----------
         kafka_config: dic
@@ -162,7 +162,7 @@ def return_npartitions(topic, kafka_config):
         ----------
         nbpartitions: int
             Number of partitions in the topic
-        
+
     """
     consumer = confluent_kafka.Consumer(kafka_config)
 
@@ -177,7 +177,7 @@ def return_npartitions(topic, kafka_config):
             nbpartitions = len(partitions)
         else:
             print("Le topic", topic, "n'existe pas.")
-            
+
     except confluent_kafka.KafkaException as e:
         print(f"Erreur lors de la récupération du nombre de partitions du topic: {e}")
 
@@ -209,7 +209,7 @@ def poll(processId, queue, schema, kafka_config, args):
     # topics = ['{}'.format(args.topic)]
 
     # infinite loop
-    maxpoll = int(args.limit/args.nconsumers) if args.limit is not None else 1e10
+    maxpoll = int(args.limit / args.nconsumers) if args.limit is not None else 1e10
     disable = not args.verbose
 
     poll_number = 0
@@ -265,7 +265,7 @@ def poll(processId, queue, schema, kafka_config, args):
                                     "status": 0
                                 })
                                 break
-                            
+
                             pdf = pd.DataFrame.from_records(
                                 [fastavro.schemaless_reader(io.BytesIO(msg.value()), schema) for msg in msgs],
                             )
@@ -409,7 +409,7 @@ def main():
         # kafka_configs = np.tile(kafka_config, args.nconsumers)
         # args_list = np.tile(args, args.nconsumers)
         nbpart = return_npartitions(args.topic, kafka_config)
-        print("Le nombre de partitions du topic", args.topic, "est", nbpart)      
+        print("Le nombre de partitions du topic", args.topic, "est", nbpart)
         available = Queue()
         # Queue loading
         for key in range(nbpart):
@@ -429,7 +429,7 @@ def main():
         for proc in procs:
             proc.join()
 
-        print_offsets(kafka_config, args.topic, args.maxtimeout)       
+        print_offsets(kafka_config, args.topic, args.maxtimeout)
 
 
 if __name__ == "__main__":
