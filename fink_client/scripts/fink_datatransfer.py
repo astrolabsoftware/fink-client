@@ -1,4 +1,6 @@
-""" Kafka consumer to listen and archive Fink streams from the data transfer service """
+""" Kafka consumer to listen and archive Fink streams
+    from the data transfer service
+"""
 import sys
 import os
 import io
@@ -13,7 +15,6 @@ import pyarrow.parquet as pq
 import fastavro
 import confluent_kafka
 
-import numpy as np
 import pandas as pd
 
 from multiprocessing import Process, Queue
@@ -22,7 +23,6 @@ from fink_client.configuration import load_credentials
 
 from fink_client.consumer import return_offsets
 
-import time
 
 def print_offsets(kafka_config, topic, maxtimeout=10, verbose=True):
     """ Wrapper around `consumer.return_offsets`
@@ -56,6 +56,7 @@ def print_offsets(kafka_config, topic, maxtimeout=10, verbose=True):
     consumer.close()
 
     return total_lag, total_offset
+
 
 def get_schema(kafka_config, topic, maxtimeout):
     """ Poll the schema data from the schema topic
@@ -96,6 +97,7 @@ def get_schema(kafka_config, topic, maxtimeout):
 
     return schema
 
+
 def my_assign(consumer, partitions):
     """ Function to reset offsets when (re)polling
 
@@ -113,6 +115,7 @@ def my_assign(consumer, partitions):
         p.offset = 0
     consumer.assign(partitions)
 
+
 def reset_offset(kafka_config, topic):
     """
     """
@@ -120,6 +123,7 @@ def reset_offset(kafka_config, topic):
     topics = ['{}'.format(topic)]
     consumer.subscribe(topics, on_assign=my_assign)
     consumer.close()
+
 
 def return_partition_offset(consumer, topic, partition):
     """ Return the offset and the remaining lag of a partition
@@ -143,7 +147,8 @@ def return_partition_offset(consumer, topic, partition):
     
     return partition_size
 
-def return_npartitions(topic,kafka_config):
+
+def return_npartitions(topic, kafka_config):
     """ Function to get the number partition
         
         Parameters
@@ -195,57 +200,69 @@ def poll(processId, queue, schema, kafka_config, args):
     kafka_config: dict
         Configuration to instantiate a consumer
     args: dict
-        Other arguments (topic, maxtimeout, total_offset, total_lag) required for the processing
+        Other arguments (topic, maxtimeout, total_offset, total_lag)
+        required for the processing
     """
     # Instantiate a consumer
     consumer = confluent_kafka.Consumer(kafka_config)
-    
     # Subscribe to schema topic
-    #topics = ['{}'.format(args.topic)]
+    # topics = ['{}'.format(args.topic)]
 
     # infinite loop
-    maxpoll = int(args.limit / args.nconsumers) if args.limit is not None else 1e10
+    maxpoll = int(args.limit/args.nconsumers) if args.limit is not None else 1e10
     disable = not args.verbose
 
     poll_number = 0
-    
     while not queue.empty() and poll_number < maxpoll:
         # Getting a partition from the queue
         partition = queue.get()
-        tp = confluent_kafka.TopicPartition(args.topic, partition["partition"], offset=partition["offset"])
+        tp = confluent_kafka.TopicPartition(
+            args.topic,
+            partition["partition"],
+            offset=partition["offset"]
+        )
         consumer.assign([tp])
         # Getting the total number of alert in the partition
-        offset = return_partition_offset(consumer, args.topic,partition["partition"])
+        offset = return_partition_offset(
+            consumer,
+            args.topic,
+            partition["partition"]
+        )
         # Resuming from the last consumed alert
         initial = partition["offset"]
 
         max_end_check = 4
 
-        if offset == initial :
+        if offset == initial:
             if partition["status"] < max_end_check:
-                # After checking max_end_check time the partition with no modification, it is supposed finished
+                # After max_end_check time if no alerts added,
+                # it is supposed finished
                 queue.put({
-                    "partition" : partition["partition"],
-                    "offset" : partition["offset"],
-                    "status" : partition["status"] + 1
+                    "partition": partition["partition"],
+                    "offset": partition["offset"],
+                    "status": partition["status"] + 1
                 })
-            
-        else :  
+        else:
             poll_number = initial
             total = offset
             with trange(total, position=processId, initial=initial, colour='#F5622E', unit='alerts', disable=disable) as pbar:
                 try:
                     while poll_number < maxpoll:
-                        msgs = consumer.consume(args.batchsize, args.maxtimeout)
+                        msgs = consumer.consume(
+                            args.batchsize,
+                            args.maxtimeout
+                        )
                         # Decode the message
                         if msgs is not None:
                             if len(msgs) == 0:
                                 print('[{}] No alerts the last {} seconds ({} polled)... Have to exit(1)\n'.format(processId, args.maxtimeout, poll_number))
-                                # Alerts can be added in the partition later, putting it again in the queue and changing the offset to continue from where we stopped
+                                # Alerts can be added in the partition later
+                                # putting it again in the queue
+                                # changing the offset to continue where we stopped
                                 queue.put({
-                                    "partition" : partition["partition"],
-                                    "offset" : poll_number,
-                                    "status" : 0
+                                    "partition": partition["partition"],
+                                    "offset": poll_number,
+                                    "status": 0
                                 })
                                 break
                             
@@ -253,7 +270,7 @@ def poll(processId, queue, schema, kafka_config, args):
                                 [fastavro.schemaless_reader(io.BytesIO(msg.value()), schema) for msg in msgs],
                             )
                             if pdf.empty:
-                                #print('[{}] No alerts the last {} seconds ({} polled)... Exiting\n'.format(processId, args.maxtimeout, poll_number))
+                                # print('[{}] No alerts the last {} seconds ({} polled)... Exiting\n'.format(processId, args.maxtimeout, poll_number))
                                 break
 
                             # known mismatches between partitions
@@ -312,8 +329,8 @@ def poll(processId, queue, schema, kafka_config, args):
                 except KeyboardInterrupt:
                     sys.stderr.write('%% Aborted by user\n')
                     consumer.close()
-                
-    consumer.close() 
+    consumer.close()
+
 
 def main():
     """ """
@@ -391,10 +408,8 @@ def main():
         # schemas = np.tile(schema, args.nconsumers)
         # kafka_configs = np.tile(kafka_config, args.nconsumers)
         # args_list = np.tile(args, args.nconsumers)
-        
         nbpart = return_npartitions(args.topic, kafka_config)
-        print("Le nombre de partitions du topic", args.topic, "est", nbpart)
-          
+        print("Le nombre de partitions du topic", args.topic, "est", nbpart)      
         available = Queue()
         # Queue loading
         for key in range(nbpart):
@@ -414,13 +429,8 @@ def main():
         for proc in procs:
             proc.join()
 
-        print_offsets(kafka_config, args.topic, args.maxtimeout)
-        
+        print_offsets(kafka_config, args.topic, args.maxtimeout)       
+
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
