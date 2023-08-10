@@ -186,6 +186,42 @@ def return_npartitions(topic, kafka_config):
     return nbpartitions
 
 
+def return_last_offsets(kafka_config, topic):
+    """
+
+    Parameters
+    ----------
+    kafka_config: dict
+        Kafka consumer config
+    topic: str
+        Topic name
+
+    Returns
+    ----------
+    offsets: list
+        Last offsets of each partition
+    """
+    consumer = confluent_kafka.Consumer(kafka_config)
+    topics = ['{}'.format(topic)]
+    consumer.subscribe(topics)
+
+    metadata = consumer.list_topics(topic)
+    if metadata.topics[topic].error is not None:
+        raise confluent_kafka.KafkaException(metadata.topics[topic].error)
+    # List of partition
+    partitions = [confluent_kafka.TopicPartition(topic, p) for p in metadata.topics[topic].partitions]
+    committed = consumer.committed(partitions)
+    offsets = []
+    for partition in committed:
+        if partition.offset != confluent_kafka.OFFSET_INVALID:
+            offsets.append(partition.offset)
+        else:
+            offsets.append(0)
+
+    consumer.close()
+    return offsets
+
+
 def poll(processId, queue, schema, kafka_config, args):
     """ Poll data from Kafka servers
 
@@ -245,7 +281,7 @@ def poll(processId, queue, schema, kafka_config, args):
         else:
             poll_number = initial
             total = offset
-            with trange(total, position=processId, initial=initial, colour='#F5622E', unit='alerts', disable=disable) as pbar:
+            with trange(total, position=partition["partition"], initial=initial, colour='#F5622E', unit='alerts', disable=disable) as pbar:
                 try:
                     while poll_number < maxpoll:
                         msgs = consumer.consume(
@@ -289,7 +325,7 @@ def poll(processId, queue, schema, kafka_config, args):
 
                             table = pa.Table.from_pandas(pdf)
 
-                            if poll_number == 0:
+                            if poll_number == initial:
                                 table_schema = table.schema
 
                             if args.partitionby == 'time':
@@ -324,6 +360,14 @@ def poll(processId, queue, schema, kafka_config, args):
 
                             poll_number += len(msgs)
                             pbar.update(len(msgs))
+
+                            if len(msgs) < args.batchsize:
+                                queue.put({
+                                    "partition": partition["partition"],
+                                    "offset": poll_number,
+                                    "status": 0
+                                })
+                                break
                         else:
                             logging.info('[{}] No alerts the last {} seconds ({} polled)\n'.format(processId, args.maxtimeout, poll_number))
                 except KeyboardInterrupt:
@@ -385,10 +429,12 @@ def main():
         total_lag, total_offset = print_offsets(kafka_config, args.topic, args.maxtimeout, verbose=False)
         args.total_lag = total_offset
         args.total_offset = 0
+        offsets = [0 for _ in range(10)]
     else:
         total_lag, total_offset = print_offsets(kafka_config, args.topic, args.maxtimeout)
         args.total_lag = total_lag
         args.total_offset = total_offset
+        offsets = return_last_offsets(kafka_config, args.topic)
         if total_lag == 0:
             print("All alerts have been polled. Exiting.")
             sys.exit()
@@ -415,7 +461,7 @@ def main():
         for key in range(nbpart):
             available.put({
                 "partition": key,
-                "offset": 0,
+                "offset": offsets[key],
                 "status": 0
             })
 
