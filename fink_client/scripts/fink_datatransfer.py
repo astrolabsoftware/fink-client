@@ -428,6 +428,9 @@ def main():
         '-maxtimeout', type=float, default=None,
         help="Overwrite the default timeout (in seconds) from user configuration. Default is None.")
     parser.add_argument(
+        '-number_partitions', type=int, default=10,
+        help="Number of partitions for the topic in the distant Kafka cluster. Do not touch unless you know what your are doing. Default is 10 (Fink Kafka cluster)")
+    parser.add_argument(
         '--restart_from_beginning', action='store_true',
         help="If specified, restart downloading from the 1st alert in the stream. Default is False.")
     parser.add_argument(
@@ -460,7 +463,7 @@ def main():
         total_lag, total_offset = print_offsets(kafka_config, args.topic, args.maxtimeout, verbose=False)
         args.total_lag = total_offset
         args.total_offset = 0
-        offsets = [0 for _ in range(10)]
+        offsets = [0 for _ in range(args.number_partitions)]
     else:
         total_lag, total_offset = print_offsets(kafka_config, args.topic, args.maxtimeout)
         args.total_lag = total_lag
