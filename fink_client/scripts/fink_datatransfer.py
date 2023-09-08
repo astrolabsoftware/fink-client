@@ -423,7 +423,7 @@ def main():
         help="Maximum number of alert within the `maxtimeout` (see conf). Default is 1000 alerts.")
     parser.add_argument(
         '-nconsumers', type=int, default=-1,
-        help="Number of parallel consumer to use. Default is the number of logical CPUs in the system.")
+        help="Number of parallel consumer to use. Default (-1) is the number of logical CPUs in the system.")
     parser.add_argument(
         '-maxtimeout', type=float, default=None,
         help="Overwrite the default timeout (in seconds) from user configuration. Default is None.")
