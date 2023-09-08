@@ -64,6 +64,19 @@ class AlertConsumer:
         self._consumer.close()
 
     def process_message(self, msg):
+        """ Process message from Kafka
+
+        Parameters
+        ----------
+        msg: confluent_kafka.Message
+            Object containing message information
+
+        Returns
+        ----------
+        list: [tuple(str, dict, str)]
+            list of topic, alert, key
+            returns an empty list on timeout
+        """
         # msg.error() returns None or KafkaError
         if msg.error():
             error_message = """
