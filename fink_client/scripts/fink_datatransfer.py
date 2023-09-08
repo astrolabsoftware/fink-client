@@ -132,7 +132,14 @@ def my_assign(consumer, partitions):
 
 
 def reset_offset(kafka_config, topic):
-    """
+    """ Rest offsets for a given topic
+
+    Parameters
+    ----------
+    kafka_config: dict
+        Kafka server parameters
+    topic: str
+        Topic name
     """
     consumer = confluent_kafka.Consumer(kafka_config)
     topics = ['{}'.format(topic)]
@@ -148,7 +155,7 @@ def return_partition_offset(consumer, topic, partition):
     topic: str
         Topic name
     partition: int
-        The partition
+        The partition number
 
     Returns
     ----------
@@ -164,19 +171,19 @@ def return_partition_offset(consumer, topic, partition):
 
 
 def return_npartitions(topic, kafka_config):
-    """ Function to get the number partition
+    """ Get the number of partitions
 
-        Parameters
-        ----------
-        kafka_config: dic
-            Dictionary with consumer parameters
-        topic: str
-            Topic name
+    Parameters
+    ----------
+    kafka_config: dic
+        Dictionary with consumer parameters
+    topic: str
+        Topic name
 
-        Returns
-        ----------
-        nbpartitions: int
-            Number of partitions in the topic
+    Returns
+    ----------
+    nbpartitions: int
+        Number of partitions in the topic
 
     """
     consumer = confluent_kafka.Consumer(kafka_config)
@@ -184,17 +191,17 @@ def return_npartitions(topic, kafka_config):
     # Details to get
     nbpartitions = 0
     try:
-        # Obtenez les métadonnées du topic
+        # Topic metadata
         metadata = consumer.list_topics(topic=topic)
 
         if metadata.topics and topic in metadata.topics:
             partitions = metadata.topics[topic].partitions
             nbpartitions = len(partitions)
         else:
-            print("Le topic", topic, "n'existe pas.")
+            print("The topic {} does not exist".format(topic))
 
     except confluent_kafka.KafkaException as e:
-        print(f"Erreur lors de la récupération du nombre de partitions du topic: {e}")
+        print(f"Error while getting the number of partitions: {e}")
 
     consumer.close()
 
@@ -202,7 +209,7 @@ def return_npartitions(topic, kafka_config):
 
 
 def return_last_offsets(kafka_config, topic):
-    """
+    """ Return the last offsets
 
     Parameters
     ----------
@@ -223,7 +230,8 @@ def return_last_offsets(kafka_config, topic):
     metadata = consumer.list_topics(topic)
     if metadata.topics[topic].error is not None:
         raise confluent_kafka.KafkaException(metadata.topics[topic].error)
-    # List of partition
+
+    # List of partitions
     partitions = [confluent_kafka.TopicPartition(topic, p) for p in metadata.topics[topic].partitions]
     committed = consumer.committed(partitions)
     offsets = []
@@ -245,7 +253,8 @@ def poll(processId, queue, schema, kafka_config, args):
     processId: int
         ID of the process used for multiprocessing
     queue: Multiprocessing.Queue
-        Shared queue between processes where are stocked partitions and the last offset of the partition
+        Shared queue between processes where are stocked partitions
+        and the last offset of the partition
     schema: dict
         Alert schema
     kafka_config: dict
@@ -465,12 +474,8 @@ def main():
         # TBD: raise error
         print('No schema found -- wait a few seconds and relaunch. If the error persists, maybe the queue is empty.')
     else:
-        # processIds = [i for i in range(args.nconsumers)]
-        # schemas = np.tile(schema, args.nconsumers)
-        # kafka_configs = np.tile(kafka_config, args.nconsumers)
-        # args_list = np.tile(args, args.nconsumers)
         nbpart = return_npartitions(args.topic, kafka_config)
-        print("Le nombre de partitions du topic", args.topic, "est", nbpart)
+        print("Number of partitions for topic {}: {}".format(args.topic, nbpart))
         available = Queue()
         # Queue loading
         for key in range(nbpart):
