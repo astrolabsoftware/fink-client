@@ -97,7 +97,7 @@ class AlertConsumer:
         # decode the key if it is bytes
         key = msg.key()
 
-        if type(key) == bytes:
+        if isinstance(key, bytes):
             key = key.decode('utf8')
         if key is None:
             # compatibility with previous scheme
@@ -177,7 +177,7 @@ class AlertConsumer:
             # decode the key if it is bytes
             key = msg.key()
 
-            if type(key) == bytes:
+            if isinstance(key, bytes):
                 key = key.decode('utf8')
             if key is None:
                 # compatibility with previous scheme
