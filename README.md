@@ -22,7 +22,7 @@ pip install fink-client --upgrade
 You will also need to install `fastavro==1.6.0` separately (versions above are not compatible with alert schema):
 
 ```
-# fastavro 1.6.1 requires Cython<3
+# fastavro 1.6.0 requires Cython<3
 pip install "Cython<3"
 pip install --no-build-isolation "fastavro==1.6.0"
 ```
@@ -108,7 +108,8 @@ More information at [docs/livestream](https://fink-broker.readthedocs.io/en/late
 If you requested data using the [Data Transfer service](https://fink-portal.org/download), you can easily poll your stream using:
 
 ```bash
-usage: fink_datatransfer [-h] [-topic TOPIC] [-limit LIMIT] [-outdir OUTDIR] [-partitionby PARTITIONBY] [-batchsize BATCHSIZE] [-nconsumers NCONSUMERS] [-maxtimeout MAXTIMEOUT] [--restart_from_beginning] [--verbose]
+usage: fink_datatransfer.py [-h] [-topic TOPIC] [-limit LIMIT] [-outdir OUTDIR] [-partitionby PARTITIONBY] [-batchsize BATCHSIZE] [-nconsumers NCONSUMERS]
+                            [-maxtimeout MAXTIMEOUT] [-number_partitions NUMBER_PARTITIONS] [--restart_from_beginning] [--verbose]
 
 Kafka consumer to listen and archive Fink streams from the data transfer service
 
@@ -118,16 +119,19 @@ optional arguments:
   -limit LIMIT          If specified, download only `limit` alerts from the stream. Default is None, that is download all alerts.
   -outdir OUTDIR        Folder to store incoming alerts. It will be created if it does not exist.
   -partitionby PARTITIONBY
-                        Partition data by `time` (year=YYYY/month=MM/day=DD), or `finkclass` (finkclass=CLASS), or `tnsclass` (tnsclass=CLASS). `classId` is also available for ELASTiCC data. Default is time.
+                        Partition data by `time` (year=YYYY/month=MM/day=DD), or `finkclass` (finkclass=CLASS), or `tnsclass` (tnsclass=CLASS). `classId` is
+                        also available for ELASTiCC data. Default is time.
   -batchsize BATCHSIZE  Maximum number of alert within the `maxtimeout` (see conf). Default is 1000 alerts.
   -nconsumers NCONSUMERS
-                        Number of parallel consumer to use. Default is 1.
+                        Number of parallel consumer to use. Default (-1) is the number of logical CPUs in the system.
   -maxtimeout MAXTIMEOUT
                         Overwrite the default timeout (in seconds) from user configuration. Default is None.
+  -number_partitions NUMBER_PARTITIONS
+                        Number of partitions for the topic in the distant Kafka cluster. Do not touch unless you know what your are doing. Default is 10
+                        (Fink Kafka cluster)
   --restart_from_beginning
                         If specified, restart downloading from the 1st alert in the stream. Default is False.
   --verbose             If specified, print on screen information about the consuming.
-
 ```
 
 More information at [docs/datatransfer](https://fink-broker.readthedocs.io/en/latest/services/data_transfer/).
