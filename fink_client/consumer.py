@@ -63,24 +63,7 @@ class AlertConsumer:
     def __exit__(self, type, value, traceback):
         self._consumer.close()
 
-    def poll(self, timeout: float = -1) -> (str, dict):
-        """ Consume one message from Fink server
-
-        Parameters
-        ----------
-        timeout: float, optional
-            maximum time to block waiting for a message
-            if not set default is None i.e. wait indefinitely
-
-        Returns
-        ----------
-        (topic, alert, key): tuple(str, dict, str)
-            returns (None, None, None) on timeout
-        """
-        msg = self._consumer.poll(timeout)
-        if msg is None:
-            return None, None, None
-
+    def process_message(self, msg):
         # msg.error() returns None or KafkaError
         if msg.error():
             error_message = """
@@ -127,6 +110,26 @@ class AlertConsumer:
 
         return topic, alert, key
 
+    def poll(self, timeout: float = -1) -> (str, dict):
+        """ Consume one message from Fink server
+
+        Parameters
+        ----------
+        timeout: float, optional
+            maximum time to block waiting for a message
+            if not set default is None i.e. wait indefinitely
+
+        Returns
+        ----------
+        (topic, alert, key): tuple(str, dict, str)
+            returns (None, None, None) on timeout
+        """
+        msg = self._consumer.poll(timeout)
+        if msg is None:
+            return None, None, None
+
+        return self.process_message(msg)
+
     def _decode_msg(self, parsed_schema, msg) -> dict:
         """ decode message using parsed schema
 
@@ -172,38 +175,7 @@ class AlertConsumer:
                 alerts.append((None, None, None))
                 continue
 
-            topic = msg.topic()
-
-            # decode the key if it is bytes
-            key = msg.key()
-
-            if isinstance(key, bytes):
-                key = key.decode('utf8')
-            if key is None:
-                # compatibility with previous scheme
-                key = ""
-
-            try:
-                _parsed_schema = fastavro.schema.parse_schema(json.loads(key))
-                alert = self._decode_msg(_parsed_schema, msg)
-            except json.JSONDecodeError:
-                # Old way
-                if self.schema_path is not None:
-                    _parsed_schema = _get_alert_schema(schema_path=self.schema_path)
-                    alert = self._decode_msg(_parsed_schema, msg)
-                elif key is not None:
-                    try:
-                        _parsed_schema = _get_alert_schema(key=key)
-                        alert = self._decode_msg(_parsed_schema, msg)
-                    except IndexError:
-                        _parsed_schema = _get_alert_schema(key=key + '_replayed')
-                        alert = self._decode_msg(_parsed_schema, msg)
-                else:
-                    msg = """
-                    The message cannot be decoded as there is no key (None). Alternatively
-                    specify manually the schema path when instantiating ``AlertConsumer`` (or from fink_consumer).
-                    """
-                    raise NotImplementedError(msg)
+            topic, alert, key = self.process_message(msg)
 
             alerts.append((topic, alert, key))
 
