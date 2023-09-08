@@ -22,6 +22,7 @@ import io
 import json
 import argparse
 import logging
+import psutil
 
 from tqdm import trange
 
@@ -245,13 +246,15 @@ def return_last_offsets(kafka_config, topic):
     return offsets
 
 
-def poll(processId, queue, schema, kafka_config, args):
+def poll(processId, nconsumers, queue, schema, kafka_config, args):
     """ Poll data from Kafka servers
 
     Parameters
     ----------
     processId: int
         ID of the process used for multiprocessing
+    nconsumers: int
+        Number of consumers (cores) in parallel
     queue: Multiprocessing.Queue
         Shared queue between processes where are stocked partitions
         and the last offset of the partition
@@ -269,7 +272,7 @@ def poll(processId, queue, schema, kafka_config, args):
     # topics = ['{}'.format(args.topic)]
 
     # infinite loop
-    maxpoll = int(args.limit / args.nconsumers) if args.limit is not None else 1e10
+    maxpoll = int(args.limit / nconsumers) if args.limit is not None else 1e10
     disable = not args.verbose
 
     poll_number = 0
@@ -419,8 +422,8 @@ def main():
         '-batchsize', type=int, default=1000,
         help="Maximum number of alert within the `maxtimeout` (see conf). Default is 1000 alerts.")
     parser.add_argument(
-        '-nconsumers', type=int, default=1,
-        help="Number of parallel consumer to use. Default is 1.")
+        '-nconsumers', type=int, default=-1,
+        help="Number of parallel consumer to use. Default is the number of logical CPUs in the system.")
     parser.add_argument(
         '-maxtimeout', type=float, default=None,
         help="Overwrite the default timeout (in seconds) from user configuration. Default is None.")
@@ -442,6 +445,10 @@ def main():
     # Time to wait before polling again if no alerts
     if args.maxtimeout is None:
         args.maxtimeout = conf['maxtimeout']
+
+    # Number of consumers to use
+    if args.nconsumers == -1:
+        nconsumers = psutil.cpu_count(logical=True)
 
     kafka_config = {
         'bootstrap.servers': conf['servers'],
@@ -487,8 +494,8 @@ def main():
 
         # Processes Creation
         procs = []
-        for i in range(args.nconsumers):
-            proc = Process(target=poll, args=(i, available, schema, kafka_config, args))
+        for i in range(nconsumers):
+            proc = Process(target=poll, args=(i, nconsumers, available, schema, kafka_config, args))
             procs.append(proc)
             proc.start()
 
