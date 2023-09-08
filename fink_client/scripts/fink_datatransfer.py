@@ -246,12 +246,12 @@ def return_last_offsets(kafka_config, topic):
     return offsets
 
 
-def poll(processId, nconsumers, queue, schema, kafka_config, args):
+def poll(process_id, nconsumers, queue, schema, kafka_config, args):
     """ Poll data from Kafka servers
 
     Parameters
     ----------
-    processId: int
+    process_id: int
         ID of the process used for multiprocessing
     nconsumers: int
         Number of consumers (cores) in parallel
@@ -318,7 +318,7 @@ def poll(processId, nconsumers, queue, schema, kafka_config, args):
                         # Decode the message
                         if msgs is not None:
                             if len(msgs) == 0:
-                                print('[{}] No alerts the last {} seconds ({} polled)... Have to exit(1)\n'.format(processId, args.maxtimeout, poll_number))
+                                print('[{}] No alerts the last {} seconds ({} polled)... Have to exit(1)\n'.format(process_id, args.maxtimeout, poll_number))
                                 # Alerts can be added in the partition later
                                 # putting it again in the queue
                                 # changing the offset to continue where we stopped
@@ -333,7 +333,7 @@ def poll(processId, nconsumers, queue, schema, kafka_config, args):
                                 [fastavro.schemaless_reader(io.BytesIO(msg.value()), schema) for msg in msgs],
                             )
                             if pdf.empty:
-                                # print('[{}] No alerts the last {} seconds ({} polled)... Exiting\n'.format(processId, args.maxtimeout, poll_number))
+                                # print('[{}] No alerts the last {} seconds ({} polled)... Exiting\n'.format(process_id, args.maxtimeout, poll_number))
                                 break
 
                             # known mismatches between partitions
@@ -369,7 +369,7 @@ def poll(processId, nconsumers, queue, schema, kafka_config, args):
                                     table,
                                     args.outdir,
                                     schema=table_schema,
-                                    basename_template='part-{}-{{i}}-{}.parquet'.format(processId, poll_number),
+                                    basename_template='part-{}-{{i}}-{}.parquet'.format(process_id, poll_number),
                                     partition_cols=partitioning,
                                     existing_data_behavior='overwrite_or_ignore'
                                 )
@@ -380,7 +380,7 @@ def poll(processId, nconsumers, queue, schema, kafka_config, args):
                                     table,
                                     args.outdir,
                                     schema=table_schema_,
-                                    basename_template='part-{}-{{i}}-{}.parquet'.format(processId, poll_number),
+                                    basename_template='part-{}-{{i}}-{}.parquet'.format(process_id, poll_number),
                                     partition_cols=partitioning,
                                     existing_data_behavior='overwrite_or_ignore'
                                 )
@@ -396,7 +396,7 @@ def poll(processId, nconsumers, queue, schema, kafka_config, args):
                                 })
                                 break
                         else:
-                            logging.info('[{}] No alerts the last {} seconds ({} polled)\n'.format(processId, args.maxtimeout, poll_number))
+                            logging.info('[{}] No alerts the last {} seconds ({} polled)\n'.format(process_id, args.maxtimeout, poll_number))
                 except KeyboardInterrupt:
                     sys.stderr.write('%% Aborted by user\n')
                     consumer.close()
