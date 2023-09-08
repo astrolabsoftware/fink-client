@@ -259,7 +259,7 @@ def write_alert(alert: dict, schema: str, path: str, overwrite: bool = False, id
         "{}_{}.avro".format(alert[id1], alert[id2])
     )
 
-    if type(schema) == str:
+    if isinstance(schema, str):
         schema = _get_alert_schema(schema)
     # Check if the alert already exist
     if os.path.exists(alert_filename) and not overwrite:
@@ -378,10 +378,10 @@ def _get_alert_schema(schema_path: str = None, key: str = None, timeout: int = 1
         raise NotImplementedError(msg)
 
     # User-defined schema
-    if type(schema_path) == str and schema_path != '':
+    if isinstance(schema_path, str) and schema_path != '':
         with open(schema_path) as f:
             schema = json.load(f)
-    elif type(schema_path) == str and schema_path == '':
+    elif isinstance(schema_path, str) and schema_path == '':
         msg = """
         `schema_path` must be a non-empty string (path to a avsc file).
         """
