@@ -32,6 +32,7 @@ import fastavro
 import confluent_kafka
 
 import pandas as pd
+import numpy as np
 
 from multiprocessing import Process, Queue
 
@@ -246,7 +247,7 @@ def return_last_offsets(kafka_config, topic):
     return offsets
 
 
-def poll(process_id, nconsumers, queue, schema, kafka_config, args):
+def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
     """ Poll data from Kafka servers
 
     Parameters
@@ -364,12 +365,13 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, args):
                             elif args.partitionby == 'classId':
                                 partitioning = ['classId']
 
+                            part_num = rng.randint(0, 1e6)
                             try:
                                 pq.write_to_dataset(
                                     table,
                                     args.outdir,
                                     schema=table_schema,
-                                    basename_template='part-{}-{{i}}-{}.parquet'.format(process_id, poll_number),
+                                    basename_template='part-{}-{{i}}-{}.parquet'.format(process_id, part_num),
                                     partition_cols=partitioning,
                                     existing_data_behavior='overwrite_or_ignore'
                                 )
@@ -380,7 +382,7 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, args):
                                     table,
                                     args.outdir,
                                     schema=table_schema_,
-                                    basename_template='part-{}-{{i}}-{}.parquet'.format(process_id, poll_number),
+                                    basename_template='part-{}-{{i}}-{}.parquet'.format(process_id, part_num),
                                     partition_cols=partitioning,
                                     existing_data_behavior='overwrite_or_ignore'
                                 )
@@ -452,6 +454,8 @@ def main():
     # Number of consumers to use
     if args.nconsumers == -1:
         nconsumers = psutil.cpu_count(logical=True)
+    else:
+        nconsumers = args.nconsumers
 
     kafka_config = {
         'bootstrap.servers': conf['servers'],
@@ -496,9 +500,11 @@ def main():
             })
 
         # Processes Creation
+        random_state = 0
+        rng = np.random.RandomState(random_state)
         procs = []
         for i in range(nconsumers):
-            proc = Process(target=poll, args=(i, nconsumers, available, schema, kafka_config, args))
+            proc = Process(target=poll, args=(i, nconsumers, available, schema, kafka_config, rng, args))
             procs.append(proc)
             proc.start()
 
