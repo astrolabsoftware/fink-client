@@ -1,6 +1,6 @@
 coverage>=4.2
 coveralls
-confluent-kafka==2.0.2
+confluent-kafka==2.2.0
 #fastavro==1.6.0
 astropy
 numpy<1.25
