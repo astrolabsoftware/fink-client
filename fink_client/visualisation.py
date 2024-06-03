@@ -22,8 +22,9 @@ from astropy.io import fits
 
 import numpy as np
 
+
 def plot_cutout(stamp: bytes, fig=None, subplot=None, **kwargs):
-    """ Plot one cutout contained in an alert (2D array)
+    """Plot one cutout contained in an alert (2D array)
 
     Adapted from ZTF alert tools.
 
@@ -32,7 +33,7 @@ def plot_cutout(stamp: bytes, fig=None, subplot=None, **kwargs):
     stamp: bytes
         Cutout data as raw binary from the alert
     """
-    with gzip.open(io.BytesIO(stamp), 'rb') as f:
+    with gzip.open(io.BytesIO(stamp), "rb") as f:
         with fits.open(io.BytesIO(f.read()), ignore_missing_simple=True) as hdul:
             if fig is None:
                 fig = plt.figure(figsize=(4, 4))
@@ -50,21 +51,23 @@ def plot_cutout(stamp: bytes, fig=None, subplot=None, **kwargs):
 
     return ax
 
+
 def show_stamps(alert: dict, fig=None):
-    """ Plot the 3 cutouts contained in an alert.
+    """Plot the 3 cutouts contained in an alert.
 
     Parameters
     ----------
     alert: dict
         Dictionnary containing alert data.
     """
-    for i, cutout in enumerate(['Science', 'Template', 'Difference']):
-        stamp = alert['cutout{}'.format(cutout)]['stampData']
+    for i, cutout in enumerate(["Science", "Template", "Difference"]):
+        stamp = alert["cutout{}".format(cutout)]["stampData"]
         ffig = plot_cutout(stamp, fig=fig, subplot=(1, 3, i + 1))
         ffig.set_title(cutout)
         # remove axis labels
-        plt.xlabel('')
-        plt.ylabel('')
+        plt.xlabel("")
+        plt.ylabel("")
+
 
 def extract_history(history_list: list, field: str) -> list:
     """Extract the historical measurements contained in the alerts
@@ -79,20 +82,21 @@ def extract_history(history_list: list, field: str) -> list:
         a key of elements of history_list (alert['prv_candidates'])
 
     Returns
-    ----------
+    -------
     measurement: list
         List of all the `field` measurements contained in the alerts.
     """
     try:
         measurement = [obs[field] for obs in history_list]
     except KeyError:
-        print('{} not in history data'.format(field))
+        print("{} not in history data".format(field))
         measurement = [None] * len(history_list)
 
     return measurement
 
+
 def extract_field(alert: dict, field: str) -> np.array:
-    """ Concatenate current and historical observation data for a given field.
+    """Concatenate current and historical observation data for a given field.
 
     Parameters
     ----------
@@ -102,16 +106,13 @@ def extract_field(alert: dict, field: str) -> np.array:
         Name of the field to extract.
 
     Returns
-    ----------
+    -------
     data: np.array
         List containing previous measurements and current measurement at the
         end. If `field` is not in `prv_candidates fields, data will be
         [None, None, ..., alert['candidate'][field]].
     """
     data = np.concatenate(
-        [
-            [alert["candidate"][field]],
-            extract_history(alert['prv_candidates'], field)
-        ]
+        [[alert["candidate"][field]], extract_history(alert["prv_candidates"], field)]
     )
     return data

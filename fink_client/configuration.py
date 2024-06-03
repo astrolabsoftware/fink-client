@@ -18,11 +18,12 @@ import os
 
 from fink_client.tester import regular_unit_tests
 
-_ROOTDIR = os.path.join(os.environ['HOME'], ".finkclient")
+_ROOTDIR = os.path.join(os.environ["HOME"], ".finkclient")
 _CREDNAME = "credentials.yml"
 
+
 def write_credentials(dict_file: dict, verbose: bool = False, tmp: bool = False):
-    """ Store user credentials on the computer.
+    """Store user credentials on the computer.
 
     To get your credentials, contact Fink admins or fill the registration form:
         https://forms.gle/2td4jysT4e9pkf889
@@ -37,7 +38,7 @@ def write_credentials(dict_file: dict, verbose: bool = False, tmp: bool = False)
         If True, store the credentials under /tmp. Default is False.
 
     Examples
-    ----------
+    --------
     >>> conf = {
     ...   'username': 'test',
     ...   'password': None,
@@ -55,25 +56,29 @@ def write_credentials(dict_file: dict, verbose: bool = False, tmp: bool = False)
 
     # check there are no missing information
     mandatory_keys = [
-        'username', 'password', 'group_id',
-        'mytopics', 'servers',
-        'maxtimeout'
+        "username",
+        "password",
+        "group_id",
+        "mytopics",
+        "servers",
+        "maxtimeout",
     ]
     for k in mandatory_keys:
-        assert k in dict_file.keys(), 'You need to specify {}'.format(k)
+        assert k in dict_file.keys(), "You need to specify {}".format(k)
 
     # Create the folder if it does not exist
     os.makedirs(ROOTDIR, exist_ok=True)
 
     # Store data into yml file
-    with open(os.path.join(ROOTDIR, _CREDNAME), 'w') as f:
+    with open(os.path.join(ROOTDIR, _CREDNAME), "w") as f:
         yaml.dump(dict_file, f)
 
     if verbose:
-        print('Credentials stored at {}/{}'.format(ROOTDIR, _CREDNAME))
+        print("Credentials stored at {}/{}".format(ROOTDIR, _CREDNAME))
+
 
 def load_credentials(tmp: bool = False) -> dict:
-    """ Load fink-client credentials.
+    """Load fink-client credentials.
 
     Parameters
     ----------
@@ -81,12 +86,12 @@ def load_credentials(tmp: bool = False) -> dict:
         If True, load the credentials from /tmp. Default is False.
 
     Returns
-    --------
+    -------
     creds: dict
         Dictionnary containing user credentials.
 
     Examples
-    ----------
+    --------
     >>> conf_in = {
     ...   'username': 'test',
     ...   'password': None,
@@ -134,14 +139,14 @@ def load_credentials(tmp: bool = False) -> dict:
 
     return creds
 
+
 def mm_topic_names():
-    """ Return list of topics with MMA schema
-    """
+    """Return list of topics with MMA schema"""
     out = [
-        'fink_grb_bronze',
-        'fink_grb_silver',
-        'fink_grb_gold',
-        'fink_gw_bronze',
+        "fink_grb_bronze",
+        "fink_grb_silver",
+        "fink_grb_gold",
+        "fink_gw_bronze",
     ]
     return out
 

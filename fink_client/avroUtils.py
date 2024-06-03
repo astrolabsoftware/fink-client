@@ -31,8 +31,9 @@ import fastavro
 from fink_client.tester import regular_unit_tests
 from fink_client import __schema_version__
 
-class AlertReader():
-    """ Class to load alert Avro files.
+
+class AlertReader:
+    """Class to load alert Avro files.
 
     It accepts single avro file (.avro), gzipped avro file (.avro.gz), and
     folders containing several of these.
@@ -43,7 +44,7 @@ class AlertReader():
         Path to alert Avro file or folder containing alert Avro files.
 
     Examples
-    ----------
+    --------
     Load a single Avro alert
     >>> r = AlertReader(avro_single_alert)
     >>> list_of_alerts = r.to_list()
@@ -71,13 +72,14 @@ class AlertReader():
     2 alerts decoded
 
     """
+
     def __init__(self, path: str):
-        """ Initialise the AlertReader class """
+        """Initialise the AlertReader class"""
         self.path = path
         self._load_avro_files()
 
     def _load_avro_files(self, ext_path: str = None):
-        """ Load Avro alert data
+        """Load Avro alert data
 
         Parameters
         ----------
@@ -93,13 +95,13 @@ class AlertReader():
         if isinstance(path, list):
             self.filenames = path
         elif os.path.isdir(path):
-            self.filenames = glob.glob(os.path.join(path, '*.avro*'))
-        elif path == '':
-            print('WARNING: path to avro files is empty')
+            self.filenames = glob.glob(os.path.join(path, "*.avro*"))
+        elif path == "":
+            print("WARNING: path to avro files is empty")
             self.filenames = []
         elif fastavro.is_avro(path):
             self.filenames = [path]
-        elif path.endswith('avro.gz'):
+        elif path.endswith("avro.gz"):
             self.filenames = [path]
         else:
             msg = """
@@ -110,7 +112,7 @@ class AlertReader():
             raise IOError(msg)
 
     def _read_single_alert(self, name: str = None) -> dict:
-        """ Read an avro alert, and return data as dictionary
+        """Read an avro alert, and return data as dictionary
 
         Parameters
         ----------
@@ -119,12 +121,12 @@ class AlertReader():
             Default is None (self.path is used).
 
         Returns
-        ----------
+        -------
         alert: dict
             Alert data in a dictionary
 
         Examples
-        ----------
+        --------
         >>> r = AlertReader("")
         WARNING: path to avro files is empty
 
@@ -135,10 +137,10 @@ class AlertReader():
 
         data = []
 
-        if name.endswith('avro'):
-            copen = lambda x: open(x, mode='rb')
-        elif name.endswith('avro.gz'):
-            copen = lambda x: gzip.open(x, mode='rb')
+        if name.endswith("avro"):
+            copen = lambda x: open(x, mode="rb")
+        elif name.endswith("avro.gz"):
+            copen = lambda x: gzip.open(x, mode="rb")
         else:
             msg = """
             Alert filename should end with `avro` or `avro.gz`.
@@ -153,15 +155,15 @@ class AlertReader():
         return data
 
     def to_pandas(self) -> pd.DataFrame:
-        """ Read Avro alert(s) and return data as Pandas DataFrame
+        """Read Avro alert(s) and return data as Pandas DataFrame
 
         Returns
-        ----------
+        -------
         alert: pd.DataFrame
             Alert data in a pandas DataFrame
 
         Examples
-        ----------
+        --------
         >>> r = AlertReader(avro_folder)
         >>> df = r.to_pandas()
         >>> assert('objectId' in r.to_pandas().columns)
@@ -174,10 +176,10 @@ class AlertReader():
         return pd.DataFrame(self.to_iterator())
 
     def to_list(self, size: int = None) -> list:
-        """ Read Avro alert and return data as list of dictionary
+        """Read Avro alert and return data as list of dictionary
 
         Returns
-        ----------
+        -------
         out: list of dictionary
             Alert data (dictionaries) in a list
         size: int, optional
@@ -185,7 +187,7 @@ class AlertReader():
             Default is None.
 
         Examples
-        ----------
+        --------
         >>> r = AlertReader(avro_single_alert)
         >>> mylist = r.to_list()
         >>> print(len(mylist))
@@ -205,15 +207,15 @@ class AlertReader():
         return [item for sublist in nest for item in sublist][:size]
 
     def to_iterator(self) -> Iterable[dict]:
-        """ Return an iterator for alert data
+        """Return an iterator for alert data
 
         Returns
-        ----------
+        -------
         out: Iterable[dict]
             Alert data (dictionaries) in an iterator
 
         Examples
-        ----------
+        --------
         >>> r = AlertReader(avro_folder)
         >>> myiterator = r.to_iterator()
         >>> assert('objectId' in next(myiterator).keys())
@@ -223,8 +225,16 @@ class AlertReader():
             for alert in self._read_single_alert(fn):
                 yield alert
 
-def write_alert(alert: dict, schema: str, path: str, overwrite: bool = False, id1: str = '', id2: str = ''):
-    """ Write avro alert on disk
+
+def write_alert(
+    alert: dict,
+    schema: str,
+    path: str,
+    overwrite: bool = False,
+    id1: str = "",
+    id2: str = "",
+):
+    """Write avro alert on disk
 
     Parameters
     ----------
@@ -237,7 +247,7 @@ def write_alert(alert: dict, schema: str, path: str, overwrite: bool = False, id
         <objectID>.avro
 
     Examples
-    ----------
+    --------
     >>> r = AlertReader(avro_single_alert)
     >>> alert = r.to_list(size=1)[0]
 
@@ -254,10 +264,7 @@ def write_alert(alert: dict, schema: str, path: str, overwrite: bool = False, id
       ...
     OSError: ./ZTF19acihgng_1060135832015015002.avro already exists!
     """
-    alert_filename = os.path.join(
-        path,
-        "{}_{}.avro".format(alert[id1], alert[id2])
-    )
+    alert_filename = os.path.join(path, "{}_{}.avro".format(alert[id1], alert[id2]))
 
     if isinstance(schema, str):
         schema = _get_alert_schema(schema)
@@ -265,8 +272,9 @@ def write_alert(alert: dict, schema: str, path: str, overwrite: bool = False, id
     if os.path.exists(alert_filename) and not overwrite:
         raise IOError("{} already exists!".format(alert_filename))
 
-    with open(alert_filename, 'wb') as out:
+    with open(alert_filename, "wb") as out:
         writer(out, schema, [alert])
+
 
 def encode_into_avro(alert: dict, schema_file: str) -> str:
     """Encode a dict record into avro bytes
@@ -279,12 +287,12 @@ def encode_into_avro(alert: dict, schema_file: str) -> str:
         Path of avro schema file
 
     Returns
-    ----------
+    -------
     value: str
         a bytes string with avro encoded alert data
 
     Examples
-    ----------
+    --------
     >>> r = AlertReader(avro_single_alert)
     >>> alert = r.to_list(size=1)[0]
     >>> avro_encoded = encode_into_avro(alert, schema_path)
@@ -314,21 +322,24 @@ def get_legal_topic_name(topic: str) -> str:
         to create a topic
 
     Returns
-    ----------
+    -------
     legal_topic: str
         A topic name that can be used as a Kafka topic
 
     Examples
-    ----------
+    --------
     >>> bad_name = 'IaMEvi\\l'
     >>> good_name = get_legal_topic_name(bad_name)
     >>> print(good_name)
     iamevil
     """
-    legal_topic = ''.join(a.lower() for a in topic if a.isalpha())
+    legal_topic = "".join(a.lower() for a in topic if a.isalpha())
     return legal_topic
 
-def _get_alert_schema(schema_path: str = None, key: str = None, timeout: int = 1) -> dict:
+
+def _get_alert_schema(
+    schema_path: str = None, key: str = None, timeout: int = 1
+) -> dict:
     """Returns schema for decoding Fink avro alerts
 
     This method downloads the latest schema available on the fink client server
@@ -345,12 +356,12 @@ def _get_alert_schema(schema_path: str = None, key: str = None, timeout: int = 1
         Default is 1 second.
 
     Returns
-    ----------
+    -------
     parsed_schema: dict
         Dictionary of json format schema for decoding avro alerts from Fink
 
     Examples
-    ----------
+    --------
     direct download
     >>> schema = _get_alert_schema() # doctest: +NORMALIZE_WHITESPACE, +ELLIPSIS
     Traceback (most recent call last):
@@ -378,10 +389,10 @@ def _get_alert_schema(schema_path: str = None, key: str = None, timeout: int = 1
         raise NotImplementedError(msg)
 
     # User-defined schema
-    if isinstance(schema_path, str) and schema_path != '':
+    if isinstance(schema_path, str) and schema_path != "":
         with open(schema_path) as f:
             schema = json.load(f)
-    elif isinstance(schema_path, str) and schema_path == '':
+    elif isinstance(schema_path, str) and schema_path == "":
         msg = """
         `schema_path` must be a non-empty string (path to a avsc file).
         """
@@ -405,6 +416,7 @@ def _get_alert_schema(schema_path: str = None, key: str = None, timeout: int = 1
 
     return fastavro.parse_schema(schema)
 
+
 def _decode_avro_alert(avro_alert: io.IOBase, schema: dict) -> Any:
     """Decodes a file-like stream of avro data
 
@@ -417,7 +429,7 @@ def _decode_avro_alert(avro_alert: io.IOBase, schema: dict) -> Any:
         Dictionary of json format schema to decode avro data
 
     Returns
-    ----------
+    -------
     record: Any
         Record obtained after decoding avro data (typically, dict)
     """
@@ -429,12 +441,14 @@ if __name__ == "__main__":
     """ Run the test suite """
 
     args = globals()
-    args['avro_single_alert'] = 'datatest/ZTF19acihgng.avro'
-    args['avro_multi_file'] = 'datatest/avro_multi_alerts.avro'
-    args['avro_multi_file2'] = 'datatest/avro_multi_alerts_other.avro'
-    args['avro_list'] = ['datatest/ZTF19acihgng.avro', 'datatest/ZTF19acyfkzd.avro']
-    args['avro_folder'] = 'datatest'
-    args['avro_gzipped'] = 'datatest/elasticc/alert_mjd60674.0512_obj747_src1494043.avro.gz'
-    args['schema_path'] = 'schemas/tests/distribution_schema_0p2.avsc'
+    args["avro_single_alert"] = "datatest/ZTF19acihgng.avro"
+    args["avro_multi_file"] = "datatest/avro_multi_alerts.avro"
+    args["avro_multi_file2"] = "datatest/avro_multi_alerts_other.avro"
+    args["avro_list"] = ["datatest/ZTF19acihgng.avro", "datatest/ZTF19acyfkzd.avro"]
+    args["avro_folder"] = "datatest"
+    args["avro_gzipped"] = (
+        "datatest/elasticc/alert_mjd60674.0512_obj747_src1494043.avro.gz"
+    )
+    args["schema_path"] = "schemas/tests/distribution_schema_0p2.avsc"
 
     regular_unit_tests(global_args=args)

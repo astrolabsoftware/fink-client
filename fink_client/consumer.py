@@ -25,6 +25,7 @@ from fink_client.avroUtils import _get_alert_schema
 from fink_client.avroUtils import _decode_avro_alert
 from fink_client.configuration import mm_topic_names
 
+
 class AlertError(Exception):
     pass
 
@@ -66,7 +67,7 @@ class AlertConsumer:
         self._consumer.close()
 
     def process_message(self, msg):
-        """ Process message from Kafka
+        """Process message from Kafka
 
         Parameters
         ----------
@@ -74,7 +75,7 @@ class AlertConsumer:
             Object containing message information
 
         Returns
-        ----------
+        -------
         list: [tuple(str, dict, str)]
             list of topic, alert, key
             returns an empty list on timeout
@@ -84,9 +85,7 @@ class AlertConsumer:
             error_message = """
             Error: {} topic: {}[{}] at offset: {} with key: {}
             """.format(
-                msg.error(), msg.topic(),
-                msg.partition(), msg.offset(),
-                str(msg.key())
+                msg.error(), msg.topic(), msg.partition(), msg.offset(), str(msg.key())
             )
             raise AlertError(error_message)
 
@@ -96,7 +95,7 @@ class AlertConsumer:
         key = msg.key()
 
         if isinstance(key, bytes):
-            key = key.decode('utf8')
+            key = key.decode("utf8")
         if key is None:
             # compatibility with previous scheme
             key = ""
@@ -105,8 +104,8 @@ class AlertConsumer:
             _parsed_schema = fastavro.schema.parse_schema(json.loads(key))
             if self.dump_schema:
                 today = datetime.now(timezone.utc).isoformat()
-                filename = 'schema_{}.json'.format(today)
-                with open(filename, 'w') as json_file:
+                filename = "schema_{}.json".format(today)
+                with open(filename, "w") as json_file:
                     json.dump(_parsed_schema, json_file, sort_keys=True, indent=4)
                 print("Schema saved as {}".format(filename))
             alert = self._decode_msg(_parsed_schema, msg)
@@ -120,7 +119,7 @@ class AlertConsumer:
                     _parsed_schema = _get_alert_schema(key=key)
                     alert = self._decode_msg(_parsed_schema, msg)
                 except IndexError:
-                    _parsed_schema = _get_alert_schema(key=key + '_replayed')
+                    _parsed_schema = _get_alert_schema(key=key + "_replayed")
                     alert = self._decode_msg(_parsed_schema, msg)
             else:
                 msg = """
@@ -132,7 +131,7 @@ class AlertConsumer:
         return topic, alert, key
 
     def poll(self, timeout: float = -1) -> (str, dict):
-        """ Consume one message from Fink server
+        """Consume one message from Fink server
 
         Parameters
         ----------
@@ -141,7 +140,7 @@ class AlertConsumer:
             if not set default is None i.e. wait indefinitely
 
         Returns
-        ----------
+        -------
         (topic, alert, key): tuple(str, dict, str)
             returns (None, None, None) on timeout
         """
@@ -152,7 +151,7 @@ class AlertConsumer:
         return self.process_message(msg)
 
     def _decode_msg(self, parsed_schema, msg) -> dict:
-        """ decode message using parsed schema
+        """Decode message using parsed schema
 
         Parameters
         ----------
@@ -163,7 +162,7 @@ class AlertConsumer:
             Message received
 
         Returns
-        ----------
+        -------
         alert: dict
             Decoded message
         """
@@ -172,7 +171,7 @@ class AlertConsumer:
         return _decode_avro_alert(avro_alert, self._parsed_schema)
 
     def consume(self, num_alerts: int = 1, timeout: float = -1) -> list:
-        """ Consume and return list of messages
+        """Consume and return list of messages
 
         Parameters
         ----------
@@ -183,7 +182,7 @@ class AlertConsumer:
             if not set default is None i.e. wait indefinitely
 
         Returns
-        ----------
+        -------
         list: [tuple(str, dict, str)]
             list of topic, alert, key
             returns an empty list on timeout
@@ -203,9 +202,9 @@ class AlertConsumer:
         return alerts
 
     def poll_and_write(
-            self, outdir: str, timeout: float = -1,
-            overwrite: bool = False) -> (str, dict):
-        """ Consume one message from Fink server, save alert on disk and
+        self, outdir: str, timeout: float = -1, overwrite: bool = False
+    ) -> (str, dict):
+        """Consume one message from Fink server, save alert on disk and
         return (topic, alert, key)
 
         Parameters
@@ -220,7 +219,7 @@ class AlertConsumer:
             Default is False.
 
         Returns
-        ----------
+        -------
         (topic, alert): tuple(str, dict)
             returns (None, None) on timeout
 
@@ -229,11 +228,11 @@ class AlertConsumer:
         is_mma = topic in mm_topic_names()
 
         if is_mma:
-            id1 = 'objectId'
-            id2 = 'triggerId'
+            id1 = "objectId"
+            id2 = "triggerId"
         else:
-            id1 = 'objectId'
-            id2 = 'candid'
+            id1 = "objectId"
+            id2 = "candid"
 
         if topic is not None:
             write_alert(
@@ -242,19 +241,19 @@ class AlertConsumer:
                 outdir,
                 overwrite=overwrite,
                 id1=id1,
-                id2=id2
+                id2=id2,
             )
 
         return topic, alert, key
 
     def available_topics(self) -> dict:
-        """ Return available broker topics
+        """Return available broker topics
 
         Note, this routine only display topics, but users need
         to be authorized to poll data.
 
         Returns
-        ---------
+        -------
         topics: dict
             Keys are topic names, values are metadata
 
@@ -262,10 +261,10 @@ class AlertConsumer:
         return self._consumer.list_topics().topics
 
     def available_brokers(self) -> dict:
-        """ Return available brokers
+        """Return available brokers
 
         Returns
-        ---------
+        -------
         brokers: dict
             Keys are broker ID, values are metadata with IP:PORT
 
@@ -278,7 +277,7 @@ class AlertConsumer:
 
 
 def return_offsets(consumer, topic, waitfor=1, timeout=10, verbose=False):
-    """ Poll servers to get the total committed offsets, and remaining lag
+    """Poll servers to get the total committed offsets, and remaining lag
 
     Parameters
     ----------
@@ -294,7 +293,7 @@ def return_offsets(consumer, topic, waitfor=1, timeout=10, verbose=False):
         If True, prints useful table. Default is False.
 
     Returns
-    ---------
+    -------
     total_offsets: int
         Total number of messages committed across all partitions
     total_lag: int
@@ -307,7 +306,10 @@ def return_offsets(consumer, topic, waitfor=1, timeout=10, verbose=False):
         raise confluent_kafka.KafkaException(metadata.topics[topic].error)
 
     # Construct TopicPartition list of partitions to query
-    partitions = [confluent_kafka.TopicPartition(topic, p) for p in metadata.topics[topic].partitions]
+    partitions = [
+        confluent_kafka.TopicPartition(topic, p)
+        for p in metadata.topics[topic].partitions
+    ]
 
     # Query committed offsets for this group and the given partitions
     try:
@@ -326,7 +328,9 @@ def return_offsets(consumer, topic, waitfor=1, timeout=10, verbose=False):
         print("=" * 72)
     for partition in committed:
         # Get the partitions low and high watermark offsets.
-        (lo, hi) = consumer.get_watermark_offsets(partition, timeout=timeout, cached=False)
+        (lo, hi) = consumer.get_watermark_offsets(
+            partition, timeout=timeout, cached=False
+        )
 
         if partition.offset == confluent_kafka.OFFSET_INVALID:
             offset = "-"
@@ -348,15 +352,17 @@ def return_offsets(consumer, topic, waitfor=1, timeout=10, verbose=False):
         total_lag = total_lag + int(lag)
 
         if verbose:
-            print("%-50s  %9s  %9s" % (
-                "{} [{}]".format(partition.topic, partition.partition), offset, lag))
+            print(
+                "%-50s  %9s  %9s"
+                % ("{} [{}]".format(partition.topic, partition.partition), offset, lag)
+            )
     if verbose:
         print("-" * 72)
-        print("%-50s  %9s  %9s" % (
-            "Total", total_offsets, total_lag))
+        print("%-50s  %9s  %9s" % ("Total", total_offsets, total_lag))
         print("-" * 72)
 
     return total_offsets, total_lag
+
 
 def _get_kafka_config(config: dict) -> dict:
     """Returns configurations for a consumer instance
@@ -367,17 +373,15 @@ def _get_kafka_config(config: dict) -> dict:
         Dictionary of configurations
 
     Returns
-    ----------
+    -------
     kafka_config: dict
         Dictionary with configurations for creating an instance of
         a secured Kafka consumer
     """
     kafka_config = {}
-    default_config = {
-        "auto.offset.reset": "earliest"
-    }
+    default_config = {"auto.offset.reset": "earliest"}
 
-    if 'username' in config and 'password' in config:
+    if "username" in config and "password" in config:
         kafka_config["security.protocol"] = "sasl_plaintext"
         kafka_config["sasl.mechanism"] = "SCRAM-SHA-512"
         kafka_config["sasl.username"] = config["username"]
@@ -388,15 +392,11 @@ def _get_kafka_config(config: dict) -> dict:
     kafka_config.update(default_config)
 
     # use servers if given
-    if 'bootstrap.servers' in config:
+    if "bootstrap.servers" in config:
         kafka_config["bootstrap.servers"] = config["bootstrap.servers"]
     else:
         # use default fink_servers
-        fink_servers = [
-            "localhost:9093",
-            "localhost:9094",
-            "localhost:9095"
-        ]
+        fink_servers = ["localhost:9093", "localhost:9094", "localhost:9095"]
         kafka_config["bootstrap.servers"] = "{}".format(",".join(fink_servers))
 
     return kafka_config

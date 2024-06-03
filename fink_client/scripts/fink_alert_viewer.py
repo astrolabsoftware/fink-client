@@ -13,7 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Display cutouts and lightcurve from a ZTF alert """
+"""Display cutouts and lightcurve from a ZTF alert"""
+
 import argparse
 
 import matplotlib
@@ -26,15 +27,12 @@ from fink_client.visualisation import show_stamps
 from fink_client.visualisation import extract_field
 
 # For plots
-font = {
-    'weight': 'bold',
-    'size': 22
-}
+font = {"weight": "bold", "size": 22}
 
-matplotlib.rc('font', **font)
+matplotlib.rc("font", **font)
 
 # Bands
-filter_color = {1: '#1f77b4', 2: '#ff7f0e', 3: '#2ca02c'}
+filter_color = {1: "#1f77b4", 2: "#ff7f0e", 3: "#2ca02c"}
 # [
 #     '#1f77b4',  # muted blue
 #     '#ff7f0e',  # safety orange
@@ -47,27 +45,31 @@ filter_color = {1: '#1f77b4', 2: '#ff7f0e', 3: '#2ca02c'}
 #     '#bcbd22',  # curry yellow-green
 #     '#17becf'   # blue-teal
 # ]
-filter_name = {1: 'g band', 2: 'r band', 3: 'i band'}
+filter_name = {1: "g band", 2: "r band", 3: "i band"}
+
 
 def main():
     """ """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        '-filename', type=str, default='',
-        help="Path to an alert data file (avro format)")
+        "-filename",
+        type=str,
+        default="",
+        help="Path to an alert data file (avro format)",
+    )
     args = parser.parse_args(None)
 
     r = AlertReader(args.filename)
 
     # Display the cutouts contained in the alert
     alert = r.to_list(size=1)[0]
-    print(alert['objectId'])
+    print(alert["objectId"])
     fig = plt.figure(num=0, figsize=(12, 4))
     show_stamps(alert, fig)
 
     # extract current and historical data as one vector
-    mag = extract_field(alert, 'magpsf')
-    error = extract_field(alert, 'sigmapsf')
+    mag = extract_field(alert, "magpsf")
+    error = extract_field(alert, "sigmapsf")
     upper = extract_field(alert, "diffmaglim")
 
     # filter bands
@@ -94,19 +96,30 @@ def main():
         # y data
         maskNotNone = mag[mask] != None
         plt.errorbar(
-            dates[mask][maskNotNone], mag[mask][maskNotNone],
+            dates[mask][maskNotNone],
+            mag[mask][maskNotNone],
             yerr=error[mask][maskNotNone],
-            color=filter_color[filt], marker='o', ls='',
-            label=filter_name[filt], mew=4)
+            color=filter_color[filt],
+            marker="o",
+            ls="",
+            label=filter_name[filt],
+            mew=4,
+        )
         # Upper limits
         plt.plot(
-            dates[mask][~maskNotNone], upper[mask][~maskNotNone],
-            color=filter_color[filt], marker='v', ls='', mew=4, alpha=0.5)
+            dates[mask][~maskNotNone],
+            upper[mask][~maskNotNone],
+            color=filter_color[filt],
+            marker="v",
+            ls="",
+            mew=4,
+            alpha=0.5,
+        )
         plt.title(title)
     plt.legend()
     plt.gca().invert_yaxis()
-    plt.xlabel('Days to candidate')
-    plt.ylabel('Difference magnitude')
+    plt.xlabel("Days to candidate")
+    plt.ylabel("Difference magnitude")
     plt.show()
 
 
