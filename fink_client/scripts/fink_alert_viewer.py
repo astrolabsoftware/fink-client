@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019-2020 AstroLab Software
+# Copyright 2019-2024 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 
-from fink_client.avroUtils import AlertReader
+from fink_client.avro_utils import AlertReader
 from fink_client.visualisation import show_stamps
 from fink_client.visualisation import extract_field
 
