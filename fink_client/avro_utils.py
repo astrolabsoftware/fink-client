@@ -151,7 +151,7 @@ class AlertReader:
         with copen(name) as fo:
             avro_reader = reader(fo)
             for record in avro_reader:
-                data.append(record)
+                data.append(record)  # noqa: PERF402
         return data
 
     def to_pandas(self) -> pd.DataFrame:
@@ -308,7 +308,7 @@ def encode_into_avro(alert: dict, schema_file: str) -> str:
 
 
 def get_legal_topic_name(topic: str) -> str:
-    """Returns a legal Kafka topic name
+    r"""Returns a legal Kafka topic name
 
     Special characters are not allowed in the name
     of a Kafka topic. This method returns a legal name

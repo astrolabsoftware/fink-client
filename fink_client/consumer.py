@@ -27,13 +27,13 @@ from fink_client.configuration import mm_topic_names
 
 
 class AlertError(Exception):
+    """Base class for exception"""
+
     pass
 
 
 class AlertConsumer:
-    """
-    High level Kafka consumer to receive alerts from Fink broker
-    """
+    """High level Kafka consumer to receive alerts from Fink broker"""
 
     def __init__(self, topics: list, config: dict, schema_path=None, dump_schema=False):
         """Creates an instance of `AlertConsumer`
@@ -61,9 +61,11 @@ class AlertConsumer:
         self.dump_schema = dump_schema
 
     def __enter__(self):
+        """Enter"""
         return self
 
     def __exit__(self, type, value, traceback):
+        """Exit"""
         self._consumer.close()
 
     def process_message(self, msg):
@@ -109,7 +111,7 @@ class AlertConsumer:
                     json.dump(_parsed_schema, json_file, sort_keys=True, indent=4)
                 print("Schema saved as {}".format(filename))
             alert = self._decode_msg(_parsed_schema, msg)
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as exc:
             # Old way
             if self.schema_path is not None:
                 _parsed_schema = _get_alert_schema(schema_path=self.schema_path)
@@ -126,7 +128,7 @@ class AlertConsumer:
                 The message cannot be decoded as there is no key (None). Alternatively
                 specify manually the schema path when instantiating ``AlertConsumer`` (or from fink_consumer).
                 """
-                raise NotImplementedError(msg)
+                raise NotImplementedError(msg) from exc
 
         return topic, alert, key
 
@@ -204,8 +206,11 @@ class AlertConsumer:
     def poll_and_write(
         self, outdir: str, timeout: float = -1, overwrite: bool = False
     ) -> (str, dict):
-        """Consume one message from Fink server, save alert on disk and
-        return (topic, alert, key)
+        """Consume one message from Fink server
+
+        Notes
+        -----
+        It also saves the alert on disk and return (topic, alert, key)
 
         Parameters
         ----------

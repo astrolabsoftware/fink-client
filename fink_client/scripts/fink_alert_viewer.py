@@ -94,7 +94,7 @@ def main():
             continue
 
         # y data
-        maskNotNone = mag[mask] != None
+        maskNotNone = mag[mask] != None  # noqa: E711
         plt.errorbar(
             dates[mask][maskNotNone],
             mag[mask][maskNotNone],

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019-2020 AstroLab Software
+# Copyright 2019-2024 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -70,8 +70,7 @@ def show_stamps(alert: dict, fig=None):
 
 
 def extract_history(history_list: list, field: str) -> list:
-    """Extract the historical measurements contained in the alerts
-    for the parameter `field`.
+    """Extract the historical measurements contained in the alerts for the parameter `field`.
 
     Parameters
     ----------
