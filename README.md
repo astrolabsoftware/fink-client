@@ -19,36 +19,17 @@
 pip install fink-client --upgrade
 ```
 
-You will also need to install `fastavro==1.6.0` separately (versions above are not compatible with alert schema):
-
-```
-# fastavro 1.6.0 requires Cython<3
-pip install "Cython<3"
-pip install --no-build-isolation "fastavro==1.6.0"
-```
-
 ### Use or develop in a controlled environment
 
-For usage:
-
-```bash
-conda env create -f https://raw.githubusercontent.com/astrolabsoftware/fink-client/master/environment.yml
-conda activate fink-client
-pip install "Cython<3"
-pip install --no-build-isolation "fastavro==1.6.0"
-pip install fink-client --upgrade
-```
-
-For development:
+For development, we recommend the use of a virtual environment:
 
 ```bash
 git clone https://github.com/astrolabsoftware/fink-client.git
 cd fink-client
-conda env create -f environment.yml
-conda activate fink-client
-pip install "Cython<3"
-pip install --no-build-isolation "fastavro==1.6.0"
-pip install -e .
+python -m venv .fc_env
+source .fc_env/bin/activate
+pip install -r requirements.txt
+pip install .
 ```
 
 ## Registration
@@ -63,19 +44,21 @@ In order to connect and poll alerts from Fink, you need to get your credentials:
 
 ## Livestream usage
 
-Once you have your credentials, you are ready to poll streams!
+Once you have your credentials, you are ready to poll streams! You can easily access the documentation using `-h` or `--help`:
 
 ```bash
 fink_consumer -h
 usage: fink_consumer [-h] [--display] [-limit LIMIT] [--available_topics]
                      [--save] [-outdir OUTDIR] [-schema SCHEMA]
+                     [--dump_schema]
 
-Kafka consumer to listen and archive Fink streams from the Livestream service
+Kafka consumer to listen and archive Fink streams from the Livestream
+service
 
 optional arguments:
   -h, --help          show this help message and exit
-  --display           If specified, print on screen information about incoming
-                      alert.
+  --display           If specified, print on screen information about
+                      incoming alert.
   -limit LIMIT        If specified, download only `limit` alerts. Default is
                       None.
   --available_topics  If specified, print on screen information about
@@ -85,7 +68,8 @@ optional arguments:
   -outdir OUTDIR      Folder to store incoming alerts if --save is set. It
                       must exist.
   -schema SCHEMA      Avro schema to decode the incoming alerts. Default is
-                      None (latest version downloaded from server)
+                      None (version taken from each alert)
+  --dump_schema       If specified, save the schema on disk (json file)
 ```
 
 You can also look at an alert on the disk:
