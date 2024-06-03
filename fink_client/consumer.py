@@ -18,6 +18,7 @@ import json
 import time
 import fastavro
 import confluent_kafka
+from datetime import datetime, timezone
 
 from fink_client.avroUtils import write_alert
 from fink_client.avroUtils import _get_alert_schema
@@ -33,7 +34,7 @@ class AlertConsumer:
     High level Kafka consumer to receive alerts from Fink broker
     """
 
-    def __init__(self, topics: list, config: dict, schema_path=None):
+    def __init__(self, topics: list, config: dict, schema_path=None, dump_schema=False):
         """Creates an instance of `AlertConsumer`
 
         Parameters
@@ -56,6 +57,7 @@ class AlertConsumer:
         self.schema_path = schema_path
         self._consumer = confluent_kafka.Consumer(self._kafka_config)
         self._consumer.subscribe(self._topics)
+        self.dump_schema = dump_schema
 
     def __enter__(self):
         return self
@@ -101,6 +103,12 @@ class AlertConsumer:
 
         try:
             _parsed_schema = fastavro.schema.parse_schema(json.loads(key))
+            if self.dump_schema:
+                today = datetime.now(timezone.utc).isoformat()
+                filename = 'schema_{}.json'.format(today)
+                with open(filename, 'w') as json_file:
+                    json.dump(_parsed_schema, json_file, sort_keys=True, indent=4)
+                print("Schema saved as {}".format(filename))
             alert = self._decode_msg(_parsed_schema, msg)
         except json.JSONDecodeError:
             # Old way
