@@ -21,6 +21,7 @@ import argparse
 import time
 
 from tabulate import tabulate
+from astropy.time import Time
 
 from fink_client.consumer import AlertConsumer
 from fink_client.configuration import load_credentials
@@ -48,6 +49,10 @@ def main():
         '-schema', type=str, default=None,
         help="Avro schema to decode the incoming alerts. Default is None (version taken from each alert)"
     )
+    parser.add_argument(
+        '--dump_schema', action='store_true',
+        help="If specified, save the schema on disk (json file)"
+    )
     args = parser.parse_args(None)
 
     # load user configuration
@@ -66,7 +71,7 @@ def main():
         schema = None
     else:
         schema = args.schema
-    consumer = AlertConsumer(conf['mytopics'], myconfig, schema_path=schema)
+    consumer = AlertConsumer(conf['mytopics'], myconfig, schema_path=schema, dump_schema=args.dump_schema)
 
     if args.available_topics:
         print(consumer.available_topics().keys())
@@ -107,7 +112,7 @@ def main():
                 else:
                     table = [
                         [
-                            alert['timestamp'], utc, topic, alert['objectId'],
+                            Time(alert['candidate']['jd'], format='jd').iso, utc, topic, alert['objectId'],
                             alert['cdsxmatch'],
                             alert['candidate']['magpsf']
                         ],
