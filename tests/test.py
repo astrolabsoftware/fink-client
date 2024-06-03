@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019-2020 AstroLab Software
+# Copyright 2019-2024 AstroLab Software
 # Author: Abhishek Chauhan, Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,9 +19,9 @@ import io
 import confluent_kafka
 import fastavro
 from fink_client.consumer import AlertConsumer
-from fink_client.avroUtils import AlertReader
-from fink_client.avroUtils import encode_into_avro
-from fink_client.avroUtils import get_legal_topic_name
+from fink_client.avro_utils import AlertReader
+from fink_client.avro_utils import encode_into_avro
+from fink_client.avro_utils import get_legal_topic_name
 
 from fink_client.configuration import load_credentials
 

@@ -13,7 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Kafka consumer to listen and archive Fink streams from the Livestream service """
+"""Kafka consumer to listen and archive Fink streams from the Livestream service"""
+
 import sys
 import os
 
@@ -27,31 +28,47 @@ from fink_client.consumer import AlertConsumer
 from fink_client.configuration import load_credentials
 from fink_client.configuration import mm_topic_names
 
+
 def main():
     """ """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        '--display', action='store_true',
-        help="If specified, print on screen information about incoming alert.")
-    parser.add_argument(
-        '-limit', type=int, default=None,
-        help="If specified, download only `limit` alerts. Default is None.")
-    parser.add_argument(
-        '--available_topics', action='store_true',
-        help="If specified, print on screen information about available topics.")
-    parser.add_argument(
-        '--save', action='store_true',
-        help="If specified, save alert data on disk (Avro). See also -outdir.")
-    parser.add_argument(
-        '-outdir', type=str, default='.',
-        help="Folder to store incoming alerts if --save is set. It must exist.")
-    parser.add_argument(
-        '-schema', type=str, default=None,
-        help="Avro schema to decode the incoming alerts. Default is None (version taken from each alert)"
+        "--display",
+        action="store_true",
+        help="If specified, print on screen information about incoming alert.",
     )
     parser.add_argument(
-        '--dump_schema', action='store_true',
-        help="If specified, save the schema on disk (json file)"
+        "-limit",
+        type=int,
+        default=None,
+        help="If specified, download only `limit` alerts. Default is None.",
+    )
+    parser.add_argument(
+        "--available_topics",
+        action="store_true",
+        help="If specified, print on screen information about available topics.",
+    )
+    parser.add_argument(
+        "--save",
+        action="store_true",
+        help="If specified, save alert data on disk (Avro). See also -outdir.",
+    )
+    parser.add_argument(
+        "-outdir",
+        type=str,
+        default=".",
+        help="Folder to store incoming alerts if --save is set. It must exist.",
+    )
+    parser.add_argument(
+        "-schema",
+        type=str,
+        default=None,
+        help="Avro schema to decode the incoming alerts. Default is None (version taken from each alert)",
+    )
+    parser.add_argument(
+        "--dump_schema",
+        action="store_true",
+        help="If specified, save the schema on disk (json file)",
     )
     args = parser.parse_args(None)
 
@@ -59,26 +76,29 @@ def main():
     conf = load_credentials()
 
     myconfig = {
-        "username": conf['username'],
-        'bootstrap.servers': conf['servers'],
-        'group_id': conf['group_id']}
+        "username": conf["username"],
+        "bootstrap.servers": conf["servers"],
+        "group_id": conf["group_id"],
+    }
 
-    if conf['password'] is not None:
-        myconfig['password'] = conf['password']
+    if conf["password"] is not None:
+        myconfig["password"] = conf["password"]
 
     # Instantiate a consumer
     if args.schema is None:
         schema = None
     else:
         schema = args.schema
-    consumer = AlertConsumer(conf['mytopics'], myconfig, schema_path=schema, dump_schema=args.dump_schema)
+    consumer = AlertConsumer(
+        conf["mytopics"], myconfig, schema_path=schema, dump_schema=args.dump_schema
+    )
 
     if args.available_topics:
         print(consumer.available_topics().keys())
         sys.exit(0)
 
     # Time to wait before polling again if no alerts
-    maxtimeout = conf['maxtimeout']
+    maxtimeout = conf["maxtimeout"]
 
     if not os.path.isdir(args.outdir):
         os.makedirs(args.outdir, exist_ok=True)
@@ -91,9 +111,7 @@ def main():
             if args.save:
                 # Save alerts on disk
                 topic, alert, key = consumer.poll_and_write(
-                    outdir=args.outdir,
-                    timeout=maxtimeout,
-                    overwrite=True
+                    outdir=args.outdir, timeout=maxtimeout, overwrite=True
                 )
             else:
                 # TODO: this is useless to get it and done nothing
@@ -105,27 +123,50 @@ def main():
                 is_mma = topic in mm_topic_names()
 
             if args.display and topic is not None:
-                utc = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())
+                utc = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
                 if is_mma:
-                    table = [[alert['objectId'], alert['fink_class'], topic, alert['rate'], alert['observatory'], alert['triggerId']]]
-                    headers = ['ObjectId', 'Classification', 'Topic', 'Rate (mag/day)', 'Observatory', 'Trigger ID']
+                    table = [
+                        [
+                            alert["objectId"],
+                            alert["fink_class"],
+                            topic,
+                            alert["rate"],
+                            alert["observatory"],
+                            alert["triggerId"],
+                        ]
+                    ]
+                    headers = [
+                        "ObjectId",
+                        "Classification",
+                        "Topic",
+                        "Rate (mag/day)",
+                        "Observatory",
+                        "Trigger ID",
+                    ]
                 else:
                     table = [
                         [
-                            Time(alert['candidate']['jd'], format='jd').iso, utc, topic, alert['objectId'],
-                            alert['cdsxmatch'],
-                            alert['candidate']['magpsf']
+                            Time(alert["candidate"]["jd"], format="jd").iso,
+                            utc,
+                            topic,
+                            alert["objectId"],
+                            alert["cdsxmatch"],
+                            alert["candidate"]["magpsf"],
                         ],
                     ]
                     headers = [
-                        'Emitted at (UTC)', 'Received at (UTC)',
-                        'Topic', 'objectId', 'Simbad', 'Magnitude'
+                        "Emitted at (UTC)",
+                        "Received at (UTC)",
+                        "Topic",
+                        "objectId",
+                        "Simbad",
+                        "Magnitude",
                     ]
                 print(tabulate(table, headers, tablefmt="pretty"))
             elif args.display:
-                print('No alerts the last {} seconds'.format(maxtimeout))
+                print("No alerts the last {} seconds".format(maxtimeout))
     except KeyboardInterrupt:
-        sys.stderr.write('%% Aborted by user\n')
+        sys.stderr.write("%% Aborted by user\n")
     finally:
         consumer.close()
 

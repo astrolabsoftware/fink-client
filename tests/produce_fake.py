@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2021 AstroLab Software
+# Copyright 2021-2024 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,8 +18,8 @@ import confluent_kafka
 
 import numpy as np
 
-from fink_client.avroUtils import AlertReader
-from fink_client.avroUtils import encode_into_avro
+from fink_client.avro_utils import AlertReader
+from fink_client.avro_utils import encode_into_avro
 
 from fink_client.configuration import load_credentials
 
