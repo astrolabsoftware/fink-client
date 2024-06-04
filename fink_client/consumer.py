@@ -385,7 +385,9 @@ def return_offsets(
         total_lag = total_lag + int(lag)
 
         if verbose:
-            if (hide_empty_partition and (offset != "-" or int(lag) > 0)) or (not hide_empty_partition):
+            if (hide_empty_partition and (offset != "-" or int(lag) > 0)) or (
+                not hide_empty_partition
+            ):
                 print(
                     "%-50s  %9s  %9s"
                     % (
