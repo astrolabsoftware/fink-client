@@ -95,7 +95,7 @@ class TestComponents(unittest.TestCase):
         myconfig = {
             "username": "Alice",
             "password": "Alice-secret",
-            "group_id": "test_group"
+            "group.id": "test_group"
         }
         kafka_config = _get_kafka_config(myconfig)
 
