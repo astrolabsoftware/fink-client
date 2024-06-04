@@ -18,7 +18,6 @@
 import sys
 import os
 import io
-import json
 import argparse
 import logging
 import psutil
@@ -37,221 +36,13 @@ from multiprocessing import Process, Queue
 
 from fink_client.configuration import load_credentials
 
-from fink_client.consumer import return_offsets
-
-
-def print_offsets(kafka_config, topic, maxtimeout=10, verbose=True):
-    """Wrapper around `consumer.return_offsets`
-
-    If the server is rebalancing the offsets, it will exit the program.
-
-    Parameters
-    ----------
-    kafka_config: dic
-        Dictionary with consumer parameters
-    topic: str
-        Topic name
-    maxtimeout: int, optional
-        Timeout in second, when polling the servers
-
-    Returns
-    -------
-    total_offsets: int
-        Total number of messages committed across all partitions
-    total_lag: int
-        Remaining messages in the topic across all partitions.
-    """
-    consumer = confluent_kafka.Consumer(kafka_config)
-
-    topics = ["{}".format(topic)]
-    consumer.subscribe(topics)
-    total_offset, total_lag = return_offsets(
-        consumer, topic, timeout=maxtimeout, waitfor=0, verbose=verbose
-    )
-    if (total_offset, total_lag) == (-1, -1):
-        print(
-            "Warning: Consumer group '{}' is rebalancing. Please wait.".format(
-                kafka_config["group.id"]
-            )
-        )
-        sys.exit()
-    consumer.close()
-
-    return total_lag, total_offset
-
-
-def get_schema(kafka_config, topic, maxtimeout):
-    """Poll the schema data from the schema topic
-
-    Parameters
-    ----------
-    kafka_config: dic
-        Dictionary with consumer parameters
-    topic: str
-        Topic name
-    timeout: int, optional
-        Timeout in second, when polling the servers
-
-    Returns
-    -------
-    schema: None or dic
-        Schema data. None if the poll was not successful.
-        Reasons to get None:
-            1. timeout has been reached (increase timeout)
-            2. topic is empty (produce new data)
-            3. topic does not exist (create the topic)
-    """
-    # Instantiate a consumer
-    consumer_schema = confluent_kafka.Consumer(kafka_config)
-
-    # Subscribe to schema topic
-    topics = ["{}_schema".format(topic)]
-    consumer_schema.subscribe(topics)
-
-    # Poll
-    msg = consumer_schema.poll(maxtimeout)
-    if msg is not None:
-        schema = fastavro.schema.parse_schema(json.loads(msg.key()))
-    else:
-        schema = None
-
-    consumer_schema.close()
-
-    return schema
-
-
-def my_assign(consumer, partitions):
-    """Function to reset offsets when (re)polling
-
-    It must be passed when subscribing to a topic:
-        `consumer.subscribe(topics, on_assign=my_assign)`
-
-    Parameters
-    ----------
-    consumer: confluent_kafka.Consumer
-        Kafka consumer
-    partitions: Kafka partitions
-        Internal object to deal with partitions
-    """
-    for p in partitions:
-        p.offset = 0
-    consumer.assign(partitions)
-
-
-def reset_offset(kafka_config, topic):
-    """Rest offsets for a given topic
-
-    Parameters
-    ----------
-    kafka_config: dict
-        Kafka server parameters
-    topic: str
-        Topic name
-    """
-    consumer = confluent_kafka.Consumer(kafka_config)
-    topics = ["{}".format(topic)]
-    consumer.subscribe(topics, on_assign=my_assign)
-    consumer.close()
-
-
-def return_partition_offset(consumer, topic, partition):
-    """Return the offset and the remaining lag of a partition
-
-    consumer: confluent_kafka.Consumer
-        Kafka consumer
-    topic: str
-        Topic name
-    partition: int
-        The partition number
-
-    Returns
-    -------
-    offset : int
-        Total number of offsets in the topic
-    """
-    topicPartition = confluent_kafka.TopicPartition(topic, partition)
-    low_offset, high_offset = consumer.get_watermark_offsets(topicPartition)
-    partition_size = high_offset - low_offset
-
-    return partition_size
-
-
-def return_npartitions(topic, kafka_config):
-    """Get the number of partitions
-
-    Parameters
-    ----------
-    kafka_config: dic
-        Dictionary with consumer parameters
-    topic: str
-        Topic name
-
-    Returns
-    -------
-    nbpartitions: int
-        Number of partitions in the topic
-
-    """
-    consumer = confluent_kafka.Consumer(kafka_config)
-
-    # Details to get
-    nbpartitions = 0
-    try:
-        # Topic metadata
-        metadata = consumer.list_topics(topic=topic)
-
-        if metadata.topics and topic in metadata.topics:
-            partitions = metadata.topics[topic].partitions
-            nbpartitions = len(partitions)
-        else:
-            print("The topic {} does not exist".format(topic))
-
-    except confluent_kafka.KafkaException as e:
-        print(f"Error while getting the number of partitions: {e}")
-
-    consumer.close()
-
-    return nbpartitions
-
-
-def return_last_offsets(kafka_config, topic):
-    """Return the last offsets
-
-    Parameters
-    ----------
-    kafka_config: dict
-        Kafka consumer config
-    topic: str
-        Topic name
-
-    Returns
-    -------
-    offsets: list
-        Last offsets of each partition
-    """
-    consumer = confluent_kafka.Consumer(kafka_config)
-    topics = ["{}".format(topic)]
-    consumer.subscribe(topics)
-
-    metadata = consumer.list_topics(topic)
-    if metadata.topics[topic].error is not None:
-        raise confluent_kafka.KafkaException(metadata.topics[topic].error)
-
-    # List of partitions
-    partitions = [
-        confluent_kafka.TopicPartition(topic, p)
-        for p in metadata.topics[topic].partitions
-    ]
-    committed = consumer.committed(partitions)
-    offsets = []
-    for partition in committed:
-        if partition.offset != confluent_kafka.OFFSET_INVALID:
-            offsets.append(partition.offset)
-        else:
-            offsets.append(0)
-
-    consumer.close()
-    return offsets
+from fink_client.consumer import (
+    print_offsets,
+    return_npartitions,
+    return_partition_offset,
+    return_last_offsets,
+    get_schema_from_stream,
+)
 
 
 def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
@@ -529,14 +320,18 @@ def main():
 
     if args.restart_from_beginning:
         total_lag, total_offset = print_offsets(
-            kafka_config, args.topic, args.maxtimeout, verbose=False
+            kafka_config,
+            args.topic,
+            args.maxtimeout,
+            verbose=False,
+            hide_empty_partition=False,
         )
         args.total_lag = total_offset
         args.total_offset = 0
         offsets = [0 for _ in range(args.number_partitions)]
     else:
         total_lag, total_offset = print_offsets(
-            kafka_config, args.topic, args.maxtimeout
+            kafka_config, args.topic, args.maxtimeout, hide_empty_partition=False
         )
         args.total_lag = total_lag
         args.total_offset = total_offset
@@ -551,7 +346,7 @@ def main():
     if (args.limit is not None) and (args.limit < args.batchsize):
         args.batchsize = args.limit
 
-    schema = get_schema(kafka_config, args.topic, args.maxtimeout)
+    schema = get_schema_from_stream(kafka_config, args.topic, args.maxtimeout)
     if schema is None:
         # TBD: raise error
         print(

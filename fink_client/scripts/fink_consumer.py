@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019-2023 AstroLab Software
+# Copyright 2019-2024 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,6 +28,8 @@ from fink_client.consumer import AlertConsumer
 from fink_client.configuration import load_credentials
 from fink_client.configuration import mm_topic_names
 
+from fink_client.consumer import print_offsets
+
 
 def main():
     """ """
@@ -36,6 +38,11 @@ def main():
         "--display",
         action="store_true",
         help="If specified, print on screen information about incoming alert.",
+    )
+    parser.add_argument(
+        "--display_statistics",
+        action="store_true",
+        help="If specified, print on screen information about queues, and exit.",
     )
     parser.add_argument(
         "-limit",
@@ -70,27 +77,74 @@ def main():
         action="store_true",
         help="If specified, save the schema on disk (json file)",
     )
+    parser.add_argument(
+        "-start_at",
+        type=str,
+        default="",
+        help=r"If specified, reset offsets to 0 (`earliest`) or empty queue (`latest`).",
+    )
     args = parser.parse_args(None)
 
     # load user configuration
     conf = load_credentials()
 
     myconfig = {
-        "username": conf["username"],
         "bootstrap.servers": conf["servers"],
-        "group_id": conf["group_id"],
+        "group.id": conf["group_id"],
     }
 
     if conf["password"] is not None:
         myconfig["password"] = conf["password"]
+
+    if args.display_statistics:
+        print()
+        for topic in conf["mytopics"]:
+            total_lag, total_offset = print_offsets(
+                myconfig, topic, conf["maxtimeout"], verbose=True
+            )
+            print()
+        sys.exit(0)
 
     # Instantiate a consumer
     if args.schema is None:
         schema = None
     else:
         schema = args.schema
+
+    if args.start_at != "":
+        if args.start_at == "earliest":
+
+            def assign_offset(consumer, partitions):
+                print("Resetting offsets to BEGINNING")
+                for p in partitions:
+                    low, high = consumer.get_watermark_offsets(p)
+                    p.offset = low
+                    print("assign", p)
+                consumer.assign(partitions)
+        elif args.start_at == "latest":
+
+            def assign_offset(consumer, partitions):
+                print("Resetting offsets to END")
+                for p in partitions:
+                    low, high = consumer.get_watermark_offsets(p)
+                    p.offset = high
+                    print("assign", p)
+                consumer.assign(partitions)
+        else:
+            raise AttributeError(
+                "{} not recognized. -start_at should be `earliest` or `latest`.".format(
+                    args.start_at
+                )
+            )
+    else:
+        assign_offset = None
+
     consumer = AlertConsumer(
-        conf["mytopics"], myconfig, schema_path=schema, dump_schema=args.dump_schema
+        conf["mytopics"],
+        myconfig,
+        schema_path=schema,
+        dump_schema=args.dump_schema,
+        on_assign=assign_offset,
     )
 
     if args.available_topics:

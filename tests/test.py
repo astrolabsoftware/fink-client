@@ -56,7 +56,7 @@ class TestIntegration(unittest.TestCase):
 
         myconfig = {
             'bootstrap.servers': kafka_servers,
-            'group_id': conf['group_id']}
+            'group.id': conf['group_id']}
 
         self.consumer = AlertConsumer(mytopics, myconfig, schema_path=schema_path)
 
@@ -95,7 +95,7 @@ class TestComponents(unittest.TestCase):
         myconfig = {
             "username": "Alice",
             "password": "Alice-secret",
-            "group_id": "test_group"
+            "group.id": "test_group"
         }
         kafka_config = _get_kafka_config(myconfig)
 
