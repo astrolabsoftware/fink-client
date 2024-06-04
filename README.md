@@ -48,28 +48,31 @@ Once you have your credentials, you are ready to poll streams! You can easily ac
 
 ```bash
 fink_consumer -h
-usage: fink_consumer [-h] [--display] [-limit LIMIT] [--available_topics]
-                     [--save] [-outdir OUTDIR] [-schema SCHEMA]
-                     [--dump_schema]
+usage: fink_consumer [-h] [--display] [--display_statistics] [-limit LIMIT]
+                     [--available_topics] [--save] [-outdir OUTDIR]
+                     [-schema SCHEMA] [--dump_schema] [-start_at START_AT]
 
-Kafka consumer to listen and archive Fink streams from the Livestream
-service
+Kafka consumer to listen and archive Fink streams from the Livestream service
 
 optional arguments:
-  -h, --help          show this help message and exit
-  --display           If specified, print on screen information about
-                      incoming alert.
-  -limit LIMIT        If specified, download only `limit` alerts. Default is
-                      None.
-  --available_topics  If specified, print on screen information about
-                      available topics.
-  --save              If specified, save alert data on disk (Avro). See also
-                      -outdir.
-  -outdir OUTDIR      Folder to store incoming alerts if --save is set. It
-                      must exist.
-  -schema SCHEMA      Avro schema to decode the incoming alerts. Default is
-                      None (version taken from each alert)
-  --dump_schema       If specified, save the schema on disk (json file)
+  -h, --help            show this help message and exit
+  --display             If specified, print on screen information about
+                        incoming alert.
+  --display_statistics  If specified, print on screen information about queues,
+                        and exit.
+  -limit LIMIT          If specified, download only `limit` alerts. Default is
+                        None.
+  --available_topics    If specified, print on screen information about
+                        available topics.
+  --save                If specified, save alert data on disk (Avro). See also
+                        -outdir.
+  -outdir OUTDIR        Folder to store incoming alerts if --save is set. It
+                        must exist.
+  -schema SCHEMA        Avro schema to decode the incoming alerts. Default is
+                        None (version taken from each alert)
+  --dump_schema         If specified, save the schema on disk (json file)
+  -start_at START_AT    If specified, reset offsets to 0 (`earliest`) or empty
+                        queue (`latest`).
 ```
 
 You can also look at an alert on the disk:
