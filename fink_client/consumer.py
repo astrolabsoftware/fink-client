@@ -371,21 +371,23 @@ def return_offsets(
             offset = "%d" % (partition.offset)
 
         if hi < 0:
-            lag = "no hwmark"  # Unlikely
+            lag = 0  # Unlikely
         elif partition.offset < 0:
             # No committed offset, show total message count as lag.
             # The actual message count may be lower due to compaction
             # and record deletions.
-            lag = "%d" % (hi - lo)
+            lag = hi - lo
             partition.offset = 0
         else:
-            lag = "%d" % (hi - partition.offset)
+            lag = hi - partition.offset
         #
         total_offsets = total_offsets + partition.offset
         total_lag = total_lag + int(lag)
 
         if verbose:
-            if (hide_empty_partition and offset != "-") or (not hide_empty_partition):
+            if (hide_empty_partition and (offset != "-" or int(lag) > 0)) or (
+                not hide_empty_partition
+            ):
                 print(
                     "%-50s  %9s  %9s"
                     % (
