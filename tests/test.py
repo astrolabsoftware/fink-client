@@ -56,7 +56,7 @@ class TestIntegration(unittest.TestCase):
 
         myconfig = {
             'bootstrap.servers': kafka_servers,
-            'group_id': conf['group_id']}
+            'group.id': conf['group_id']}
 
         self.consumer = AlertConsumer(mytopics, myconfig, schema_path=schema_path)
 
