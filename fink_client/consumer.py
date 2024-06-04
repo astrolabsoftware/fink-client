@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import io
+import sys
 import json
 import time
 import fastavro
@@ -35,7 +36,14 @@ class AlertError(Exception):
 class AlertConsumer:
     """High level Kafka consumer to receive alerts from Fink broker"""
 
-    def __init__(self, topics: list, config: dict, schema_path=None, dump_schema=False):
+    def __init__(
+        self,
+        topics: list,
+        config: dict,
+        schema_path=None,
+        dump_schema=False,
+        on_assign=None,
+    ):
         """Creates an instance of `AlertConsumer`
 
         Parameters
@@ -52,12 +60,27 @@ class AlertConsumer:
                 group.id for Kafka consumer
             bootstrap.servers: str, optional
                 Kafka servers to connect to
+            schema_path: str, optional
+                If specified, path to an alert schema (avsc).
+                Default is None.
+            dump_schema: bool, optional
+                If True, save incoming alert schema on disk.
+                Useful for schema inspection when getting `IndexError`.
+                Default is False.
+            on_assign: callable, optional
+                Callback to update the current assignment
+                and specify start offsets. Default is None.
+
         """
         self._topics = topics
         self._kafka_config = _get_kafka_config(config)
         self.schema_path = schema_path
         self._consumer = confluent_kafka.Consumer(self._kafka_config)
-        self._consumer.subscribe(self._topics)
+
+        if on_assign is not None:
+            self._consumer.subscribe(self._topics, on_assign=on_assign)
+        else:
+            self._consumer.subscribe(self._topics)
         self.dump_schema = dump_schema
 
     def __enter__(self):
@@ -281,7 +304,9 @@ class AlertConsumer:
         self._consumer.close()
 
 
-def return_offsets(consumer, topic, waitfor=1, timeout=10, verbose=False):
+def return_offsets(
+    consumer, topic, waitfor=1, timeout=10, hide_empty_partition=True, verbose=False
+):
     """Poll servers to get the total committed offsets, and remaining lag
 
     Parameters
@@ -294,6 +319,9 @@ def return_offsets(consumer, topic, waitfor=1, timeout=10, verbose=False):
         Time in second to wait before polling. Default is 1 second.
     timeout: int, optional
         Timeout in second when polling the servers. Default is 10.
+    hide_empty_partition: bool, optional
+        If True, display only non-empty partitions.
+        Default is True
     verbose: bool, optional
         If True, prints useful table. Default is False.
 
@@ -357,16 +385,115 @@ def return_offsets(consumer, topic, waitfor=1, timeout=10, verbose=False):
         total_lag = total_lag + int(lag)
 
         if verbose:
-            print(
-                "%-50s  %9s  %9s"
-                % ("{} [{}]".format(partition.topic, partition.partition), offset, lag)
-            )
+            if (hide_empty_partition and offset != "-") or (not hide_empty_partition):
+                print(
+                    "%-50s  %9s  %9s"
+                    % (
+                        "{} [{}]".format(partition.topic, partition.partition),
+                        offset,
+                        lag,
+                    )
+                )
     if verbose:
         print("-" * 72)
-        print("%-50s  %9s  %9s" % ("Total", total_offsets, total_lag))
+        print(
+            "%-50s  %9s  %9s" % ("Total for {}".format(topic), total_offsets, total_lag)
+        )
         print("-" * 72)
 
     return total_offsets, total_lag
+
+
+def return_last_offsets(kafka_config, topic):
+    """Return the last offsets
+
+    Parameters
+    ----------
+    kafka_config: dict
+        Kafka consumer config
+    topic: str
+        Topic name
+
+    Returns
+    -------
+    offsets: list
+        Last offsets of each partition
+    """
+    consumer = confluent_kafka.Consumer(kafka_config)
+    topics = ["{}".format(topic)]
+    consumer.subscribe(topics)
+
+    metadata = consumer.list_topics(topic)
+    if metadata.topics[topic].error is not None:
+        raise confluent_kafka.KafkaException(metadata.topics[topic].error)
+
+    # List of partitions
+    partitions = [
+        confluent_kafka.TopicPartition(topic, p)
+        for p in metadata.topics[topic].partitions
+    ]
+    committed = consumer.committed(partitions)
+    offsets = []
+    for partition in committed:
+        if partition.offset != confluent_kafka.OFFSET_INVALID:
+            offsets.append(partition.offset)
+        else:
+            offsets.append(0)
+
+    consumer.close()
+    return offsets
+
+
+def print_offsets(
+    kafka_config, topic, maxtimeout=10, hide_empty_partition=True, verbose=True
+):
+    """Wrapper around `consumer.return_offsets`
+
+    If the server is rebalancing the offsets, it will exit the program.
+
+    Parameters
+    ----------
+    kafka_config: dic
+        Dictionary with consumer parameters
+    topic: str
+        Topic name
+    maxtimeout: int, optional
+        Timeout in second, when polling the servers
+    hide_empty_partition: bool, optional
+        If True, display only non-empty partitions.
+        Default is True
+    verbose: bool, optional
+        If True, prints useful table. Default is True.
+
+    Returns
+    -------
+    total_offsets: int
+        Total number of messages committed across all partitions
+    total_lag: int
+        Remaining messages in the topic across all partitions.
+    """
+    consumer = confluent_kafka.Consumer(kafka_config)
+
+    topics = ["{}".format(topic)]
+    consumer.subscribe(topics)
+    total_offset, total_lag = return_offsets(
+        consumer,
+        topic,
+        timeout=maxtimeout,
+        waitfor=0,
+        verbose=verbose,
+        hide_empty_partition=hide_empty_partition,
+    )
+    if (total_offset, total_lag) == (-1, -1):
+        print(
+            "Warning: Consumer group '{}' is rebalancing. Please wait.".format(
+                kafka_config["group.id"]
+            )
+        )
+        sys.exit()
+    consumer.close()
+
+    return total_lag, total_offset
 
 
 def _get_kafka_config(config: dict) -> dict:
@@ -392,7 +519,7 @@ def _get_kafka_config(config: dict) -> dict:
         kafka_config["sasl.username"] = config["username"]
         kafka_config["sasl.password"] = config["password"]
 
-    kafka_config["group.id"] = config["group_id"]
+    kafka_config["group.id"] = config["group.id"]
 
     kafka_config.update(default_config)
 
@@ -405,3 +532,103 @@ def _get_kafka_config(config: dict) -> dict:
         kafka_config["bootstrap.servers"] = "{}".format(",".join(fink_servers))
 
     return kafka_config
+
+
+def return_npartitions(topic, kafka_config):
+    """Get the number of partitions
+
+    Parameters
+    ----------
+    kafka_config: dic
+        Dictionary with consumer parameters
+    topic: str
+        Topic name
+
+    Returns
+    -------
+    nbpartitions: int
+        Number of partitions in the topic
+
+    """
+    consumer = confluent_kafka.Consumer(kafka_config)
+
+    # Details to get
+    nbpartitions = 0
+    try:
+        # Topic metadata
+        metadata = consumer.list_topics(topic=topic)
+
+        if metadata.topics and topic in metadata.topics:
+            partitions = metadata.topics[topic].partitions
+            nbpartitions = len(partitions)
+        else:
+            print("The topic {} does not exist".format(topic))
+
+    except confluent_kafka.KafkaException as e:
+        print(f"Error while getting the number of partitions: {e}")
+
+    consumer.close()
+
+    return nbpartitions
+
+
+def return_partition_offset(consumer, topic, partition):
+    """Return the offset and the remaining lag of a partition
+
+    consumer: confluent_kafka.Consumer
+        Kafka consumer
+    topic: str
+        Topic name
+    partition: int
+        The partition number
+
+    Returns
+    -------
+    offset : int
+        Total number of offsets in the topic
+    """
+    topicPartition = confluent_kafka.TopicPartition(topic, partition)
+    low_offset, high_offset = consumer.get_watermark_offsets(topicPartition)
+    partition_size = high_offset - low_offset
+
+    return partition_size
+
+
+def get_schema_from_stream(kafka_config, topic, maxtimeout):
+    """Poll the schema data from the schema topic
+
+    Parameters
+    ----------
+    kafka_config: dic
+        Dictionary with consumer parameters
+    topic: str
+        Topic name
+    timeout: int, optional
+        Timeout in second, when polling the servers
+
+    Returns
+    -------
+    schema: None or dic
+        Schema data. None if the poll was not successful.
+        Reasons to get None:
+            1. timeout has been reached (increase timeout)
+            2. topic is empty (produce new data)
+            3. topic does not exist (create the topic)
+    """
+    # Instantiate a consumer
+    consumer_schema = confluent_kafka.Consumer(kafka_config)
+
+    # Subscribe to schema topic
+    topics = ["{}_schema".format(topic)]
+    consumer_schema.subscribe(topics)
+
+    # Poll
+    msg = consumer_schema.poll(maxtimeout)
+    if msg is not None:
+        schema = fastavro.schema.parse_schema(json.loads(msg.key()))
+    else:
+        schema = None
+
+    consumer_schema.close()
+
+    return schema

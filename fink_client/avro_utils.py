@@ -245,6 +245,12 @@ def write_alert(
     path: str
         Folder that will contain the alert. The filename will always be
         <objectID>.avro
+    overwrite: bool, optional
+        If True, overwrite existing alert. Default is False.
+    id1: str, optional
+        First prefix for alert name: {id1}_{id2}.avro
+    id2: str, optional
+        Second prefix for alert name: {id1}_{id2}.avro
 
     Examples
     --------
