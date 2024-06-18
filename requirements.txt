@@ -1,4 +1,4 @@
-astropy==6.0.1
+astropy
 confluent-kafka==2.4.0
 coverage
 coveralls
