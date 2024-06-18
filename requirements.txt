@@ -1,7 +1,7 @@
 astropy==6.0.1
 confluent-kafka==2.4.0
-coverage==7.5.3
-coveralls==4.0.1
+coverage
+coveralls
 fastavro==1.9.4
 matplotlib==3.9.0
 numpy==1.26.4
