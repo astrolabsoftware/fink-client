@@ -10,3 +10,4 @@ pyarrow
 PyYAML
 tabulate
 tqdm
+psutils
