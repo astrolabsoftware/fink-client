@@ -1,5 +1,5 @@
 astropy
-confluent-kafka==2.5.0
+confluent-kafka
 coverage
 coveralls
 fastavro==1.9.4
