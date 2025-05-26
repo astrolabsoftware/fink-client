@@ -94,13 +94,11 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
             if partition["status"] < max_end_check:
                 # After max_end_check time if no alerts added,
                 # it is supposed finished
-                queue.put(
-                    {
-                        "partition": partition["partition"],
-                        "offset": partition["offset"],
-                        "status": partition["status"] + 1,
-                    }
-                )
+                queue.put({
+                    "partition": partition["partition"],
+                    "offset": partition["offset"],
+                    "status": partition["status"] + 1,
+                })
         else:
             poll_number = initial
             total = offset
@@ -126,13 +124,11 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
                                 # Alerts can be added in the partition later
                                 # putting it again in the queue
                                 # changing the offset to continue where we stopped
-                                queue.put(
-                                    {
-                                        "partition": partition["partition"],
-                                        "offset": poll_number,
-                                        "status": 0,
-                                    }
-                                )
+                                queue.put({
+                                    "partition": partition["partition"],
+                                    "offset": poll_number,
+                                    "status": 0,
+                                })
                                 break
 
                             pdf = pd.DataFrame.from_records(
@@ -209,13 +205,11 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
                             pbar.update(len(msgs))
 
                             if len(msgs) < args.batchsize:
-                                queue.put(
-                                    {
-                                        "partition": partition["partition"],
-                                        "offset": poll_number,
-                                        "status": 0,
-                                    }
-                                )
+                                queue.put({
+                                    "partition": partition["partition"],
+                                    "offset": poll_number,
+                                    "status": 0,
+                                })
                                 break
                         else:
                             logging.info(
@@ -307,9 +301,9 @@ def main():
 
     if not args.topic.startswith("ftransfer"):
         msg = """
-{} is not a valid topic name. 
+{} is not a valid topic name.
 Topic name must start with `ftransfer_`.
-Check the webpage on which you submit the job, 
+Check the webpage on which you submit the job,
 and open the tab `Get your data` to retrieve the topic.
         """.format(args.topic)
         print(msg)

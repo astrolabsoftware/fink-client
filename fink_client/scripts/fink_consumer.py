@@ -121,6 +121,7 @@ def main():
                     p.offset = low
                     print("assign", p)
                 consumer.assign(partitions)
+
         elif args.start_at == "latest":
 
             def assign_offset(consumer, partitions):
@@ -130,6 +131,7 @@ def main():
                     p.offset = high
                     print("assign", p)
                 consumer.assign(partitions)
+
         else:
             raise AttributeError(
                 "{} not recognized. -start_at should be `earliest` or `latest`.".format(
