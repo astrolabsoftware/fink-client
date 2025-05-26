@@ -22,6 +22,8 @@ from astropy.io import fits
 
 import numpy as np
 
+from fink_client.tester import regular_unit_tests
+
 
 def plot_cutout(stamp: bytes, fig=None, subplot=None, **kwargs):
     """Plot one cutout contained in an alert (2D array)
@@ -110,9 +112,29 @@ def extract_field(alert: dict, field: str) -> np.array:
         List containing previous measurements and current measurement at the
         end. If `field` is not in `prv_candidates fields, data will be
         [None, None, ..., alert['candidate'][field]].
+
+    Examples
+    --------
+    >>> from fink_client.visualisation import extract_field
+    >>> alert = {"candidate": {"magpsf": 1.0}, "prv_candidates": [{"magpsf": 2.0}]}
+    >>> mag = extract_field(alert, "magpsf")
+    >>> assert len(mag) == 2, mag
+
+    >>> alert = {"candidate": {"magpsf": 1.0}, "prv_candidates": None}
+    >>> mag = extract_field(alert, "magpsf")
+    >>> assert len(mag) == 1, mag
     """
-    data = np.concatenate([
-        [alert["candidate"][field]],
-        extract_history(alert["prv_candidates"], field),
-    ])
+    if isinstance(alert["prv_candidates"], list):
+        data = np.concatenate([
+            [alert["candidate"][field]],
+            extract_history(alert["prv_candidates"], field),
+        ])
+    else:
+        data = [alert["candidate"][field]]
     return data
+
+
+if __name__ == "__main__":
+    """ Run the test suite """
+
+    regular_unit_tests()
