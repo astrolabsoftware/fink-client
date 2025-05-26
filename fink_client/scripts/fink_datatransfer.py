@@ -21,6 +21,7 @@ import io
 import argparse
 import logging
 import psutil
+import json
 
 from tqdm import trange
 
@@ -285,6 +286,11 @@ def main():
         help="If specified, restart downloading from the 1st alert in the stream. Default is False.",
     )
     parser.add_argument(
+        "--dump_schema",
+        action="store_true",
+        help="If specified, save the schema on disk (json file)",
+    )
+    parser.add_argument(
         "--verbose",
         action="store_true",
         help="If specified, print on screen information about the consuming.",
@@ -353,6 +359,10 @@ def main():
             "No schema found -- wait a few seconds and relaunch. If the error persists, maybe the queue is empty."
         )
     else:
+        if args.dump_schema:
+            filename = "schema_{}.json".format(args.topic)
+            with open(filename, "w") as json_file:
+                json.dump(schema, json_file, sort_keys=True, indent=4)
         nbpart = return_npartitions(args.topic, kafka_config)
         print("Number of partitions for topic {}: {}".format(args.topic, nbpart))
         available = Queue()
