@@ -111,7 +111,8 @@ def extract_field(alert: dict, field: str) -> np.array:
         end. If `field` is not in `prv_candidates fields, data will be
         [None, None, ..., alert['candidate'][field]].
     """
-    data = np.concatenate(
-        [[alert["candidate"][field]], extract_history(alert["prv_candidates"], field)]
-    )
+    data = np.concatenate([
+        [alert["candidate"][field]],
+        extract_history(alert["prv_candidates"], field),
+    ])
     return data

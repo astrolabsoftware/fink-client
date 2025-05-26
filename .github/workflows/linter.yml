@@ -26,5 +26,5 @@ jobs:
         pip install ruff
     - name: utilities
       run: |
-        ruff check --statistics fink_client
-        ruff format --check fink_client
+        ruff check --statistics --preview fink_client
+        ruff format --check --preview fink_client
