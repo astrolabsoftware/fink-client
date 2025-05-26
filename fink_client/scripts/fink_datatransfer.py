@@ -305,6 +305,16 @@ def main():
         )
         sys.exit()
 
+    if not args.topic.startswith("ftransfer"):
+        msg = """
+{} is not a valid topic name. 
+Topic name must start with `ftransfer_`.
+Check the webpage on which you submit the job, 
+and open the tab `Get your data` to retrieve the topic.
+        """.format(args.topic)
+        print(msg)
+        sys.exit()
+
     # load user configuration
     conf = load_credentials()
 
