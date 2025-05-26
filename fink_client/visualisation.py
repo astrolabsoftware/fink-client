@@ -116,21 +116,25 @@ def extract_field(alert: dict, field: str) -> np.array:
     Examples
     --------
     >>> from fink_client.visualisation import extract_field
-    >>> alert = {"candidate": {"magpsf": 1.0}, "prv_candidates": [{"magpsf": 2.0}]}
+    >>> alert = {"candidate": {"magpsf": 1.0}, "prv_candidates": np.array([{"magpsf": 2.0}])}
     >>> mag = extract_field(alert, "magpsf")
     >>> assert len(mag) == 2, mag
 
     >>> alert = {"candidate": {"magpsf": 1.0}, "prv_candidates": None}
     >>> mag = extract_field(alert, "magpsf")
     >>> assert len(mag) == 1, mag
+
+    >>> alert = {"candidate": {"magpsf": 1.0}, "prv_candidates": [{"magpsf": 2.0}, {"magpsf": None}]}
+    >>> mag = extract_field(alert, "magpsf")
+    >>> assert len(mag) == 3, mag
     """
-    if isinstance(alert["prv_candidates"], list):
+    if alert["prv_candidates"] is None:
+        data = [alert["candidate"][field]]
+    else:
         data = np.concatenate([
             [alert["candidate"][field]],
             extract_history(alert["prv_candidates"], field),
         ])
-    else:
-        data = [alert["candidate"][field]]
     return data
 
 
