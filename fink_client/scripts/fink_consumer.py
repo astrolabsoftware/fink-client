@@ -99,9 +99,7 @@ def main():
     if args.display_statistics:
         print()
         for topic in conf["mytopics"]:
-            total_lag, total_offset = print_offsets(
-                myconfig, topic, conf["maxtimeout"], verbose=True
-            )
+            _, _ = print_offsets(myconfig, topic, conf["maxtimeout"], verbose=True)
             print()
         sys.exit(0)
 
@@ -117,7 +115,7 @@ def main():
             def assign_offset(consumer, partitions):
                 print("Resetting offsets to BEGINNING")
                 for p in partitions:
-                    low, high = consumer.get_watermark_offsets(p)
+                    low, _ = consumer.get_watermark_offsets(p)
                     p.offset = low
                     print("assign", p)
                 consumer.assign(partitions)
@@ -127,7 +125,7 @@ def main():
             def assign_offset(consumer, partitions):
                 print("Resetting offsets to END")
                 for p in partitions:
-                    low, high = consumer.get_watermark_offsets(p)
+                    _, high = consumer.get_watermark_offsets(p)
                     p.offset = high
                     print("assign", p)
                 consumer.assign(partitions)
@@ -166,13 +164,13 @@ def main():
         while poll_number < maxpoll:
             if args.save:
                 # Save alerts on disk
-                topic, alert, key = consumer.poll_and_write(
+                topic, alert, _ = consumer.poll_and_write(
                     outdir=args.outdir, timeout=maxtimeout, overwrite=True
                 )
             else:
                 # TODO: this is useless to get it and done nothing
                 # why not thinking about handler like Comet?
-                topic, alert, key = consumer.poll(timeout=maxtimeout)
+                topic, alert, _ = consumer.poll(timeout=maxtimeout)
 
             if topic is not None:
                 poll_number += 1
