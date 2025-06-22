@@ -32,6 +32,7 @@ import confluent_kafka
 
 import pandas as pd
 import numpy as np
+from astropy.time import Time
 
 from multiprocessing import Process, Queue
 
@@ -44,6 +45,9 @@ from fink_client.consumer import (
     return_last_offsets,
     get_schema_from_stream,
 )
+from fink_client.logger import get_fink_logger
+
+_LOG = get_fink_logger("Fink", "INFO")
 
 
 def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
@@ -116,7 +120,7 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
                         # Decode the message
                         if msgs is not None:
                             if len(msgs) == 0:
-                                print(
+                                _LOG.warning(
                                     "[{}] No alerts the last {} seconds ({} polled)... Have to exit(1)\n".format(
                                         process_id, args.maxtimeout, poll_number
                                     )
@@ -140,7 +144,6 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
                                 ],
                             )
                             if pdf.empty:
-                                # print('[{}] No alerts the last {} seconds ({} polled)... Exiting\n'.format(process_id, args.maxtimeout, poll_number))
                                 break
 
                             # known mismatches between partitions
@@ -158,22 +161,58 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
                             if "tracklet" in pdf.columns:
                                 pdf["tracklet"] = pdf["tracklet"].astype("str")
 
-                            # if 'jd' in pdf.columns:
-                            #     # create columns year, month, day
+                            if args.partitionby == "time":
+                                if "jd" in pdf.columns:
+                                    pdf[["year", "month", "day"]] = pdf[["jd"]].apply(
+                                        lambda x: Time(x.iloc[0], format="jd")
+                                        .strftime("%Y-%m-%d")
+                                        .split("-"),
+                                        axis=1,
+                                        result_type="expand",
+                                    )
+                                elif "candidate" in pdf.columns:
+                                    pdf[["year", "month", "day"]] = pdf[
+                                        ["candidate"]
+                                    ].apply(
+                                        lambda x: Time(x.iloc[0]["jd"], format="jd")
+                                        .strftime("%Y-%m-%d")
+                                        .split("-"),
+                                        axis=1,
+                                        result_type="expand",
+                                    )
+                                partitioning = ["year", "month", "day"]
+                            elif args.partitionby == "finkclass":
+                                if "finkclass" not in pdf.columns:
+                                    # partition by time
+                                    # put a warning
+                                    _LOG.warning(
+                                        "finkclass not found. Applying time partitioning."
+                                    )
+                                    if "jd" in pdf.columns:
+                                        pdf[["year", "month", "day"]] = pdf[
+                                            ["jd"]
+                                        ].apply(
+                                            lambda x: Time(x.iloc[0], format="jd")
+                                            .strftime("%Y-%m-%d")
+                                            .split("-"),
+                                            axis=1,
+                                            result_type="expand",
+                                        )
+                                        partitioning = ["year", "month", "day"]
+                                    else:
+                                        # put an error
+                                        pass
+                                else:
+                                    partitioning = ["finkclass"]
+                            elif args.partitionby == "tnsclass":
+                                partitioning = ["tnsclass"]
+                            elif args.partitionby == "classId":
+                                partitioning = ["classId"]
 
                             table = pa.Table.from_pandas(pdf)
 
                             if poll_number == initial:
                                 table_schema = table.schema
-
-                            if args.partitionby == "time":
-                                partitioning = ["year", "month", "day"]
-                            elif args.partitionby == "finkclass":
-                                partitioning = ["finkclass"]
-                            elif args.partitionby == "tnsclass":
-                                partitioning = ["tnsclass"]
-                            elif args.partitionby == "classId":
-                                partitioning = ["classId"]
 
                             part_num = rng.randint(0, 1e6)
                             try:
@@ -188,7 +227,9 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
                                     existing_data_behavior="overwrite_or_ignore",
                                 )
                             except pa.lib.ArrowTypeError:
-                                print("Schema mismatch detected")
+                                _LOG.warning(
+                                    "Schema mismatch detected -- recreating the schema"
+                                )
                                 table_schema_ = table.schema
                                 pq.write_to_dataset(
                                     table,
@@ -292,7 +333,7 @@ def main():
     args = parser.parse_args(None)
 
     if args.partitionby not in ["time", "finkclass", "tnsclass", "classId"]:
-        print(
+        _LOG.error(
             "{} is an unknown partitioning. `-partitionby` should be in ['time', 'finkclass', 'tnsclass', 'classId']".format(
                 args.partitionby
             )
@@ -306,7 +347,7 @@ Topic name must start with `ftransfer_`.
 Check the webpage on which you submit the job,
 and open the tab `Get your data` to retrieve the topic.
         """.format(args.topic)
-        print(msg)
+        _LOG.error(msg)
         sys.exit()
 
     # load user configuration
@@ -347,7 +388,7 @@ and open the tab `Get your data` to retrieve the topic.
         args.total_offset = total_offset
         offsets = return_last_offsets(kafka_config, args.topic)
         if total_lag == 0:
-            print("All alerts have been polled. Exiting.")
+            _LOG.info("All alerts have been polled. Exiting.")
             sys.exit()
 
     if not os.path.isdir(args.outdir):
@@ -359,7 +400,7 @@ and open the tab `Get your data` to retrieve the topic.
     schema = get_schema_from_stream(kafka_config, args.topic, args.maxtimeout)
     if schema is None:
         # TBD: raise error
-        print(
+        _LOG.info(
             "No schema found -- wait a few seconds and relaunch. If the error persists, maybe the queue is empty."
         )
     else:
@@ -368,7 +409,7 @@ and open the tab `Get your data` to retrieve the topic.
             with open(filename, "w") as json_file:
                 json.dump(schema, json_file, sort_keys=True, indent=4)
         nbpart = return_npartitions(args.topic, kafka_config)
-        print("Number of partitions for topic {}: {}".format(args.topic, nbpart))
+        _LOG.info("Number of partitions for topic {}: {}".format(args.topic, nbpart))
         available = Queue()
         # Queue loading
         for key in range(nbpart):
