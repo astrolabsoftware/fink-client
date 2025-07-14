@@ -208,6 +208,8 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
                                 partitioning = ["tnsclass"]
                             elif args.partitionby == "classId":
                                 partitioning = ["classId"]
+                            else:
+                                partitioning = None
 
                             table = pa.Table.from_pandas(pdf)
 
@@ -332,7 +334,7 @@ def main():
     )
     args = parser.parse_args(None)
 
-    if args.partitionby not in ["time", "finkclass", "tnsclass", "classId"]:
+    if args.partitionby is not None and args.partitionby not in ["time", "finkclass", "tnsclass", "classId"]:
         _LOG.error(
             "{} is an unknown partitioning. `-partitionby` should be in ['time', 'finkclass', 'tnsclass', 'classId']".format(
                 args.partitionby
