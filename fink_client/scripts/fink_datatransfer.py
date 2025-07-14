@@ -334,7 +334,12 @@ def main():
     )
     args = parser.parse_args(None)
 
-    if args.partitionby is not None and args.partitionby not in ["time", "finkclass", "tnsclass", "classId"]:
+    if args.partitionby is not None and args.partitionby not in [
+        "time",
+        "finkclass",
+        "tnsclass",
+        "classId",
+    ]:
         _LOG.error(
             "{} is an unknown partitioning. `-partitionby` should be in ['time', 'finkclass', 'tnsclass', 'classId']".format(
                 args.partitionby
