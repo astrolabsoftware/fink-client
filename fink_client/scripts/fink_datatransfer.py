@@ -290,8 +290,8 @@ def main():
     parser.add_argument(
         "-partitionby",
         type=str,
-        default="time",
-        help="Partition data by `time` (year=YYYY/month=MM/day=DD), or `finkclass` (finkclass=CLASS), or `tnsclass` (tnsclass=CLASS). `classId` is also available for ELASTiCC data. Default is time.",
+        default=None,
+        help="Partition data by `time` (year=YYYY/month=MM/day=DD), or `finkclass` (finkclass=CLASS), or `tnsclass` (tnsclass=CLASS). `classId` is also available for ELASTiCC data. Default is None, that is no partitioning is applied.",
     )
     parser.add_argument(
         "-batchsize",
