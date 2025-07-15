@@ -347,10 +347,10 @@ def main():
         )
         sys.exit()
 
-    if not args.topic.startswith("ftransfer"):
+    if not (args.topic.startswith("ftransfer") or args.topic.startswith("fxmatch")):
         msg = """
 {} is not a valid topic name.
-Topic name must start with `ftransfer_`.
+Topic name must start with `ftransfer_` or `fxmatch_`.
 Check the webpage on which you submit the job,
 and open the tab `Get your data` to retrieve the topic.
         """.format(args.topic)
