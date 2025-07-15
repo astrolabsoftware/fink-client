@@ -208,6 +208,8 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
                                 partitioning = ["tnsclass"]
                             elif args.partitionby == "classId":
                                 partitioning = ["classId"]
+                            else:
+                                partitioning = None
 
                             table = pa.Table.from_pandas(pdf)
 
@@ -288,8 +290,8 @@ def main():
     parser.add_argument(
         "-partitionby",
         type=str,
-        default="time",
-        help="Partition data by `time` (year=YYYY/month=MM/day=DD), or `finkclass` (finkclass=CLASS), or `tnsclass` (tnsclass=CLASS). `classId` is also available for ELASTiCC data. Default is time.",
+        default=None,
+        help="Partition data by `time` (year=YYYY/month=MM/day=DD), or `finkclass` (finkclass=CLASS), or `tnsclass` (tnsclass=CLASS). `classId` is also available for ELASTiCC data. Default is None, that is no partitioning is applied.",
     )
     parser.add_argument(
         "-batchsize",
@@ -332,7 +334,12 @@ def main():
     )
     args = parser.parse_args(None)
 
-    if args.partitionby not in ["time", "finkclass", "tnsclass", "classId"]:
+    if args.partitionby is not None and args.partitionby not in [
+        "time",
+        "finkclass",
+        "tnsclass",
+        "classId",
+    ]:
         _LOG.error(
             "{} is an unknown partitioning. `-partitionby` should be in ['time', 'finkclass', 'tnsclass', 'classId']".format(
                 args.partitionby
