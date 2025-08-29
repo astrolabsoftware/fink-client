@@ -19,12 +19,15 @@ import json
 import time
 import fastavro
 import confluent_kafka
+import logging
 from datetime import datetime, timezone
 
 from fink_client.avro_utils import write_alert
 from fink_client.avro_utils import _get_alert_schema
 from fink_client.avro_utils import _decode_avro_alert
 from fink_client.configuration import mm_topic_names
+
+_LOG = logging.getLogger(__name__)
 
 
 class AlertError(Exception):
@@ -334,8 +337,25 @@ def return_offsets(
     """
     time.sleep(waitfor)
     # Get the topic's partitions
-    metadata = consumer.list_topics(topic, timeout=timeout)
+    try:
+        metadata = consumer.list_topics(topic, timeout=timeout)
+    except confluent_kafka.KafkaException as e:
+        # Server on the configuration file is not correct
+        print()
+        _LOG.error(
+            """Your client cannot reach the server. Most likely, you did not register the correct server in your configuration. Make sure you run `fink_client_register` with the option `-servers kafka-ztf.fink-broker.org:24499` (alongside other parameters). In case of doubt, run `fink_client_register -h` or check the parameter file `cat ~/.finkclient/credentials.yml`.\n"""
+        )
+        raise e
+
     if metadata.topics[topic].error is not None:
+        # Empirical
+        code = metadata.topics[topic].error.code()
+        if code == 3:
+            # topic does not exist
+            print()
+            _LOG.error(
+                """Your topic does not exist in the server. This is likely due to (a) your job has not started yet or has not produced output yet, (b) no match with your catalog if you are using the Xmatch service, or (c) no alerts satisfy your criteria if you are using the Data Transfer service. Try to change your parameters (e.g. increase radius for xmatch, or remove filters for Data Transfer), and contact us if that persists.\n"""
+            )
         raise confluent_kafka.KafkaException(metadata.topics[topic].error)
 
     # Construct TopicPartition list of partitions to query
