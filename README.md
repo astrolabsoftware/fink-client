@@ -39,8 +39,14 @@ In order to connect and poll alerts from Fink, you need to get your credentials:
 1. Subscribe to one or more Fink streams by filling this [form](https://forms.gle/2td4jysT4e9pkf889).
 2. After filling the form, we will send your credentials. Register them on your laptop by simply running:
   ```
-  fink_client_register -username <USERNAME> -group_id <GROUP_ID> ...
+  fink_client_register -username <USERNAME> -group_id <GROUP_ID> -servers <SERVERS> ...
   ```
+
+In case of doubt, run `fink_client_register -h`. You can also inspect the configuration file on disk:
+
+```bash
+cat ~/.finkclient/credentials.yml
+```
 
 ## Livestream usage
 
