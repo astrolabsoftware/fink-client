@@ -154,6 +154,10 @@ def extract_field(alert: dict, field: str, current: str, previous: str) -> np.ar
         Dictionnary containing alert data
     field: str
         Name of the field to extract.
+    current: str
+        Name of the section with current observation
+    previous: str
+        Name of the section with the history
 
     Returns
     -------
@@ -166,15 +170,15 @@ def extract_field(alert: dict, field: str, current: str, previous: str) -> np.ar
     --------
     >>> from fink_client.visualisation import extract_field
     >>> alert = {"candidate": {"magpsf": 1.0}, "prv_candidates": np.array([{"magpsf": 2.0}])}
-    >>> mag = extract_field(alert, "magpsf")
+    >>> mag = extract_field(alert, "magpsf", current="candidate", previous="prv_candidates")
     >>> assert len(mag) == 2, mag
 
     >>> alert = {"candidate": {"magpsf": 1.0}, "prv_candidates": None}
-    >>> mag = extract_field(alert, "magpsf")
+    >>> mag = extract_field(alert, "magpsf", current="candidate", previous="prv_candidates")
     >>> assert len(mag) == 1, mag
 
     >>> alert = {"candidate": {"magpsf": 1.0}, "prv_candidates": [{"magpsf": 2.0}, {"magpsf": None}]}
-    >>> mag = extract_field(alert, "magpsf")
+    >>> mag = extract_field(alert, "magpsf", current="candidate", previous="prv_candidates")
     >>> assert len(mag) == 3, mag
     """
     if alert[previous] is None:
