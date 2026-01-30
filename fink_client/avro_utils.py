@@ -230,9 +230,9 @@ def write_alert(
     alert: dict,
     schema: str,
     path: str,
-    overwrite: bool = False,
-    id1: str = "",
+    id1: str,
     id2: str = "",
+    overwrite: bool = False,
 ):
     """Write avro alert on disk
 
@@ -245,12 +245,12 @@ def write_alert(
     path: str
         Folder that will contain the alert. The filename will always be
         <objectID>.avro
+    id1: str
+        Prefix for alert name
+    id2: str, optional
+        Second prefix for alert name if need be (id1_id2.avro)
     overwrite: bool, optional
         If True, overwrite existing alert. Default is False.
-    id1: str, optional
-        First prefix for alert name: {id1}_{id2}.avro
-    id2: str, optional
-        Second prefix for alert name: {id1}_{id2}.avro
 
     Examples
     --------
@@ -270,7 +270,10 @@ def write_alert(
       ...
     OSError: ./ZTF19acihgng_1060135832015015002.avro already exists!
     """
-    alert_filename = os.path.join(path, "{}_{}.avro".format(alert[id1], alert[id2]))
+    if id2 is not None:
+        alert_filename = os.path.join(path, "{}_{}.avro".format(alert[id1], alert[id2]))
+    else:
+        alert_filename = os.path.join(path, "{}.avro".format(alert[id1]))
 
     if isinstance(schema, str):
         schema = _get_alert_schema(schema)

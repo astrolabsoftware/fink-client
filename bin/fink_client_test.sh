@@ -27,7 +27,7 @@ done
 TEST_DIR=${FINK_CLIENT_HOME}/tests
 
 # Fake credentials
-fink_client_register -username test -password None \
+fink_client_register -survey ztf -username test -password None \
   -servers 'localhost:9093, localhost:9094, localhost:9095' \
   -mytopics rrlyr -group_id test_group -maxtimeout 10 --tmp
 
