@@ -94,11 +94,12 @@ class AlertConsumer:
         self._consumer = confluent_kafka.Consumer(self._kafka_config)
 
         if self._topics is not None and len(self._topics) > 0:
-            _LOG.warning("No topics is declared for survey {}".format(self.survey))
             if on_assign is not None:
                 self._consumer.subscribe(self._topics, on_assign=on_assign)
             else:
                 self._consumer.subscribe(self._topics)
+        else:
+            _LOG.warning("No topics is declared for survey {}".format(self.survey))
         self.dump_schema = dump_schema
 
     def __enter__(self):
