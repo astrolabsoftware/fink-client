@@ -129,11 +129,12 @@ options:
   -outdir OUTDIR        Folder to store incoming alerts. It will be created if it does not
                         exist.
   -partitionby PARTITIONBY
-                        Partition data by `time` (year=YYYY/month=MM/day=DD), or
-                        `finkclass` (finkclass=CLASS -- ZTF only), or `tnsclass`
-                        (tnsclass=CLASS -- ZTF only). `classId` is also available for
-                        ELASTiCC data. Default is None, that is no partitioning is
-                        applied.
+                        If specified, partition data when writing alerts on disk.
+                        Available options: - `time`: year=YYYY/month=MM/day=DD (ztf and
+                        lsst) - `finkclass`: finkclass=CLASS (ztf only) - `tnsclass`:
+                        tnsclass=CLASS (ztf only) - `classId`: classId=CLASSID (ELASTiCC
+                        only) Default is None, that is no partitioning is applied (all
+                        parquet files in the `outdir` folder).
   -batchsize BATCHSIZE  Maximum number of alert within the `maxtimeout` (see conf).
                         Default is 1000 alerts.
   -nconsumers NCONSUMERS
@@ -153,4 +154,4 @@ options:
   --verbose             If specified, print on screen information about the consuming.
 ```
 
-More information at [docs/datatransfer](https://fink-broker.readthedocs.io/en/latest/services/data_transfer/).
+More information at [docs/datatransfer](https://doc.ztf.fink-broker.org/en/latest/services/data_transfer/).
