@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019-2020 AstroLab Software
+# Copyright 2019-2026 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,16 +17,37 @@ from fink_client.configuration import write_credentials
 from fink_client.configuration import load_credentials
 
 import argparse
+import logging
+
+_LOG = logging.getLogger(__name__)
 
 
 def main():
     """ """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
+        "-survey",
+        type=str,
+        required=True,
+        help="Survey name among ztf or lsst. Note that each survey will have its own configuration file.",
+    )
+    parser.add_argument(
         "-username",
         type=str,
-        default="",
+        required=True,
         help="username used for the authentication on the Kafka cluster",
+    )
+    parser.add_argument(
+        "-group_id",
+        type=str,
+        required=True,
+        help="group_id used for the authentication on the Kafka cluster",
+    )
+    parser.add_argument(
+        "-servers",
+        type=str,
+        required=True,
+        help="Fink Kafka bootstrap server in the form name:port",
     )
     parser.add_argument(
         "-password",
@@ -35,23 +56,11 @@ def main():
         help="If specified, password for the authentication. Default is None.",
     )
     parser.add_argument(
-        "-group_id",
-        type=str,
-        default="",
-        help="group_id used for the authentication on the Kafka cluster",
-    )
-    parser.add_argument(
         "-mytopics",
         nargs="+",
         type=str,
         default=[],
         help="Space-separated list of subscribed topics. E.g. --topics t1 t2",
-    )
-    parser.add_argument(
-        "-servers",
-        type=str,
-        default=".",
-        help="Comma-separated list of IP:PORT as a single string. e.g. 's1,s2'",
     )
     parser.add_argument(
         "-maxtimeout",
@@ -73,6 +82,7 @@ def main():
         pwd = args.password
 
     dict_file = {
+        "survey": args.survey,
         "username": args.username,
         "password": pwd,
         "group_id": args.group_id,
@@ -86,7 +96,7 @@ def main():
 
     # check credentials are correct
     if args.verbose:
-        print(load_credentials(args.tmp))
+        _LOG.info(load_credentials(args.tmp))
 
 
 if __name__ == "__main__":

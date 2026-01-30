@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019-2020 AstroLab Software
+# Copyright 2019-2026 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,11 +15,15 @@
 # limitations under the License.
 import yaml
 import os
+import logging
 
 from fink_client.tester import regular_unit_tests
 
+_LOG = logging.getLogger(__name__)
+
+
 _ROOTDIR = os.path.join(os.environ["HOME"], ".finkclient")
-_CREDNAME = "credentials.yml"
+_CREDNAME = "{}_credentials.yml"
 
 
 def write_credentials(dict_file: dict, verbose: bool = False, tmp: bool = False):
@@ -40,6 +44,7 @@ def write_credentials(dict_file: dict, verbose: bool = False, tmp: bool = False)
     Examples
     --------
     >>> conf = {
+    ...   'survey': 'lsst',
     ...   'username': 'test',
     ...   'password': None,
     ...   'mytopics': ['rrlyr'],
@@ -56,32 +61,35 @@ def write_credentials(dict_file: dict, verbose: bool = False, tmp: bool = False)
 
     # check there are no missing information
     mandatory_keys = [
+        "survey",
         "username",
-        "password",
         "group_id",
-        "mytopics",
         "servers",
-        "maxtimeout",
     ]
     for k in mandatory_keys:
         assert k in dict_file.keys(), "You need to specify {}".format(k)
+
+    if dict_file["survey"] not in ["ztf", "lsst"]:
+        raise KeyError("-survey must be one of ['ztf', 'lsst']. {} is not recognized.".format(dict_file["survey"]))
 
     # Create the folder if it does not exist
     os.makedirs(ROOTDIR, exist_ok=True)
 
     # Store data into yml file
-    with open(os.path.join(ROOTDIR, _CREDNAME), "w") as f:
+    with open(os.path.join(ROOTDIR, _CREDNAME.format(dict_file["survey"])), "w") as f:
         yaml.dump(dict_file, f)
 
     if verbose:
-        print("Credentials stored at {}/{}".format(ROOTDIR, _CREDNAME))
+        _LOG.info("Credentials stored at {}/{}".format(ROOTDIR, _CREDNAME.format(dict_file["survey"])))
 
 
-def load_credentials(tmp: bool = False) -> dict:
+def load_credentials(survey: str, tmp: bool = False) -> dict:
     """Load fink-client credentials.
 
     Parameters
     ----------
+    survey: str
+        Survey name, among ztf or lsst
     tmp: bool, optional
         If True, load the credentials from /tmp. Default is False.
 
@@ -93,6 +101,7 @@ def load_credentials(tmp: bool = False) -> dict:
     Examples
     --------
     >>> conf_in = {
+    ...   'survey': 'lsst',
     ...   'username': 'test',
     ...   'password': None,
     ...   'mytopics': ['rrlyr'],
@@ -101,7 +110,7 @@ def load_credentials(tmp: bool = False) -> dict:
     ...   'maxtimeout': 10
     ... }
     >>> write_credentials(conf_in, verbose=False, tmp=True)
-    >>> conf_out = load_credentials(tmp=True)
+    >>> conf_out = load_credentials(conf_in["survey"], tmp=True)
 
     If, however the credentials do not exist yet
     >>> os.remove('/tmp/credentials.yml')
@@ -121,17 +130,17 @@ def load_credentials(tmp: bool = False) -> dict:
     else:
         ROOTDIR = _ROOTDIR
 
-    path = os.path.join(ROOTDIR, _CREDNAME)
+    path = os.path.join(ROOTDIR, _CREDNAME.format(survey))
 
     if not os.path.exists(path):
         msg = """
-        No credentials found, did you register?
+        No credentials found for survey {}, did you register?
         To get your credentials, and use fink-client you need to:
           1. subscribe to one or more Fink streams at
             https://forms.gle/2td4jysT4e9pkf889
           2. run `fink_client_register` to register
         See https://fink-broker.readthedocs.io/en/latest/services/data_transfer/
-        """
+        """.format(survey)
         raise IOError(msg)
 
     with open(path) as f:
