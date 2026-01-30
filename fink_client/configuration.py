@@ -24,6 +24,16 @@ _ROOTDIR = os.path.join(os.environ["HOME"], ".finkclient")
 _CREDNAME = "{}_credentials.yml"
 
 
+def check_survey_exists(survey):
+    """Check survey exists"""
+    if survey not in ["ztf", "lsst"]:
+        raise KeyError(
+            "-survey must be one of ['ztf', 'lsst']. {} is not recognized.".format(
+                survey
+            )
+        )
+
+
 def write_credentials(dict_file: dict, log_level: str = "WARN", tmp: bool = False):
     """Store user credentials on the computer.
 
@@ -50,7 +60,7 @@ def write_credentials(dict_file: dict, log_level: str = "WARN", tmp: bool = Fals
     ...   'group_id': 'test_group',
     ...   'maxtimeout': 10
     ... }
-    >>> write_credentials(conf, verbose=False, tmp=True)
+    >>> write_credentials(conf, log_level="WARN", tmp=True)
     """
     _LOG.setLevel(log_level)
     if tmp:
@@ -68,12 +78,7 @@ def write_credentials(dict_file: dict, log_level: str = "WARN", tmp: bool = Fals
     for k in mandatory_keys:
         assert k in dict_file.keys(), "You need to specify {}".format(k)
 
-    if dict_file["survey"] not in ["ztf", "lsst"]:
-        raise KeyError(
-            "-survey must be one of ['ztf', 'lsst']. {} is not recognized.".format(
-                dict_file["survey"]
-            )
-        )
+    check_survey_exists(dict_file["survey"])
 
     # Create the folder if it does not exist
     os.makedirs(ROOTDIR, exist_ok=True)
@@ -115,22 +120,23 @@ def load_credentials(survey: str, tmp: bool = False) -> dict:
     ...   'group_id': 'test_group',
     ...   'maxtimeout': 10
     ... }
-    >>> write_credentials(conf_in, verbose=False, tmp=True)
-    >>> conf_out = load_credentials(conf_in["survey"], tmp=True)
+    >>> write_credentials(conf_in, tmp=True)
+    >>> conf_out = load_credentials(survey=conf_in["survey"], tmp=True)
 
     If, however the credentials do not exist yet
-    >>> os.remove('/tmp/credentials.yml')
-    >>> conf = load_credentials(tmp=True) # doctest: +NORMALIZE_WHITESPACE, +ELLIPSIS
+    >>> os.remove('/tmp/lsst_credentials.yml')
+    >>> conf = load_credentials(survey="lsst", tmp=True) # doctest: +NORMALIZE_WHITESPACE, +ELLIPSIS
     Traceback (most recent call last):
      ...
-    OSError: No credentials found, did you register?
+    OSError: No credentials found for survey lsst, did you register?
     To get your credentials, and use fink-client you need to:
       1. subscribe to one or more Fink streams at
         https://forms.gle/2td4jysT4e9pkf889
       2. run `fink_client_register` to register
-    See https://fink-broker.readthedocs.io/en/latest/services/data_transfer/
+    See https://doc.lsst.fink-broker.org/en/latest/services/data_transfer/
 
     """
+    check_survey_exists(survey)
     if tmp:
         ROOTDIR = "/tmp"
     else:
@@ -145,8 +151,8 @@ def load_credentials(survey: str, tmp: bool = False) -> dict:
           1. subscribe to one or more Fink streams at
             https://forms.gle/2td4jysT4e9pkf889
           2. run `fink_client_register` to register
-        See https://fink-broker.readthedocs.io/en/latest/services/data_transfer/
-        """.format(survey)
+        See https://doc.{}.fink-broker.org/en/latest/services/data_transfer/
+        """.format(survey, survey)
         raise IOError(msg)
 
     with open(path) as f:
