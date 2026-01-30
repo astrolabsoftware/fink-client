@@ -44,22 +44,6 @@ DEFAULT_FINK_MARKERS = {
     "y": "p",  # Matplotlib 'p' -> Plotly 'pentagon'
 }
 
-# Bands
-filter_color = {1: "#1f77b4", 2: "#ff7f0e", 3: "#2ca02c"}
-# [
-#     '#1f77b4',  # muted blue
-#     '#ff7f0e',  # safety orange
-#     '#2ca02c',  # cooked asparagus green
-#     '#d62728',  # brick red
-#     '#9467bd',  # muted purple
-#     '#8c564b',  # chestnut brown
-#     '#e377c2',  # raspberry yogurt pink
-#     '#7f7f7f',  # middle gray
-#     '#bcbd22',  # curry yellow-green
-#     '#17becf'   # blue-teal
-# ]
-filter_name = {1: "g band", 2: "r band", 3: "i band"}
-
 
 def main():
     """ """
@@ -71,7 +55,7 @@ def main():
         help="Path to an alert data file (avro format)",
     )
     parser.add_argument(
-        "-survey",
+        "-s",
         type=str,
         default="",
         help="Survey name among ztf or lsst.",
