@@ -107,7 +107,7 @@ More information at [docs/livestream](https://doc.lsst.fink-broker.org/en/latest
 
 ## Data Transfer usage
 
-If you requested data using the [Data Transfer service](https://fink-portal.org/download), you can easily poll your stream using:
+If you requested data using the Data Transfer service ([ZTF](https://ztf.fink-portal.org/download) or [LSST](https://lsst.fink-portal.org/download)), you can easily poll your stream using:
 
 ```bash
 usage: fink_datatransfer [-h] -survey SURVEY [-topic TOPIC] [-limit LIMIT]
