@@ -70,7 +70,11 @@ def write_credentials(dict_file: dict, verbose: bool = False, tmp: bool = False)
         assert k in dict_file.keys(), "You need to specify {}".format(k)
 
     if dict_file["survey"] not in ["ztf", "lsst"]:
-        raise KeyError("-survey must be one of ['ztf', 'lsst']. {} is not recognized.".format(dict_file["survey"]))
+        raise KeyError(
+            "-survey must be one of ['ztf', 'lsst']. {} is not recognized.".format(
+                dict_file["survey"]
+            )
+        )
 
     # Create the folder if it does not exist
     os.makedirs(ROOTDIR, exist_ok=True)
@@ -80,7 +84,11 @@ def write_credentials(dict_file: dict, verbose: bool = False, tmp: bool = False)
         yaml.dump(dict_file, f)
 
     if verbose:
-        _LOG.info("Credentials stored at {}/{}".format(ROOTDIR, _CREDNAME.format(dict_file["survey"])))
+        _LOG.info(
+            "Credentials stored at {}/{}".format(
+                ROOTDIR, _CREDNAME.format(dict_file["survey"])
+            )
+        )
 
 
 def load_credentials(survey: str, tmp: bool = False) -> dict:

@@ -164,9 +164,11 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
                             if args.partitionby == "time":
                                 if "jd" in pdf.columns:
                                     pdf[["year", "month", "day"]] = pdf[["jd"]].apply(
-                                        lambda x: Time(x.iloc[0], format="jd")
-                                        .strftime("%Y-%m-%d")
-                                        .split("-"),
+                                        lambda x: (
+                                            Time(x.iloc[0], format="jd")
+                                            .strftime("%Y-%m-%d")
+                                            .split("-")
+                                        ),
                                         axis=1,
                                         result_type="expand",
                                     )
@@ -174,9 +176,11 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
                                     pdf[["year", "month", "day"]] = pdf[
                                         ["candidate"]
                                     ].apply(
-                                        lambda x: Time(x.iloc[0]["jd"], format="jd")
-                                        .strftime("%Y-%m-%d")
-                                        .split("-"),
+                                        lambda x: (
+                                            Time(x.iloc[0]["jd"], format="jd")
+                                            .strftime("%Y-%m-%d")
+                                            .split("-")
+                                        ),
                                         axis=1,
                                         result_type="expand",
                                     )
@@ -192,9 +196,11 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
                                         pdf[["year", "month", "day"]] = pdf[
                                             ["jd"]
                                         ].apply(
-                                            lambda x: Time(x.iloc[0], format="jd")
-                                            .strftime("%Y-%m-%d")
-                                            .split("-"),
+                                            lambda x: (
+                                                Time(x.iloc[0], format="jd")
+                                                .strftime("%Y-%m-%d")
+                                                .split("-")
+                                            ),
                                             axis=1,
                                             result_type="expand",
                                         )
