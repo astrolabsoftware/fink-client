@@ -15,12 +15,17 @@
 # limitations under the License.
 import io
 import gzip
+import glob
 
 import matplotlib.pyplot as plt
 
 from astropy.io import fits
-
+import pandas as pd
 import numpy as np
+
+import pyarrow as pa
+import pyarrow.parquet as pq
+import pyarrow.compute as pc
 
 from fink_client.tester import regular_unit_tests
 
@@ -189,6 +194,60 @@ def extract_field(alert: dict, field: str, current: str, previous: str) -> np.ar
             extract_history(alert[previous], field),
         ])
     return data
+
+
+def read_parquet(folder: str) -> pd.DataFrame:
+    """Read all parquet files in a folder using pandas
+
+    Parameters
+    ----------
+    folder: str
+        Folder containing parquet files from the transfer
+
+    Returns
+    -------
+    out: pd.DataFrame
+    """
+    fns = glob.glob("{}/*.parquet".format(folder))
+    pdf = pd.DataFrame()
+    for fn in fns:
+        pdf = pd.concat((pdf, pd.read_parquet(fn)))
+    pdf = pdf.reset_index()
+    return pdf
+
+
+def read_parquet_from_pyarrow(folder: str):
+    """Read all parquet files in a folder using pyarrow
+
+    Notes
+    -----
+    Using pyArrow as pandas conversion has an int64 problem
+    with diaObject.ObjectId. Beware that if columns
+    are expanded the problem persists
+
+    Parameters
+    ----------
+    folder: str
+        Folder containing parquet files from the transfer
+
+    Returns
+    -------
+    out: pd.DataFrame
+    """
+    fns = glob.glob("{}/*.parquet".format(folder))
+    pdf = pd.DataFrame()
+    for fn in fns:
+        table = pq.read_table(
+            fn,
+        )
+        df = table.to_pandas(integer_object_nulls=True)
+        # Casting to str diaObjectId
+        diaObjectId = pc.struct_field(table["diaObject"], "diaObjectId")
+        diaObjectId_str = pc.cast(diaObjectId, pa.string())
+        df["diaObjectId"] = diaObjectId_str.to_pandas()
+        pdf = pd.concat((pdf, df))
+    pdf = pdf.reset_index()
+    return pdf
 
 
 if __name__ == "__main__":
