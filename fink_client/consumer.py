@@ -315,8 +315,11 @@ class AlertConsumer:
 
         topics_datatransfer = [i for i in topics if i.startswith("ftransfer_")]
         topics_xmatch = [i for i in topics if i.startswith("fxmatch_")]
+        topics_stats = [i for i in topics if i.startswith("fink_ztf_")]
         topics_livestream = [
-            i for i in topics if i not in topics_datatransfer + topics_xmatch + _default
+            i
+            for i in topics
+            if i not in topics_datatransfer + topics_xmatch + topics_stats + _default
         ]
 
         if service == "livestream":

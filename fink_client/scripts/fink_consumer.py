@@ -113,7 +113,7 @@ def main():
         "-survey",
         type=str,
         required=True,
-        help="Survey name among ztf or lsst. Note that each survey will have its own configuration file.",
+        help="Survey name among ztf or lsst. Note that each survey has its own configuration file.",
     )
     parser.add_argument(
         "--display",
@@ -230,7 +230,7 @@ def main():
     )
 
     if args.available_topics:
-        print(consumer.available_topics())
+        print(consumer.available_topics(service="livestream"))
         sys.exit(0)
 
     # Time to wait before polling again if no alerts

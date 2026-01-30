@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2023-2024 AstroLab Software
+# Copyright 2023-2026 AstroLab Software
 # Author: Julien Peloton, Saikou Oumar BAH
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -72,8 +72,16 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
     """
     # Instantiate a consumer
     consumer = confluent_kafka.Consumer(kafka_config)
-    # Subscribe to schema topic
-    # topics = ['{}'.format(args.topic)]
+
+    # partitioning colum if need be
+    if args.survey == "ztf":
+        timecol = "jd"
+        format_timecol = "jd"
+        timesection = "candidate"
+    elif args.survey == "lsst":
+        timecol = "midpointMjdTai"
+        format_timecol = "mjd"
+        timesection = "diaSource"
 
     # infinite loop
     maxpoll = int(args.limit / nconsumers) if args.limit is not None else 1e10
@@ -162,22 +170,27 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
                                 pdf["tracklet"] = pdf["tracklet"].astype("str")
 
                             if args.partitionby == "time":
-                                if "jd" in pdf.columns:
-                                    pdf[["year", "month", "day"]] = pdf[["jd"]].apply(
+                                if timecol in pdf.columns:
+                                    pdf[["year", "month", "day"]] = pdf[
+                                        [timecol]
+                                    ].apply(
                                         lambda x: (
-                                            Time(x.iloc[0], format="jd")
+                                            Time(x.iloc[0], format=format_timecol)
                                             .strftime("%Y-%m-%d")
                                             .split("-")
                                         ),
                                         axis=1,
                                         result_type="expand",
                                     )
-                                elif "candidate" in pdf.columns:
+                                elif timesection in pdf.columns:
                                     pdf[["year", "month", "day"]] = pdf[
-                                        ["candidate"]
+                                        [timesection]
                                     ].apply(
                                         lambda x: (
-                                            Time(x.iloc[0]["jd"], format="jd")
+                                            Time(
+                                                x.iloc[0][timecol],
+                                                format=format_timecol,
+                                            )
                                             .strftime("%Y-%m-%d")
                                             .split("-")
                                         ),
@@ -192,12 +205,12 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
                                     _LOG.warning(
                                         "finkclass not found. Applying time partitioning."
                                     )
-                                    if "jd" in pdf.columns:
+                                    if timecol in pdf.columns:
                                         pdf[["year", "month", "day"]] = pdf[
-                                            ["jd"]
+                                            [timecol]
                                         ].apply(
                                             lambda x: (
-                                                Time(x.iloc[0], format="jd")
+                                                Time(x.iloc[0], format=format_timecol)
                                                 .strftime("%Y-%m-%d")
                                                 .split("-")
                                             ),
@@ -276,9 +289,15 @@ def main():
     """ """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
+        "-survey",
+        type=str,
+        required=True,
+        help="Survey name among ztf or lsst. Note that each survey will have its own configuration file.",
+    )
+    parser.add_argument(
         "-topic",
         type=str,
-        default=".",
+        required=True,
         help="Topic name for the stream that contains the data.",
     )
     parser.add_argument(
@@ -297,7 +316,7 @@ def main():
         "-partitionby",
         type=str,
         default=None,
-        help="Partition data by `time` (year=YYYY/month=MM/day=DD), or `finkclass` (finkclass=CLASS), or `tnsclass` (tnsclass=CLASS). `classId` is also available for ELASTiCC data. Default is None, that is no partitioning is applied.",
+        help="Partition data by `time` (year=YYYY/month=MM/day=DD), or `finkclass` (finkclass=CLASS -- ZTF only), or `tnsclass` (tnsclass=CLASS -- ZTF only). `classId` is also available for ELASTiCC data. Default is None, that is no partitioning is applied.",
     )
     parser.add_argument(
         "-batchsize",
@@ -353,6 +372,22 @@ def main():
         )
         sys.exit()
 
+    if (
+        args.partitionby
+        in [
+            "finkclass",
+            "tnsclass",
+            "classId",
+        ]
+        and args.survey == "lsst"
+    ):
+        _LOG.error(
+            "{} is not available for lsst. No partitioning or `-partitionby=time` are allowed.".format(
+                args.partitionby
+            )
+        )
+        sys.exit()
+
     if not (args.topic.startswith("ftransfer") or args.topic.startswith("fxmatch")):
         msg = """
 {} is not a valid topic name.
@@ -364,7 +399,7 @@ and open the tab `Get your data` to retrieve the topic.
         sys.exit()
 
     # load user configuration
-    conf = load_credentials()
+    conf = load_credentials(survey=args.survey)
 
     # Time to wait before polling again if no alerts
     if args.maxtimeout is None:
