@@ -39,7 +39,7 @@ class TestIntegration(unittest.TestCase):
         r = AlertReader(data_path)
         alerts = r.to_list()
 
-        conf = load_credentials(tmp=True)
+        conf = load_credentials(survey="ztf", tmp=True)
 
         kafka_servers = conf['servers']
         p = confluent_kafka.Producer({
@@ -58,7 +58,7 @@ class TestIntegration(unittest.TestCase):
             'bootstrap.servers': kafka_servers,
             'group.id': conf['group_id']}
 
-        self.consumer = AlertConsumer(mytopics, myconfig, schema_path=schema_path)
+        self.consumer = AlertConsumer(mytopics, survey="ztf", conf=myconfig, schema_path=schema_path)
 
     def test_poll(self):
         topic, alert, key = self.consumer.poll()
