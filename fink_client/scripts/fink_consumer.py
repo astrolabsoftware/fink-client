@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019-2024 AstroLab Software
+# Copyright 2019-2026 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,7 +22,6 @@ import argparse
 import time
 
 from tabulate import tabulate
-from astropy.time import Time
 
 from fink_client.consumer import AlertConsumer
 from fink_client.configuration import load_credentials
@@ -32,8 +31,14 @@ from fink_client.consumer import print_offsets
 
 
 def main():
-    """ """
+    """Wrapper around Kafka consumer to listen to Fink streams"""
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "-survey",
+        type=str,
+        required=True,
+        help="Survey name among ztf or lsst. Note that each survey will have its own configuration file.",
+    )
     parser.add_argument(
         "--display",
         action="store_true",
@@ -86,7 +91,7 @@ def main():
     args = parser.parse_args(None)
 
     # load user configuration
-    conf = load_credentials()
+    conf = load_credentials(survey=args.survey)
 
     myconfig = {
         "bootstrap.servers": conf["servers"],
@@ -140,15 +145,16 @@ def main():
         assign_offset = None
 
     consumer = AlertConsumer(
-        conf["mytopics"],
-        myconfig,
+        topics=conf["mytopics"],
+        config=myconfig,
+        survey=conf["survey"],
         schema_path=schema,
         dump_schema=args.dump_schema,
         on_assign=assign_offset,
     )
 
     if args.available_topics:
-        print(consumer.available_topics().keys())
+        print(consumer.available_topics())
         sys.exit(0)
 
     # Time to wait before polling again if no alerts
@@ -198,24 +204,25 @@ def main():
                         "Trigger ID",
                     ]
                 else:
-                    table = [
-                        [
-                            Time(alert["candidate"]["jd"], format="jd").iso,
-                            utc,
-                            topic,
-                            alert["objectId"],
-                            alert["cdsxmatch"],
-                            alert["candidate"]["magpsf"],
-                        ],
-                    ]
-                    headers = [
-                        "Emitted at (UTC)",
-                        "Received at (UTC)",
-                        "Topic",
-                        "objectId",
-                        "Simbad",
-                        "Magnitude",
-                    ]
+                    print(alert)
+                    # table = [
+                    #     [
+                    #         Time(alert["candidate"]["jd"], format="jd").iso,
+                    #         utc,
+                    #         topic,
+                    #         alert["objectId"],
+                    #         alert["cdsxmatch"],
+                    #         alert["candidate"]["magpsf"],
+                    #     ],
+                    # ]
+                    # headers = [
+                    #     "Emitted at (UTC)",
+                    #     "Received at (UTC)",
+                    #     "Topic",
+                    #     "objectId",
+                    #     "Simbad",
+                    #     "Magnitude",
+                    # ]
                 print(tabulate(table, headers, tablefmt="pretty"))
             elif args.display:
                 print("No alerts the last {} seconds".format(maxtimeout))
