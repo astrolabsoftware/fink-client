@@ -24,32 +24,11 @@ import time
 from astropy.time import Time
 from tabulate import tabulate
 
-from fink_client.consumer import AlertConsumer
+from fink_client.consumer import AlertConsumer, extract_id_from_lsst
 from fink_client.configuration import load_credentials
 from fink_client.configuration import mm_topic_names
 
 from fink_client.consumer import print_offsets
-
-
-def extract_id_from_lsst(alert):
-    """Extract correct ID depending if the alert is static or moving
-
-    Parameters
-    ----------
-    alert: dict
-        Dictionary containing alert data
-
-    Returns
-    -------
-    id_value: str
-        field value
-    id_name: str
-        field name
-    """
-    if alert["diaObject"] is not None:
-        return alert["diaObject"]["diaObjectId"], "diaObjectId"
-    else:
-        return alert["mpc_orbits"]["designation"], "SSO desgination"
 
 
 def display_table(survey, topic, alert, is_mma=False):

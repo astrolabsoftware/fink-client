@@ -694,3 +694,24 @@ def get_schema_from_stream(kafka_config, topic, maxtimeout):
     consumer_schema.close()
 
     return schema
+
+
+def extract_id_from_lsst(alert):
+    """Extract correct ID depending if the alert is static or moving
+
+    Parameters
+    ----------
+    alert: dict
+        Dictionary containing alert data
+
+    Returns
+    -------
+    id_value: str
+        field value
+    id_name: str
+        field name
+    """
+    if alert["diaObject"] is not None:
+        return alert["diaObject"]["diaObjectId"], "diaObjectId"
+    else:
+        return alert["mpc_orbits"]["designation"], "SSO desgination"
