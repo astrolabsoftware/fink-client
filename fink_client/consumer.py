@@ -19,15 +19,15 @@ import json
 import time
 import fastavro
 import confluent_kafka
-import logging
 from datetime import datetime, timezone
 
 from fink_client.avro_utils import write_alert
 from fink_client.avro_utils import _get_alert_schema
 from fink_client.avro_utils import _decode_avro_alert
 from fink_client.configuration import mm_topic_names
+from fink_client.logger import get_fink_logger
 
-_LOG = logging.getLogger(__name__)
+_LOG = get_fink_logger()
 
 
 class AlertError(Exception):
@@ -43,6 +43,7 @@ class AlertConsumer:
         self,
         topics: list,
         config: dict,
+        survey: str,
         schema_path=None,
         dump_schema=False,
         on_assign=None,
@@ -77,17 +78,27 @@ class AlertConsumer:
             on_assign: callable, optional
                 Callback to update the current assignment
                 and specify start offsets. Default is None.
-
+        survey: str
+            Survey name among ztf or lsst.
+        schema_path: str, optional
+            Path to a schema in avsc format.
+        dump_schema: bool, optional
+            If True, store the schema from the alert packet on disk.
+        on_assign: func, optional
+            Callback to update the current assignment and specify start offsets
         """
+        self.survey = survey
         self._topics = topics
         self._kafka_config = _get_kafka_config(config)
         self.schema_path = schema_path
         self._consumer = confluent_kafka.Consumer(self._kafka_config)
 
-        if on_assign is not None:
-            self._consumer.subscribe(self._topics, on_assign=on_assign)
-        else:
-            self._consumer.subscribe(self._topics)
+        if self._topics is not None and len(self._topics) > 0:
+            _LOG.warning("No topics is declared for survey {}".format(self.survey))
+            if on_assign is not None:
+                self._consumer.subscribe(self._topics, on_assign=on_assign)
+            else:
+                self._consumer.subscribe(self._topics)
         self.dump_schema = dump_schema
 
     def __enter__(self):
@@ -265,9 +276,12 @@ class AlertConsumer:
         if is_mma:
             id1 = "objectId"
             id2 = "triggerId"
-        else:
+        elif self.survey == "ztf":
             id1 = "objectId"
             id2 = "candid"
+        elif self.survey == "lsst":
+            id1 = "diaSourceId"
+            id2 = None
 
         if topic is not None:
             write_alert(
@@ -281,7 +295,7 @@ class AlertConsumer:
 
         return topic, alert, key
 
-    def available_topics(self) -> dict:
+    def available_topics(self, service="livestream") -> dict:
         """Return available broker topics
 
         Note, this routine only display topics, but users need
@@ -291,9 +305,27 @@ class AlertConsumer:
         -------
         topics: dict
             Keys are topic names, values are metadata
+        kind: str
+            Name of the service: livestream, datatransfer, xmatch
 
         """
-        return self._consumer.list_topics().topics
+        _default = ["__consumer_offsets"]
+        topics = self._consumer.list_topics().topics
+
+        topics_datatransfer = [i for i in topics if i.startswith("ftransfer_")]
+        topics_xmatch = [i for i in topics if i.startswith("fxmatch_")]
+        topics_livestream = [
+            i for i in topics if i not in topics_datatransfer + topics_xmatch + _default
+        ]
+
+        if service == "livestream":
+            return topics_livestream
+        elif service == "datatransfer":
+            return topics_datatransfer
+        elif service == "xmatch":
+            return topics_xmatch
+        else:
+            raise AssertionError("{} is not a valid service".fornmat(service))
 
     def available_brokers(self) -> dict:
         """Return available brokers
@@ -653,7 +685,8 @@ def get_schema_from_stream(kafka_config, topic, maxtimeout):
     # Poll
     msg = consumer_schema.poll(maxtimeout)
     if msg is not None:
-        schema = fastavro.schema.parse_schema(json.loads(msg.key()))
+        schema_decoded = json.loads(msg.key())
+        schema = fastavro.schema.parse_schema(schema_decoded)
     else:
         schema = None
 
