@@ -49,6 +49,10 @@ class AlertConsumer:
     ):
         """Creates an instance of `AlertConsumer`
 
+        Note we are currently using SASL for the user authentication.
+        `config` parameters get then translated for Kafka.
+        For lower level usage, see `_get_kafka_config`
+
         Parameters
         ----------
         topics : list of str
@@ -520,6 +524,8 @@ def print_offsets(
 
 def _get_kafka_config(config: dict) -> dict:
     """Returns configurations for a consumer instance
+
+    Note we are using SASL for authentication (SCRAM-SHA-512).
 
     Parameters
     ----------
