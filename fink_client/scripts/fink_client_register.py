@@ -15,11 +15,12 @@
 # limitations under the License.
 from fink_client.configuration import write_credentials
 from fink_client.configuration import load_credentials
+from fink_client.logger import get_fink_logger
 
 import argparse
-import logging
 
-_LOG = logging.getLogger(__name__)
+
+_LOG = get_fink_logger()
 
 
 def main():
@@ -69,12 +70,16 @@ def main():
         help="Timeout when polling the servers. Default is 10 seconds.",
     )
     parser.add_argument(
-        "--tmp", action="store_true", help="If specified, register credentials in /tmp."
+        "-log_level",
+        type=str,
+        default="WARN",
+        help="Level of verbosity. Default is WARN. Set to INFO or DEBUG to get more information",
     )
     parser.add_argument(
-        "--verbose", action="store_true", help="If specified, print useful information."
+        "--tmp", action="store_true", help="If specified, register credentials in /tmp."
     )
     args = parser.parse_args(None)
+    _LOG.setLevel(args.log_level)
 
     if args.password == "None":
         pwd = None
@@ -92,11 +97,12 @@ def main():
     }
 
     # Write credentials
-    write_credentials(dict_file, args.verbose, args.tmp)
+    write_credentials(dict_file, args.log_level, args.tmp)
 
     # check credentials are correct
-    if args.verbose:
-        _LOG.info(load_credentials(args.tmp))
+    _LOG.debug(
+        "Credentials are: {}".format(load_credentials(survey=args.survey, tmp=args.tmp))
+    )
 
 
 if __name__ == "__main__":

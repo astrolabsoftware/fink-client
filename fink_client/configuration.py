@@ -15,18 +15,16 @@
 # limitations under the License.
 import yaml
 import os
-import logging
 
+from fink_client.logger import get_fink_logger
 from fink_client.tester import regular_unit_tests
 
-_LOG = logging.getLogger(__name__)
-
-
+_LOG = get_fink_logger()
 _ROOTDIR = os.path.join(os.environ["HOME"], ".finkclient")
 _CREDNAME = "{}_credentials.yml"
 
 
-def write_credentials(dict_file: dict, verbose: bool = False, tmp: bool = False):
+def write_credentials(dict_file: dict, log_level: str = "WARN", tmp: bool = False):
     """Store user credentials on the computer.
 
     To get your credentials, contact Fink admins or fill the registration form:
@@ -36,8 +34,8 @@ def write_credentials(dict_file: dict, verbose: bool = False, tmp: bool = False)
     ----------
     dict_file: dict
         Dictionnary containing user credentials.
-    verbose: bool, optional
-        If True, print the credentials location. Default is False.
+    log_level: str, optional
+        Level of verbosity. Default is WARN.
     tmp: bool, optional
         If True, store the credentials under /tmp. Default is False.
 
@@ -54,6 +52,7 @@ def write_credentials(dict_file: dict, verbose: bool = False, tmp: bool = False)
     ... }
     >>> write_credentials(conf, verbose=False, tmp=True)
     """
+    _LOG.setLevel(log_level)
     if tmp:
         ROOTDIR = "/tmp"
     else:
@@ -83,12 +82,11 @@ def write_credentials(dict_file: dict, verbose: bool = False, tmp: bool = False)
     with open(os.path.join(ROOTDIR, _CREDNAME.format(dict_file["survey"])), "w") as f:
         yaml.dump(dict_file, f)
 
-    if verbose:
-        _LOG.info(
-            "Credentials stored at {}/{}".format(
-                ROOTDIR, _CREDNAME.format(dict_file["survey"])
-            )
+    _LOG.info(
+        "Credentials stored at {}/{}".format(
+            ROOTDIR, _CREDNAME.format(dict_file["survey"])
         )
+    )
 
 
 def load_credentials(survey: str, tmp: bool = False) -> dict:
