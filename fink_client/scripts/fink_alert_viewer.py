@@ -51,13 +51,13 @@ def main():
     parser.add_argument(
         "-f",
         type=str,
-        default="",
+        required=True,
         help="Path to an alert data file (avro format)",
     )
     parser.add_argument(
-        "-s",
+        "-survey",
         type=str,
-        default="",
+        required=True,
         help="Survey name among ztf or lsst.",
     )
     args = parser.parse_args(None)
