@@ -30,7 +30,7 @@ setuptools.setup(
     description="Light-weight client to manipulate alerts from Fink",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://fink-broker.readthedocs.io/en/latest/",
+    url="https://doc.lsst.fink-broker.org/en/latest/",
     install_requires=requirements,
     packages=setuptools.find_packages(),
     entry_points={
@@ -45,13 +45,15 @@ setuptools.setup(
     classifiers=[
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: Unix",
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Science/Research",
     ],
     project_urls={
-        'Documentation': "https://fink-broker.readthedocs.io/en/latest/",
+        'Documentation': "https://doc.lsst.fink-broker.org/en/latest/",
         'Source': 'https://github.com/astrolabsoftware/fink-client'
     },
 )

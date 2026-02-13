@@ -39,10 +39,10 @@ In order to connect and poll alerts from Fink, you need to get your credentials:
 1. Subscribe to one or more Fink streams by filling this [form](https://forms.gle/2td4jysT4e9pkf889).
 2. After filling the form, we will send your credentials. Register them on your laptop by simply running:
   ```
-  fink_client_register -username <USERNAME> -group_id <GROUP_ID> -servers <SERVERS> ...
+  fink_client_register -survey SURVEY -username USERNAME -group_id GROUP_ID -servers SERVERS ...
   ```
 
-In case of doubt, run `fink_client_register -h`. You can also inspect the configuration file on disk:
+Note that `SURVEY` is among `ztf` or `lsst`. In case of doubt, run `fink_client_register -h`. You can also inspect the configuration file on disk:
 
 ```bash
 cat ~/.finkclient/credentials.yml
@@ -54,77 +54,104 @@ Once you have your credentials, you are ready to poll streams! You can easily ac
 
 ```bash
 fink_consumer -h
-usage: fink_consumer [-h] [--display] [--display_statistics] [-limit LIMIT]
-                     [--available_topics] [--save] [-outdir OUTDIR]
-                     [-schema SCHEMA] [--dump_schema] [-start_at START_AT]
+usage: fink_consumer    [-h] -survey SURVEY [--display]
+                        [--display_statistics] [-limit LIMIT]
+                        [--available_topics] [--save]
+                        [-outdir OUTDIR] [-schema SCHEMA]
+                        [--dump_schema] [-start_at START_AT]
 
-Kafka consumer to listen and archive Fink streams from the Livestream service
+Kafka consumer to listen and archive Fink streams from the
+Livestream service
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
-  --display             If specified, print on screen information about
-                        incoming alert.
-  --display_statistics  If specified, print on screen information about queues,
-                        and exit.
-  -limit LIMIT          If specified, download only `limit` alerts. Default is
-                        None.
-  --available_topics    If specified, print on screen information about
-                        available topics.
-  --save                If specified, save alert data on disk (Avro). See also
-                        -outdir.
-  -outdir OUTDIR        Folder to store incoming alerts if --save is set. It
-                        must exist.
-  -schema SCHEMA        Avro schema to decode the incoming alerts. Default is
-                        None (version taken from each alert)
-  --dump_schema         If specified, save the schema on disk (json file)
-  -start_at START_AT    If specified, reset offsets to 0 (`earliest`) or empty
-                        queue (`latest`).
+  -survey SURVEY        Survey name among ztf or lsst. Note that
+                        each survey will have its own configuration
+                        file.
+  --display             If specified, print on screen information
+                        about incoming alert.
+  --display_statistics  If specified, print on screen information
+                        about queues, and exit.
+  -limit LIMIT          If specified, download only `limit` alerts.
+                        Default is None.
+  --available_topics    If specified, print on screen information
+                        about available topics.
+  --save                If specified, save alert data on disk
+                        (Avro). See also -outdir.
+  -outdir OUTDIR        Folder to store incoming alerts if --save is
+                        set. It must exist.
+  -schema SCHEMA        Avro schema to decode the incoming alerts.
+                        Default is None (version taken from each
+                        alert)
+  --dump_schema         If specified, save the schema on disk (json
+                        file)
+  -start_at START_AT    If specified, reset offsets to 0
+                        (`earliest`) or empty queue (`latest`).
 ```
 
 You can also look at an alert on the disk:
 
 ```bash
 fink_alert_viewer -h
-usage: fink_alert_viewer [-h] [-filename FILENAME]
+usage: fink_alert_viewer [-h] [-f F] [-s S]
 
-Display cutouts and lightcurve from a ZTF alert
+Display cutouts and lightcurve from an alert
 
-optional arguments:
-  -h, --help          show this help message and exit
-  -filename FILENAME  Path to an alert data file (avro format)
+options:
+  -h, --help  show this help message and exit
+  -f F        Path to an alert data file (avro format)
+  -s S        Survey name among ztf or lsst.
 ```
 
-More information at [docs/livestream](https://fink-broker.readthedocs.io/en/latest/services/livestream).
+More information at [docs/livestream](https://doc.lsst.fink-broker.org/en/latest/services/livestream).
 
 ## Data Transfer usage
 
-If you requested data using the [Data Transfer service](https://fink-portal.org/download), you can easily poll your stream using:
+If you requested data using the Data Transfer service ([ZTF](https://ztf.fink-portal.org/download) or [LSST](https://lsst.fink-portal.org/download)), you can easily poll your stream using:
 
 ```bash
-usage: fink_datatransfer.py [-h] [-topic TOPIC] [-limit LIMIT] [-outdir OUTDIR] [-partitionby PARTITIONBY] [-batchsize BATCHSIZE] [-nconsumers NCONSUMERS]
-                            [-maxtimeout MAXTIMEOUT] [-number_partitions NUMBER_PARTITIONS] [--restart_from_beginning] [--verbose]
+usage: fink_datatransfer [-h] -survey SURVEY [-topic TOPIC] [-limit LIMIT]
+                            [-outdir OUTDIR] [-partitionby PARTITIONBY]
+                            [-batchsize BATCHSIZE] [-nconsumers NCONSUMERS]
+                            [-maxtimeout MAXTIMEOUT]
+                            [-number_partitions NUMBER_PARTITIONS]
+                            [--restart_from_beginning] [--dump_schema] [--verbose]
 
 Kafka consumer to listen and archive Fink streams from the data transfer service
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
+  -survey SURVEY        Survey name among ztf or lsst. Note that each survey will have its
+                        own configuration file.
   -topic TOPIC          Topic name for the stream that contains the data.
-  -limit LIMIT          If specified, download only `limit` alerts from the stream. Default is None, that is download all alerts.
-  -outdir OUTDIR        Folder to store incoming alerts. It will be created if it does not exist.
+  -limit LIMIT          If specified, download only `limit` alerts from the stream.
+                        Default is None, that is download all alerts.
+  -outdir OUTDIR        Folder to store incoming alerts. It will be created if it does not
+                        exist.
   -partitionby PARTITIONBY
-                        Partition data by `time` (year=YYYY/month=MM/day=DD), or `finkclass` (finkclass=CLASS), or `tnsclass` (tnsclass=CLASS). `classId` is
-                        also available for ELASTiCC data. Default is time.
-  -batchsize BATCHSIZE  Maximum number of alert within the `maxtimeout` (see conf). Default is 1000 alerts.
+                        If specified, partition data when writing alerts on disk.
+                        Available options: - `time`: year=YYYY/month=MM/day=DD (ztf and
+                        lsst) - `finkclass`: finkclass=CLASS (ztf only) - `tnsclass`:
+                        tnsclass=CLASS (ztf only) - `classId`: classId=CLASSID (ELASTiCC
+                        only) Default is None, that is no partitioning is applied (all
+                        parquet files in the `outdir` folder).
+  -batchsize BATCHSIZE  Maximum number of alert within the `maxtimeout` (see conf).
+                        Default is 1000 alerts.
   -nconsumers NCONSUMERS
-                        Number of parallel consumer to use. Default (-1) is the number of logical CPUs in the system.
+                        Number of parallel consumer to use. Default (-1) is the number of
+                        logical CPUs in the system.
   -maxtimeout MAXTIMEOUT
-                        Overwrite the default timeout (in seconds) from user configuration. Default is None.
+                        Overwrite the default timeout (in seconds) from user
+                        configuration. Default is None.
   -number_partitions NUMBER_PARTITIONS
-                        Number of partitions for the topic in the distant Kafka cluster. Do not touch unless you know what your are doing. Default is 10
+                        Number of partitions for the topic in the distant Kafka cluster.
+                        Do not touch unless you know what your are doing. Default is 10
                         (Fink Kafka cluster)
   --restart_from_beginning
-                        If specified, restart downloading from the 1st alert in the stream. Default is False.
+                        If specified, restart downloading from the 1st alert in the
+                        stream. Default is False.
+  --dump_schema         If specified, save the schema on disk (json file)
   --verbose             If specified, print on screen information about the consuming.
 ```
 
-More information at [docs/datatransfer](https://fink-broker.readthedocs.io/en/latest/services/data_transfer/).
+More information at [docs/datatransfer](https://doc.ztf.fink-broker.org/en/latest/services/data_transfer/).

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright 2019-2024 AstroLab Software
+# Copyright 2019-2026 AstroLab Software
 # Author: Julien Peloton
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,19 +21,100 @@ import os
 import argparse
 import time
 
-from tabulate import tabulate
 from astropy.time import Time
+from tabulate import tabulate
 
-from fink_client.consumer import AlertConsumer
+from fink_client.consumer import AlertConsumer, extract_id_from_lsst
 from fink_client.configuration import load_credentials
 from fink_client.configuration import mm_topic_names
 
 from fink_client.consumer import print_offsets
 
 
+def display_table(survey, topic, alert, is_mma=False):
+    """Display table based on input survey
+
+    Parameters
+    ----------
+    survey: str
+        lsst or ztf
+    topic: str
+        Topic name
+    alert: dict
+        Dictionary containing alert data
+    is_mma: bool, optional
+        If True, assumes MMA topics (ZTF only).
+
+    Returns
+    -------
+    table: list of list
+    header: list of str
+    """
+    utc = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
+    if survey == "ztf":
+        if is_mma:
+            table = [
+                [
+                    alert["objectId"],
+                    alert["fink_class"],
+                    topic,
+                    alert["rate"],
+                    alert["observatory"],
+                    alert["triggerId"],
+                ]
+            ]
+            header = [
+                "ObjectId",
+                "Classification",
+                "Topic",
+                "Rate (mag/day)",
+                "Observatory",
+                "Trigger ID",
+            ]
+        else:
+            table = [
+                [
+                    Time(alert["candidate"]["jd"], format="jd").iso,
+                    utc,
+                    topic,
+                    alert["objectId"],
+                    alert["cdsxmatch"],
+                    alert["candidate"]["magpsf"],
+                ],
+            ]
+            header = [
+                "Emitted at (UTC)",
+                "Received at (UTC)",
+                "Topic",
+                "objectId",
+                "Simbad",
+                "Magnitude",
+            ]
+    elif survey == "lsst":
+        id_value, id_name = extract_id_from_lsst(alert)
+        table = [
+            [
+                Time(
+                    alert["diaSource"]["midpointMjdTai"], format="mjd", scale="tai"
+                ).utc.iso,
+                utc,
+                topic,
+                id_value,
+            ]
+        ]
+        header = ["Emitted at (UTC)", "Received at (UTC)", "Topic", id_name]
+    return table, header
+
+
 def main():
-    """ """
+    """Wrapper around Kafka consumer to listen to Fink streams"""
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "-survey",
+        type=str,
+        required=True,
+        help="Survey name among ztf or lsst. Note that each survey has its own configuration file.",
+    )
     parser.add_argument(
         "--display",
         action="store_true",
@@ -86,7 +167,7 @@ def main():
     args = parser.parse_args(None)
 
     # load user configuration
-    conf = load_credentials()
+    conf = load_credentials(survey=args.survey)
 
     myconfig = {
         "bootstrap.servers": conf["servers"],
@@ -140,15 +221,16 @@ def main():
         assign_offset = None
 
     consumer = AlertConsumer(
-        conf["mytopics"],
-        myconfig,
+        topics=conf["mytopics"],
+        config=myconfig,
+        survey=conf["survey"],
         schema_path=schema,
         dump_schema=args.dump_schema,
         on_assign=assign_offset,
     )
 
     if args.available_topics:
-        print(consumer.available_topics().keys())
+        print(consumer.available_topics(service="livestream"))
         sys.exit(0)
 
     # Time to wait before polling again if no alerts
@@ -177,46 +259,8 @@ def main():
                 is_mma = topic in mm_topic_names()
 
             if args.display and topic is not None:
-                utc = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
-                if is_mma:
-                    table = [
-                        [
-                            alert["objectId"],
-                            alert["fink_class"],
-                            topic,
-                            alert["rate"],
-                            alert["observatory"],
-                            alert["triggerId"],
-                        ]
-                    ]
-                    headers = [
-                        "ObjectId",
-                        "Classification",
-                        "Topic",
-                        "Rate (mag/day)",
-                        "Observatory",
-                        "Trigger ID",
-                    ]
-                else:
-                    table = [
-                        [
-                            Time(alert["candidate"]["jd"], format="jd").iso,
-                            utc,
-                            topic,
-                            alert["objectId"],
-                            alert["cdsxmatch"],
-                            alert["candidate"]["magpsf"],
-                        ],
-                    ]
-                    headers = [
-                        "Emitted at (UTC)",
-                        "Received at (UTC)",
-                        "Topic",
-                        "objectId",
-                        "Simbad",
-                        "Magnitude",
-                    ]
-                print(tabulate(table, headers, tablefmt="pretty"))
+                table, header = display_table(conf["survey"], topic, alert, is_mma)
+                print(tabulate(table, header, tablefmt="pretty"))
             elif args.display:
                 print("No alerts the last {} seconds".format(maxtimeout))
     except KeyboardInterrupt:
