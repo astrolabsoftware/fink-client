@@ -45,8 +45,11 @@ In order to connect and poll alerts from Fink, you need to get your credentials:
 Note that `SURVEY` is among `ztf` or `lsst`. In case of doubt, run `fink_client_register -h`. You can also inspect the configuration file on disk:
 
 ```bash
-cat ~/.finkclient/credentials.yml
+cat ~/.finkclient/ztf_credentials.yml
+cat ~/.finkclient/lsst_credentials.yml
 ```
+
+Note for users migration from v9.x to v10.x: your credentials remain valid, but you have to register again via the command line to generate correct credential files.
 
 ## Livestream usage
 
