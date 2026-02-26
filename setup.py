@@ -23,7 +23,7 @@ with open("requirements.txt", "r") as fr:
     requirements = fr.read().splitlines()
 
 setuptools.setup(
-    name="fink-client",
+    name="fink_client",
     version=fink_client.__version__,
     author="AstroLab Software",
     author_email="peloton@lal.in2p3.fr",
