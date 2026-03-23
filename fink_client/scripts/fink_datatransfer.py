@@ -41,7 +41,10 @@ from fink_client.consumer import (
     return_last_offsets,
     get_schema_from_stream,
 )
-from fink_client.avro2arrow import avro_to_arrow, create_partitioning
+from fink_client.avro2arrow import avro_to_arrow
+from fink_client.avro2arrow import create_partitioning
+from fink_client.avro2arrow import avro_schema_to_arrow_schema
+
 from fink_client.logger import get_fink_logger
 
 _LOG = get_fink_logger("Fink", "INFO")
@@ -278,9 +281,9 @@ Default is None, that is no partitioning is applied (all parquet files in the `o
         help="If specified, restart downloading from the 1st alert in the stream. Default is False.",
     )
     parser.add_argument(
-        "--dump_schema",
+        "--dump_schemas",
         action="store_true",
-        help="If specified, save the schema on disk (json file)",
+        help="If specified, save the avro & arrow schemas on disk (json file)",
     )
     parser.add_argument(
         "--verbose",
@@ -382,43 +385,44 @@ and open the tab `Get your data` to retrieve the topic.
         args.batchsize = args.limit
 
     avro_schema = get_schema_from_stream(kafka_config, args.topic, args.maxtimeout)
-    # arrow_schema = avro_to_arrow(schema)
-    # arrow_schema = avro_schema_to_arrow_schema(avro_schema)
-    # print(arrow_schema)
-    # sys.exit()
     if avro_schema is None:
         # TBD: raise error
         _LOG.info(
-            "No schema found -- wait a few seconds and relaunch. If the error persists, maybe the queue is empty."
+            "No schema found -- wait a few seconds and relaunch. If the error persists, maybe the queue is empty (i.e. your query produced no results)."
         )
-    else:
-        if args.dump_schema:
-            filename = "schema_{}.json".format(args.topic)
-            with open(filename, "w") as json_file:
-                json.dump(avro_schema, json_file, sort_keys=True, indent=4)
-        nbpart = return_npartitions(args.topic, kafka_config)
-        _LOG.info("Number of partitions for topic {}: {}".format(args.topic, nbpart))
-        available = Queue()
-        # Queue loading
-        for key in range(nbpart):
-            available.put({"partition": key, "offset": offsets[key], "status": 0})
+        sys.exit()
 
-        # Processes Creation
-        random_state = 0
-        rng = np.random.RandomState(random_state)
-        procs = []
-        for i in range(nconsumers):
-            proc = Process(
-                target=poll,
-                args=(i, nconsumers, available, avro_schema, kafka_config, rng, args),
-            )
-            procs.append(proc)
-            proc.start()
+    if args.dump_schemas:
+        avro_filename = "avro_schema_{}.json".format(args.topic)
+        with open(avro_filename, "w") as json_file:
+            json.dump(avro_schema, json_file, sort_keys=True, indent=4)
 
-        for proc in procs:
-            proc.join()
+        arrow_filename = "arrow_schema_{}.metadata".format(args.topic)
+        pq.write_metadata(avro_schema_to_arrow_schema(avro_schema), arrow_filename)
 
-        print_offsets(kafka_config, args.topic, args.maxtimeout)
+    nbpart = return_npartitions(args.topic, kafka_config)
+    _LOG.info("Number of partitions for topic {}: {}".format(args.topic, nbpart))
+    available = Queue()
+    # Queue loading
+    for key in range(nbpart):
+        available.put({"partition": key, "offset": offsets[key], "status": 0})
+
+    # Processes Creation
+    random_state = 0
+    rng = np.random.RandomState(random_state)
+    procs = []
+    for i in range(nconsumers):
+        proc = Process(
+            target=poll,
+            args=(i, nconsumers, available, avro_schema, kafka_config, rng, args),
+        )
+        procs.append(proc)
+        proc.start()
+
+    for proc in procs:
+        proc.join()
+
+    print_offsets(kafka_config, args.topic, args.maxtimeout)
 
 
 if __name__ == "__main__":
