@@ -285,6 +285,50 @@ def write_alert(
         writer(out, schema, [alert])
 
 
+def write_alerts(
+    alerts: dict,
+    schema: str,
+    root_path: str,
+    filename: str,
+    overwrite: bool = False,
+):
+    """Write a list of avro alerts on disk
+
+    Parameters
+    ----------
+    alerts: list of dict
+        List of alert data to save
+    schema: str or dict
+        Path to Avro schema of the alert, or parsed schema.
+    root_path: str
+        Folder that will contain the alerts.
+    filename: str
+        Filename for the Avro file.
+    overwrite: bool, optional
+        If True, overwrite existing alert. Default is False.
+
+    Examples
+    --------
+    Write ZTF alerts on disk
+    >>> r = AlertReader(avro_ztf)
+    >>> write_alerts(r.to_list(), schema_ztf, ".", overwrite=True, filename="ztf_test")
+
+    Write LSST alerts on disk
+    >>> r = AlertReader(avro_lsst)
+    >>> write_alerts(r.to_list(), schema_lsst, ".", overwrite=True, filename="lsst_test")
+    """
+    alert_filename = os.path.join(root_path, "{}".format(filename))
+
+    if isinstance(schema, str):
+        schema = _get_alert_schema(schema)
+    # Check if the alert already exist
+    if os.path.exists(alert_filename) and not overwrite:
+        raise IOError("{} already exists!".format(alert_filename))
+
+    with open(alert_filename, "wb") as out:
+        writer(out, schema, alerts)
+
+
 def encode_into_avro(alert: dict, schema_file: str) -> str:
     """Encode a dict record into avro bytes
 
@@ -459,5 +503,13 @@ if __name__ == "__main__":
         "datatest/elasticc/alert_mjd60674.0512_obj747_src1494043.avro.gz"
     )
     args["schema_path"] = "schemas/tests/distribution_schema_0p2.avsc"
+
+    # v11
+    args["avro_ztf"] = "datatest/ztf/part-3-305711.avro"
+    args["avro_lsst"] = "datatest/lsst/part-2-918301.avro"
+    args["schema_ztf"] = "datatest/ztf/avro_schema_ftransfer_ztf_2026-03-23_11487.json"
+    args["schema_lsst"] = (
+        "datatest/lsst/avro_schema_ftransfer_lsst_2026-03-18_803281.json"
+    )
 
     regular_unit_tests(global_args=args)

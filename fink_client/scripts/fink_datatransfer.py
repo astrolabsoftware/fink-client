@@ -41,6 +41,7 @@ from fink_client.consumer import (
     return_last_offsets,
     get_schema_from_stream,
 )
+from fink_client.avro_utils import write_alerts
 from fink_client.avro2arrow import avro_to_arrow
 from fink_client.avro2arrow import create_partitioning
 from fink_client.avro2arrow import avro_schema_to_arrow_schema
@@ -143,6 +144,7 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
                             if len(records) == 0:
                                 break
 
+                            part_num = rng.randint(0, 1e6)
                             if args.outformat == "parquet":
                                 table, arrow_schema = avro_to_arrow(schema, records)
 
@@ -154,7 +156,6 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
                                     survey=args.survey,
                                 )
 
-                                part_num = rng.randint(0, 1e6)
                                 pq.write_to_dataset(
                                     table,
                                     args.outdir,
@@ -166,7 +167,14 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
                                     existing_data_behavior="overwrite_or_ignore",
                                 )
                             elif args.outformat == "avro":
-                                pass
+                                write_alerts(
+                                    records,
+                                    schema,
+                                    root_path=args.outdir,
+                                    filename="part-{}-{}.avro".format(
+                                        process_id, part_num
+                                    ),
+                                )
 
                             poll_number += len(msgs)
                             pbar.update(len(msgs))
