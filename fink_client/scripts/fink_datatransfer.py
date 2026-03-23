@@ -133,21 +133,6 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
                                 })
                                 break
 
-                            # # known mismatches between partitions
-                            # # see https://github.com/astrolabsoftware/fink-client/issues/165
-                            # if "cats_broad_max_prob" in pdf.columns:
-                            #     pdf["cats_broad_max_prob"] = pdf[
-                            #         "cats_broad_max_prob"
-                            #     ].astype("float")
-
-                            # if "cats_broad_class" in pdf.columns:
-                            #     pdf["cats_broad_class"] = pdf[
-                            #         "cats_broad_class"
-                            #     ].astype("float")
-
-                            # if "tracklet" in pdf.columns:
-                            #     pdf["tracklet"] = pdf["tracklet"].astype("str")
-
                             records = [
                                 fastavro.schemaless_reader(
                                     io.BytesIO(msg.value()), schema
