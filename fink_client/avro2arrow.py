@@ -18,8 +18,14 @@
 from typing import Any, Dict, List
 
 import pyarrow as pa
+import pyarrow.compute as pc
+
+from astropy.time import Time
 
 from fink_client.tester import regular_unit_tests
+from fink_client.logger import get_fink_logger
+
+_LOG = get_fink_logger("Fink", "INFO")
 
 
 def avro_to_arrow(avro_schema: Dict[str, Any], records: List[Dict[str, Any]]):
@@ -250,6 +256,196 @@ def transform_value(value: Any, avro_type: Any) -> Any:
             return {k: transform_value(v, value_type) for k, v in value.items()}
 
     return value
+
+
+def create_partitioning(table, arrow_schema, partitionby, survey):
+    """
+    Add partitioning columns to Arrow table and schema.
+
+    Parameters
+    ----------
+    table: PyArrow Table
+        Table with alert content
+    arrow_schema: PyArrow Schema
+        Schema of the Table
+    partitionby: str
+        Partitioning strategy: time, finkclass, tnsclass, or classId
+    survey: str
+        Survey name: ztf, lsst
+
+    Returns
+    -------
+    out: tuple
+        Updated table, updated schema, partitioning column names
+    """
+    # partitioning colum if need be
+    if survey == "ztf":
+        timecol = "jd"
+        format_timecol = "jd"
+        timesection = "candidate"
+    elif survey == "lsst":
+        timecol = "midpointMjdTai"
+        format_timecol = "mjd"
+        timesection = "diaSource"
+
+    time_cols_in_table = [
+        col for col in ["year", "month", "day"] if col in table.column_names
+    ]
+    if partitionby == "time":
+        if timecol in table.column_names:
+            # Parse time column using astropy
+            if "year" in table.column_names:
+                _LOG.warning("Partitioning columns already exist. Recreating...")
+                table = table.drop(time_cols_in_table)
+
+            table, arrow_schema = _add_date_partitions(
+                table, arrow_schema, timecol, format_timecol
+            )
+            partitioning = ["year", "month", "day"]
+
+        elif timesection in table.column_names:
+            # Extract time from nested struct, then parse
+            if "year" in table.column_names:
+                _LOG.warning("Partitioning columns already exist. Recreating...")
+                table = table.drop(time_cols_in_table)
+            table, arrow_schema = _add_date_partitions_from_struct(
+                table, arrow_schema, timesection, timecol, format_timecol
+            )
+            partitioning = ["year", "month", "day"]
+        else:
+            partitioning = None
+
+    elif partitionby == "finkclass":
+        if "finkclass" not in table.column_names:
+            _LOG.warning("finkclass not found. Applying time partitioning.")
+
+            if timecol in table.column_names:
+                if "year" in table.column_names:
+                    _LOG.warning("Partitioning columns already exist. Recreating...")
+                    table = table.drop(time_cols_in_table)
+                table, arrow_schema = _add_date_partitions(
+                    table, arrow_schema, timecol, format_timecol
+                )
+                partitioning = ["year", "month", "day"]
+            else:
+                _LOG.error(f"Neither finkclass nor {timecol} found in table.")
+                partitioning = None
+        else:
+            partitioning = ["finkclass"]
+
+    elif partitionby == "tnsclass":
+        partitioning = ["tnsclass"]
+
+    elif partitionby == "classId":
+        partitioning = ["classId"]
+
+    else:
+        partitioning = None
+
+    return table, arrow_schema, partitioning
+
+
+def _add_date_partitions(table, arrow_schema, timecol, format_timecol):
+    """Extract year, month, day from a time column."""
+    # Get the time column
+    time_array = table[timecol]
+
+    # Convert to Python objects for astropy parsing
+    time_strings = pc.cast(time_array, pa.string()).to_pylist()
+
+    # Parse with astropy and extract year, month, day
+    years = []
+    months = []
+    days = []
+
+    for time_str in time_strings:
+        if time_str is None:
+            years.append(None)
+            months.append(None)
+            days.append(None)
+        else:
+            try:
+                t = Time(time_str, format=format_timecol)
+                date_str = t.strftime("%Y-%m-%d")
+                y, m, d = date_str.split("-")
+                years.append(y)
+                months.append(m)
+                days.append(d)
+            except Exception as e:
+                _LOG.warning(f"Failed to parse time '{time_str}': {e}")
+                years.append(None)
+                months.append(None)
+                days.append(None)
+
+    # Add columns to table
+    table = (
+        table
+        .append_column("year", pa.array(years, type=pa.string()))
+        .append_column("month", pa.array(months, type=pa.string()))
+        .append_column("day", pa.array(days, type=pa.string()))
+    )
+
+    # Update schema
+    arrow_schema = table.schema
+
+    return table, arrow_schema
+
+
+def _add_date_partitions_from_struct(
+    table, arrow_schema, timesection, timecol, format_timecol
+):
+    """Extract year, month, day from a time field inside a struct column."""
+    # Extract the nested field from struct
+    struct_col = table[timesection]
+    struct_type = struct_col.type
+
+    # Get the field index for timecol within the struct
+    field_index = struct_type.get_field_index(timecol)
+    if field_index == -1:
+        raise ValueError(f"Field '{timecol}' not found in struct '{timesection}'")
+
+    # Extract the time field
+    time_array = pc.struct_field(struct_col, [field_index])
+
+    # Convert to Python objects for astropy parsing
+    time_values = time_array.to_pylist()
+
+    # Parse with astropy and extract year, month, day
+    years = []
+    months = []
+    days = []
+
+    for time_val in time_values:
+        if time_val is None:
+            years.append(None)
+            months.append(None)
+            days.append(None)
+        else:
+            try:
+                t = Time(time_val, format=format_timecol)
+                date_str = t.strftime("%Y-%m-%d")
+                y, m, d = date_str.split("-")
+                years.append(y)
+                months.append(m)
+                days.append(d)
+            except Exception as e:
+                _LOG.warning(f"Failed to parse time '{time_val}': {e}")
+                years.append(None)
+                months.append(None)
+                days.append(None)
+
+    # Add columns to table
+    table = (
+        table
+        .append_column("year", pa.array(years, type=pa.string()))
+        .append_column("month", pa.array(months, type=pa.string()))
+        .append_column("day", pa.array(days, type=pa.string()))
+    )
+
+    # Update schema
+    arrow_schema = table.schema
+
+    return table, arrow_schema
 
 
 if __name__ == "__main__":

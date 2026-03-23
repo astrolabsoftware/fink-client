@@ -30,7 +30,6 @@ import fastavro
 import confluent_kafka
 
 import numpy as np
-
 from multiprocessing import Process, Queue
 
 from fink_client.configuration import load_credentials
@@ -42,7 +41,7 @@ from fink_client.consumer import (
     return_last_offsets,
     get_schema_from_stream,
 )
-from fink_client.avro2arrow import avro_to_arrow
+from fink_client.avro2arrow import avro_to_arrow, create_partitioning
 from fink_client.logger import get_fink_logger
 
 _LOG = get_fink_logger("Fink", "INFO")
@@ -70,16 +69,6 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
     """
     # Instantiate a consumer
     consumer = confluent_kafka.Consumer(kafka_config)
-
-    # partitioning colum if need be
-    if args.survey == "ztf":
-        timecol = "jd"
-        format_timecol = "jd"
-        timesection = "candidate"
-    elif args.survey == "lsst":
-        timecol = "midpointMjdTai"
-        format_timecol = "mjd"
-        timesection = "diaSource"
 
     # infinite loop
     maxpoll = int(args.limit / nconsumers) if args.limit is not None else 1e10
@@ -156,68 +145,6 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
                             # if "tracklet" in pdf.columns:
                             #     pdf["tracklet"] = pdf["tracklet"].astype("str")
 
-                            # if args.partitionby == "time":
-                            #     if timecol in pdf.columns:
-                            #         pdf[["year", "month", "day"]] = pdf[
-                            #             [timecol]
-                            #         ].apply(
-                            #             lambda x: (
-                            #                 Time(x.iloc[0], format=format_timecol)
-                            #                 .strftime("%Y-%m-%d")
-                            #                 .split("-")
-                            #             ),
-                            #             axis=1,
-                            #             result_type="expand",
-                            #         )
-                            #     elif timesection in pdf.columns:
-                            #         pdf[["year", "month", "day"]] = pdf[
-                            #             [timesection]
-                            #         ].apply(
-                            #             lambda x: (
-                            #                 Time(
-                            #                     x.iloc[0][timecol],
-                            #                     format=format_timecol,
-                            #                 )
-                            #                 .strftime("%Y-%m-%d")
-                            #                 .split("-")
-                            #             ),
-                            #             axis=1,
-                            #             result_type="expand",
-                            #         )
-                            #     partitioning = ["year", "month", "day"]
-                            # elif args.partitionby == "finkclass":
-                            #     if "finkclass" not in pdf.columns:
-                            #         # partition by time
-                            #         # put a warning
-                            #         _LOG.warning(
-                            #             "finkclass not found. Applying time partitioning."
-                            #         )
-                            #         if timecol in pdf.columns:
-                            #             pdf[["year", "month", "day"]] = pdf[
-                            #                 [timecol]
-                            #             ].apply(
-                            #                 lambda x: (
-                            #                     Time(x.iloc[0], format=format_timecol)
-                            #                     .strftime("%Y-%m-%d")
-                            #                     .split("-")
-                            #                 ),
-                            #                 axis=1,
-                            #                 result_type="expand",
-                            #             )
-                            #             partitioning = ["year", "month", "day"]
-                            #         else:
-                            #             # put an error
-                            #             pass
-                            #     else:
-                            #         partitioning = ["finkclass"]
-                            # elif args.partitionby == "tnsclass":
-                            #     partitioning = ["tnsclass"]
-                            # elif args.partitionby == "classId":
-                            #     partitioning = ["classId"]
-                            # else:
-                            #     partitioning = None
-
-                            partitioning = None
                             records = [
                                 fastavro.schemaless_reader(
                                     io.BytesIO(msg.value()), schema
@@ -230,6 +157,14 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
 
                             if args.outformat == "parquet":
                                 table, arrow_schema = avro_to_arrow(schema, records)
+
+                                # In-place partitioning
+                                table, arrow_schema, partitioning = create_partitioning(
+                                    table=table,
+                                    arrow_schema=arrow_schema,
+                                    partitionby=args.partitionby,
+                                    survey=args.survey,
+                                )
 
                                 part_num = rng.randint(0, 1e6)
                                 pq.write_to_dataset(
