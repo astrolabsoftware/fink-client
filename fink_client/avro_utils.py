@@ -286,13 +286,17 @@ def write_alert(
 
 
 def write_alerts(
-    alerts: dict,
+    alerts: list,
     schema: str,
     root_path: str,
     filename: str,
     overwrite: bool = False,
 ):
     """Write a list of avro alerts on disk
+
+    Notes
+    -----
+    This is not a vectorized version of `avro_utils.write_alert`
 
     Parameters
     ----------
