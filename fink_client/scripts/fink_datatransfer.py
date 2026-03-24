@@ -25,15 +25,11 @@ import json
 
 from tqdm import trange
 
-import pyarrow as pa
 import pyarrow.parquet as pq
 import fastavro
 import confluent_kafka
 
-import pandas as pd
 import numpy as np
-from astropy.time import Time
-
 from multiprocessing import Process, Queue
 
 from fink_client.configuration import load_credentials
@@ -45,6 +41,11 @@ from fink_client.consumer import (
     return_last_offsets,
     get_schema_from_stream,
 )
+from fink_client.avro_utils import write_alerts
+from fink_client.avro2arrow import avro_to_arrow
+from fink_client.avro2arrow import create_partitioning
+from fink_client.avro2arrow import avro_schema_to_arrow_schema
+
 from fink_client.logger import get_fink_logger
 
 _LOG = get_fink_logger("Fink", "INFO")
@@ -72,16 +73,6 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
     """
     # Instantiate a consumer
     consumer = confluent_kafka.Consumer(kafka_config)
-
-    # partitioning colum if need be
-    if args.survey == "ztf":
-        timecol = "jd"
-        format_timecol = "jd"
-        timesection = "candidate"
-    elif args.survey == "lsst":
-        timecol = "midpointMjdTai"
-        format_timecol = "mjd"
-        timesection = "diaSource"
 
     # infinite loop
     maxpoll = int(args.limit / nconsumers) if args.limit is not None else 1e10
@@ -143,124 +134,46 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
                                 })
                                 break
 
-                            pdf = pd.DataFrame.from_records(
-                                [
-                                    fastavro.schemaless_reader(
-                                        io.BytesIO(msg.value()), schema
-                                    )
-                                    for msg in msgs
-                                ],
-                            )
-                            if pdf.empty:
+                            records = [
+                                fastavro.schemaless_reader(
+                                    io.BytesIO(msg.value()), schema
+                                )
+                                for msg in msgs
+                            ]
+
+                            if len(records) == 0:
                                 break
 
-                            # known mismatches between partitions
-                            # see https://github.com/astrolabsoftware/fink-client/issues/165
-                            if "cats_broad_max_prob" in pdf.columns:
-                                pdf["cats_broad_max_prob"] = pdf[
-                                    "cats_broad_max_prob"
-                                ].astype("float")
-
-                            if "cats_broad_class" in pdf.columns:
-                                pdf["cats_broad_class"] = pdf[
-                                    "cats_broad_class"
-                                ].astype("float")
-
-                            if "tracklet" in pdf.columns:
-                                pdf["tracklet"] = pdf["tracklet"].astype("str")
-
-                            if args.partitionby == "time":
-                                if timecol in pdf.columns:
-                                    pdf[["year", "month", "day"]] = pdf[
-                                        [timecol]
-                                    ].apply(
-                                        lambda x: (
-                                            Time(x.iloc[0], format=format_timecol)
-                                            .strftime("%Y-%m-%d")
-                                            .split("-")
-                                        ),
-                                        axis=1,
-                                        result_type="expand",
-                                    )
-                                elif timesection in pdf.columns:
-                                    pdf[["year", "month", "day"]] = pdf[
-                                        [timesection]
-                                    ].apply(
-                                        lambda x: (
-                                            Time(
-                                                x.iloc[0][timecol],
-                                                format=format_timecol,
-                                            )
-                                            .strftime("%Y-%m-%d")
-                                            .split("-")
-                                        ),
-                                        axis=1,
-                                        result_type="expand",
-                                    )
-                                partitioning = ["year", "month", "day"]
-                            elif args.partitionby == "finkclass":
-                                if "finkclass" not in pdf.columns:
-                                    # partition by time
-                                    # put a warning
-                                    _LOG.warning(
-                                        "finkclass not found. Applying time partitioning."
-                                    )
-                                    if timecol in pdf.columns:
-                                        pdf[["year", "month", "day"]] = pdf[
-                                            [timecol]
-                                        ].apply(
-                                            lambda x: (
-                                                Time(x.iloc[0], format=format_timecol)
-                                                .strftime("%Y-%m-%d")
-                                                .split("-")
-                                            ),
-                                            axis=1,
-                                            result_type="expand",
-                                        )
-                                        partitioning = ["year", "month", "day"]
-                                    else:
-                                        # put an error
-                                        pass
-                                else:
-                                    partitioning = ["finkclass"]
-                            elif args.partitionby == "tnsclass":
-                                partitioning = ["tnsclass"]
-                            elif args.partitionby == "classId":
-                                partitioning = ["classId"]
-                            else:
-                                partitioning = None
-
-                            table = pa.Table.from_pandas(pdf)
-
-                            if poll_number == initial:
-                                table_schema = table.schema
-
                             part_num = rng.randint(0, 1e6)
-                            try:
+                            if args.outformat == "parquet":
+                                table, arrow_schema = avro_to_arrow(schema, records)
+
+                                # In-place partitioning
+                                table, arrow_schema, partitioning = create_partitioning(
+                                    table=table,
+                                    arrow_schema=arrow_schema,
+                                    partitionby=args.partitionby,
+                                    survey=args.survey,
+                                )
+
                                 pq.write_to_dataset(
                                     table,
                                     args.outdir,
-                                    schema=table_schema,
+                                    schema=arrow_schema,
                                     basename_template="part-{}-{{i}}-{}.parquet".format(
                                         process_id, part_num
                                     ),
                                     partition_cols=partitioning,
                                     existing_data_behavior="overwrite_or_ignore",
                                 )
-                            except pa.lib.ArrowTypeError:
-                                _LOG.warning(
-                                    "Schema mismatch detected -- recreating the schema"
-                                )
-                                table_schema_ = table.schema
-                                pq.write_to_dataset(
-                                    table,
-                                    args.outdir,
-                                    schema=table_schema_,
-                                    basename_template="part-{}-{{i}}-{}.parquet".format(
+                            elif args.outformat == "avro":
+                                write_alerts(
+                                    records,
+                                    schema,
+                                    root_path=args.outdir,
+                                    filename="part-{}-{}.avro".format(
                                         process_id, part_num
                                     ),
-                                    partition_cols=partitioning,
-                                    existing_data_behavior="overwrite_or_ignore",
                                 )
 
                             poll_number += len(msgs)
@@ -313,6 +226,12 @@ def main():
         help="Folder to store incoming alerts. It will be created if it does not exist.",
     )
     parser.add_argument(
+        "-outformat",
+        type=str,
+        default="parquet",
+        help="Output alert format. Choose among: parquet, avro. Default is parquet.",
+    )
+    parser.add_argument(
         "-partitionby",
         type=str,
         default=None,
@@ -347,7 +266,7 @@ Default is None, that is no partitioning is applied (all parquet files in the `o
         "-number_partitions",
         type=int,
         default=10,
-        help="Number of partitions for the topic in the distant Kafka cluster. Do not touch unless you know what your are doing. Default is 10 (Fink Kafka cluster)",
+        help="Number of partitions for the topic in the distant Kafka cluster. Do not change unless you know what your are doing. Default is 10 (Fink Kafka cluster)",
     )
     parser.add_argument(
         "--restart_from_beginning",
@@ -355,9 +274,9 @@ Default is None, that is no partitioning is applied (all parquet files in the `o
         help="If specified, restart downloading from the 1st alert in the stream. Default is False.",
     )
     parser.add_argument(
-        "--dump_schema",
+        "--dump_schemas",
         action="store_true",
-        help="If specified, save the schema on disk (json file)",
+        help="If specified, save the avro & arrow schemas on disk (json file)",
     )
     parser.add_argument(
         "--verbose",
@@ -404,6 +323,12 @@ and open the tab `Get your data` to retrieve the topic.
         """.format(args.topic)
         _LOG.error(msg)
         sys.exit()
+
+    assert args.outformat in ["parquet", "avro"], (
+        "-outformat must be one of parquet, avro. {} is not allowed.".format(
+            args.outformat
+        )
+    )
 
     # load user configuration
     conf = load_credentials(survey=args.survey)
@@ -452,40 +377,45 @@ and open the tab `Get your data` to retrieve the topic.
     if (args.limit is not None) and (args.limit < args.batchsize):
         args.batchsize = args.limit
 
-    schema = get_schema_from_stream(kafka_config, args.topic, args.maxtimeout)
-    if schema is None:
+    avro_schema = get_schema_from_stream(kafka_config, args.topic, args.maxtimeout)
+    if avro_schema is None:
         # TBD: raise error
         _LOG.info(
-            "No schema found -- wait a few seconds and relaunch. If the error persists, maybe the queue is empty."
+            "No schema found -- wait a few seconds and relaunch. If the error persists, maybe the queue is empty (i.e. your query produced no results)."
         )
-    else:
-        if args.dump_schema:
-            filename = "schema_{}.json".format(args.topic)
-            with open(filename, "w") as json_file:
-                json.dump(schema, json_file, sort_keys=True, indent=4)
-        nbpart = return_npartitions(args.topic, kafka_config)
-        _LOG.info("Number of partitions for topic {}: {}".format(args.topic, nbpart))
-        available = Queue()
-        # Queue loading
-        for key in range(nbpart):
-            available.put({"partition": key, "offset": offsets[key], "status": 0})
+        sys.exit()
 
-        # Processes Creation
-        random_state = 0
-        rng = np.random.RandomState(random_state)
-        procs = []
-        for i in range(nconsumers):
-            proc = Process(
-                target=poll,
-                args=(i, nconsumers, available, schema, kafka_config, rng, args),
-            )
-            procs.append(proc)
-            proc.start()
+    if args.dump_schemas:
+        avro_filename = "avro_schema_{}.json".format(args.topic)
+        with open(avro_filename, "w") as json_file:
+            json.dump(avro_schema, json_file, sort_keys=True, indent=4)
 
-        for proc in procs:
-            proc.join()
+        arrow_filename = "arrow_schema_{}.metadata".format(args.topic)
+        pq.write_metadata(avro_schema_to_arrow_schema(avro_schema), arrow_filename)
 
-        print_offsets(kafka_config, args.topic, args.maxtimeout)
+    nbpart = return_npartitions(args.topic, kafka_config)
+    _LOG.info("Number of partitions for topic {}: {}".format(args.topic, nbpart))
+    available = Queue()
+    # Queue loading
+    for key in range(nbpart):
+        available.put({"partition": key, "offset": offsets[key], "status": 0})
+
+    # Processes Creation
+    random_state = 0
+    rng = np.random.RandomState(random_state)
+    procs = []
+    for i in range(nconsumers):
+        proc = Process(
+            target=poll,
+            args=(i, nconsumers, available, avro_schema, kafka_config, rng, args),
+        )
+        procs.append(proc)
+        proc.start()
+
+    for proc in procs:
+        proc.join()
+
+    print_offsets(kafka_config, args.topic, args.maxtimeout)
 
 
 if __name__ == "__main__":

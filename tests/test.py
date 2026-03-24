@@ -72,11 +72,11 @@ class TestIntegration(unittest.TestCase):
 
     def test_topics(self):
         topics = self.consumer.available_topics()
-        self.assertTrue('rrlyr' in topics.keys())
+        self.assertTrue('rrlyr' in topics)
 
     def test_broker_name(self):
         brokers = self.consumer.available_brokers()
-        self.assertTrue(0 in brokers.keys())
+        self.assertTrue(1 in brokers.keys())
 
     def tearDown(self):
         self.consumer.close()
