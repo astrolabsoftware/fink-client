@@ -348,7 +348,7 @@ def create_partitioning(table, arrow_schema, partitionby, survey):
                     _LOG.warning("Partitioning columns already exist. Recreating...")
                     table = table.drop(time_cols_in_table)
                 table, arrow_schema = _add_date_partitions(
-                    table, arrow_schema, timecol, format_timecol
+                    table, timecol, format_timecol
                 )
                 partitioning = ["year", "month", "day"]
             else:
