@@ -324,9 +324,7 @@ def create_partitioning(table, arrow_schema, partitionby, survey):
                 _LOG.warning("Partitioning columns already exist. Recreating...")
                 table = table.drop(time_cols_in_table)
 
-            table, arrow_schema = _add_date_partitions(
-                table, arrow_schema, timecol, format_timecol
-            )
+            table, arrow_schema = _add_date_partitions(table, timecol, format_timecol)
             partitioning = ["year", "month", "day"]
 
         elif timesection in table.column_names:
@@ -335,7 +333,7 @@ def create_partitioning(table, arrow_schema, partitionby, survey):
                 _LOG.warning("Partitioning columns already exist. Recreating...")
                 table = table.drop(time_cols_in_table)
             table, arrow_schema = _add_date_partitions_from_struct(
-                table, arrow_schema, timesection, timecol, format_timecol
+                table, timesection, timecol, format_timecol
             )
             partitioning = ["year", "month", "day"]
         else:
@@ -371,15 +369,13 @@ def create_partitioning(table, arrow_schema, partitionby, survey):
     return table, arrow_schema, partitioning
 
 
-def _add_date_partitions(table, arrow_schema, timecol, format_timecol):
+def _add_date_partitions(table, timecol, format_timecol):
     """Extract year, month, day from a time column.
 
     Parameters
     ----------
     table: pyarrow table
         Alert table
-    arrow_schema: dict
-        Dictionary for the table
     timecol: str
         Name of the column with times
     format_timecol: str
@@ -436,17 +432,13 @@ def _add_date_partitions(table, arrow_schema, timecol, format_timecol):
     return table, arrow_schema
 
 
-def _add_date_partitions_from_struct(
-    table, arrow_schema, timesection, timecol, format_timecol
-):
+def _add_date_partitions_from_struct(table, timesection, timecol, format_timecol):
     """Extract year, month, day from a time field inside a struct column.
 
     Parameters
     ----------
     table: pyarrow table
         Alert table
-    arrow_schema: dict
-        Dictionary for the table
     timesection: str
         Name of the struct column containing time column
     timecol: str
