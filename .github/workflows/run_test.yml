@@ -36,6 +36,7 @@ jobs:
         echo `python -V`
     - name: Run test suites
       run: |
+        echo "KAFKA_OPTS=-Djava.net.preferIPv4Stack=True" >> $GITHUB_ENV
         python -c "import fink_client; print('Fink client version ', fink_client.__version__)"
         bin/fink_client_test.sh
         bash <(curl -s https://codecov.io/bash)

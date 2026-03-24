@@ -42,6 +42,20 @@ def avro_to_arrow(avro_schema: Dict[str, Any], records: List[Dict[str, Any]]):
     -------
     out: PyArrow Table
     out: PyArrow Schema
+
+    Examples
+    --------
+    Convert ZTF Avro records
+    >>> from fink_client.avro_utils import _get_alert_schema, AlertReader
+    >>> records = AlertReader(avro_ztf).to_list()
+    >>> avro_schema = _get_alert_schema(schema_ztf)
+    >>> table, arrow_schema = avro_to_arrow(avro_schema, records)
+
+    Convert LSST Avro records
+    >>> from fink_client.avro_utils import _get_alert_schema, AlertReader
+    >>> records = AlertReader(avro_lsst).to_list()
+    >>> avro_schema = _get_alert_schema(schema_lsst)
+    >>> table, arrow_schema = avro_to_arrow(avro_schema, records)
     """
     # Step 1: Convert Avro schema to Arrow schema
     arrow_schema = avro_schema_to_arrow_schema(avro_schema)
@@ -65,6 +79,18 @@ def avro_schema_to_arrow_schema(avro_schema: Dict[str, Any]) -> pa.Schema:
     -------
     out: pa.Schema
         PyArrow schema
+
+    Examples
+    --------
+    Convert ZTF Avro schema
+    >>> from fink_client.avro_utils import _get_alert_schema
+    >>> avro_schema = _get_alert_schema(schema_ztf)
+    >>> arrow_schema = avro_schema_to_arrow_schema(avro_schema)
+
+    Convert LSST Avro records
+    >>> from fink_client.avro_utils import _get_alert_schema
+    >>> avro_schema = _get_alert_schema(schema_lsst)
+    >>> arrow_schema = avro_schema_to_arrow_schema(avro_schema)
     """
     if avro_schema.get("type") == "record":
         fields = []
@@ -489,16 +515,16 @@ def _add_date_partitions_from_struct(
 
 
 if __name__ == "__main__":
-    """Test suite"""
+    """ Run the test suite """
+
     args = globals()
-    args["avro_single_alert"] = "datatest/ZTF19acihgng.avro"
-    args["avro_multi_file"] = "datatest/avro_multi_alerts.avro"
-    args["avro_multi_file2"] = "datatest/avro_multi_alerts_other.avro"
-    args["avro_list"] = ["datatest/ZTF19acihgng.avro", "datatest/ZTF19acyfkzd.avro"]
-    args["avro_folder"] = "datatest"
-    args["avro_gzipped"] = (
-        "datatest/elasticc/alert_mjd60674.0512_obj747_src1494043.avro.gz"
+
+    # v11
+    args["avro_ztf"] = "datatest/ztf/part-3-305711.avro"
+    args["avro_lsst"] = "datatest/lsst/part-2-918301.avro"
+    args["schema_ztf"] = "datatest/ztf/avro_schema_ftransfer_ztf_2026-03-23_11487.json"
+    args["schema_lsst"] = (
+        "datatest/lsst/avro_schema_ftransfer_lsst_2026-03-18_803281.json"
     )
-    args["schema_path"] = "schemas/tests/distribution_schema_0p2.avsc"
 
     regular_unit_tests(global_args=args)
