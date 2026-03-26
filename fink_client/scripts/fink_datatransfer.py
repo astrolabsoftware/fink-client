@@ -159,7 +159,7 @@ def poll(
                         if len(records) == 0:
                             break
 
-                        part_num = rng.randint(0, 1e6)
+                        part_num = rng.randint(0, 1e9)
                         if args.outformat == "parquet":
                             table, arrow_schema = avro_to_arrow(schema, records)
 
