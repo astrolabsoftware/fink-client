@@ -19,18 +19,18 @@ import sys
 import os
 import io
 import argparse
-import logging
 import psutil
 import json
+import time
 
-from tqdm import trange
+from tqdm import trange, tqdm
 
 import pyarrow.parquet as pq
 import fastavro
 import confluent_kafka
 
 import numpy as np
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, Value, Lock
 
 from fink_client.configuration import load_credentials
 
@@ -51,7 +51,17 @@ from fink_client.logger import get_fink_logger
 _LOG = get_fink_logger("Fink", "INFO")
 
 
-def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
+def poll(
+    process_id,
+    nconsumers,
+    queue,
+    schema,
+    kafka_config,
+    rng,
+    args,
+    shared_counter,
+    counter_lock,
+):
     """Poll data from Kafka servers
 
     Parameters
@@ -79,6 +89,7 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
     disable = not args.verbose
 
     poll_number = 0
+    pbar = None
     while not queue.empty() and poll_number < maxpoll:
         # Getting a partition from the queue
         partition = queue.get()
@@ -93,6 +104,19 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
 
         max_end_check = 4
 
+        # One bar per consumer
+        if pbar is None:
+            pbar = trange(
+                partition["lag"],
+                position=process_id,
+                initial=initial,
+                colour="#F5622E",
+                unit="alerts",
+                disable=disable,
+                desc="Consumer {}".format(partition["partition"]),
+                bar_format="{desc}: {n:,} {unit} [{rate_fmt}{postfix}]",
+            )
+
         if offset == initial:
             if partition["status"] < max_end_check:
                 # After max_end_check time if no alerts added,
@@ -101,100 +125,92 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
                     "partition": partition["partition"],
                     "offset": partition["offset"],
                     "status": partition["status"] + 1,
+                    "lag": partition["lag"],
                 })
         else:
             poll_number = initial
-            total = offset
-            with trange(
-                total,
-                position=partition["partition"],
-                initial=initial,
-                colour="#F5622E",
-                unit="alerts",
-                disable=disable,
-            ) as pbar:
-                try:
-                    while poll_number < maxpoll:
-                        msgs = consumer.consume(args.batchsize, args.maxtimeout)
-                        # Decode the message
-                        if msgs is not None:
-                            if len(msgs) == 0:
-                                _LOG.warning(
-                                    "[{}] No alerts the last {} seconds ({} polled)... Have to exit(1)\n".format(
-                                        process_id, args.maxtimeout, poll_number
-                                    )
-                                )
-                                # Alerts can be added in the partition later
-                                # putting it again in the queue
-                                # changing the offset to continue where we stopped
-                                queue.put({
-                                    "partition": partition["partition"],
-                                    "offset": poll_number,
-                                    "status": 0,
-                                })
-                                break
-
-                            records = [
-                                fastavro.schemaless_reader(
-                                    io.BytesIO(msg.value()), schema
-                                )
-                                for msg in msgs
-                            ]
-
-                            if len(records) == 0:
-                                break
-
-                            part_num = rng.randint(0, 1e6)
-                            if args.outformat == "parquet":
-                                table, arrow_schema = avro_to_arrow(schema, records)
-
-                                # In-place partitioning
-                                table, arrow_schema, partitioning = create_partitioning(
-                                    table=table,
-                                    arrow_schema=arrow_schema,
-                                    partitionby=args.partitionby,
-                                    survey=args.survey,
-                                )
-
-                                pq.write_to_dataset(
-                                    table,
-                                    args.outdir,
-                                    schema=arrow_schema,
-                                    basename_template="part-{}-{{i}}-{}.parquet".format(
-                                        process_id, part_num
-                                    ),
-                                    partition_cols=partitioning,
-                                    existing_data_behavior="overwrite_or_ignore",
-                                )
-                            elif args.outformat == "avro":
-                                write_alerts(
-                                    records,
-                                    schema,
-                                    root_path=args.outdir,
-                                    filename="part-{}-{}.avro".format(
-                                        process_id, part_num
-                                    ),
-                                )
-
-                            poll_number += len(msgs)
-                            pbar.update(len(msgs))
-
-                            if len(msgs) < args.batchsize:
-                                queue.put({
-                                    "partition": partition["partition"],
-                                    "offset": poll_number,
-                                    "status": 0,
-                                })
-                                break
-                        else:
-                            logging.info(
-                                "[{}] No alerts the last {} seconds ({} polled)\n".format(
+            try:
+                while poll_number < maxpoll:
+                    msgs = consumer.consume(args.batchsize, args.maxtimeout)
+                    # Decode the message
+                    if msgs is not None:
+                        if len(msgs) == 0:
+                            pbar.write(
+                                "[{}] No alerts the last {} seconds ({} polled)... Have to exit(1)\n".format(
                                     process_id, args.maxtimeout, poll_number
                                 )
                             )
-                except KeyboardInterrupt:
-                    sys.stderr.write("%% Aborted by user\n")
-                    consumer.close()
+                            # Alerts can be added in the partition later
+                            # putting it again in the queue
+                            # changing the offset to continue where we stopped
+                            queue.put({
+                                "partition": partition["partition"],
+                                "offset": poll_number,
+                                "status": 0,
+                                "lag": partition["lag"],
+                            })
+                            break
+
+                        records = [
+                            fastavro.schemaless_reader(io.BytesIO(msg.value()), schema)
+                            for msg in msgs
+                        ]
+
+                        if len(records) == 0:
+                            break
+
+                        part_num = rng.randint(0, 1e6)
+                        if args.outformat == "parquet":
+                            table, arrow_schema = avro_to_arrow(schema, records)
+
+                            # In-place partitioning
+                            table, arrow_schema, partitioning = create_partitioning(
+                                table=table,
+                                arrow_schema=arrow_schema,
+                                partitionby=args.partitionby,
+                                survey=args.survey,
+                            )
+
+                            pq.write_to_dataset(
+                                table,
+                                args.outdir,
+                                schema=arrow_schema,
+                                basename_template="part-{}-{{i}}-{}.parquet".format(
+                                    process_id, part_num
+                                ),
+                                partition_cols=partitioning,
+                                existing_data_behavior="overwrite_or_ignore",
+                            )
+                        elif args.outformat == "avro":
+                            write_alerts(
+                                records,
+                                schema,
+                                root_path=args.outdir,
+                                filename="part-{}-{}.avro".format(process_id, part_num),
+                            )
+
+                        poll_number += len(msgs)
+                        pbar.update(len(msgs))
+                        with counter_lock:
+                            shared_counter.value += len(msgs)
+
+                        if len(msgs) < args.batchsize:
+                            queue.put({
+                                "partition": partition["partition"],
+                                "offset": poll_number,
+                                "status": 0,
+                                "lag": partition["lag"],
+                            })
+                            break
+                    else:
+                        pbar.write(
+                            "[{}] No alerts the last {} seconds ({} polled)\n".format(
+                                process_id, args.maxtimeout, poll_number
+                            )
+                        )
+            except KeyboardInterrupt:
+                sys.stderr.write("%% Aborted by user\n")
+                consumer.close()
     consumer.close()
 
 
@@ -350,26 +366,29 @@ and open the tab `Get your data` to retrieve the topic.
     }
 
     if args.restart_from_beginning:
-        total_lag, total_offset = print_offsets(
+        offsets, lags = print_offsets(
             kafka_config,
             args.topic,
             args.maxtimeout,
             verbose=False,
             hide_empty_partition=False,
         )
-        args.total_lag = total_offset
+        # All offsets, commited or not
+        args.total_lag = sum(lags) + sum(offsets)
         args.total_offset = 0
         offsets = [0 for _ in range(args.number_partitions)]
     else:
-        total_lag, total_offset = print_offsets(
+        offsets, lags = print_offsets(
             kafka_config, args.topic, args.maxtimeout, hide_empty_partition=False
         )
-        args.total_lag = total_lag
-        args.total_offset = total_offset
+        args.total_lag = sum(lags)
+        args.total_offset = sum(offsets)
         offsets = return_last_offsets(kafka_config, args.topic)
-        if total_lag == 0:
+        if args.total_lag == 0:
             _LOG.info("All alerts have been polled. Exiting.")
             sys.exit()
+
+    args.topic_size = args.total_lag + args.total_offset
 
     if not os.path.isdir(args.outdir):
         os.makedirs(args.outdir, exist_ok=True)
@@ -398,7 +417,25 @@ and open the tab `Get your data` to retrieve the topic.
     available = Queue()
     # Queue loading
     for key in range(nbpart):
-        available.put({"partition": key, "offset": offsets[key], "status": 0})
+        available.put({
+            "partition": key,
+            "offset": offsets[key],
+            "lag": lags[key],
+            "status": 0,
+        })
+
+    # Initialize shared counter
+    shared_counter = Value("i", 0)  # 'i' = signed integer
+    counter_lock = Lock()
+
+    # Create progress bar
+    pbar_common = tqdm(
+        position=0,
+        desc="Dowloading",
+        colour="#F5622E",
+        initial=args.total_offset,
+        total=args.topic_size,
+    )
 
     # Processes Creation
     random_state = 0
@@ -407,10 +444,37 @@ and open the tab `Get your data` to retrieve the topic.
     for i in range(nconsumers):
         proc = Process(
             target=poll,
-            args=(i, nconsumers, available, avro_schema, kafka_config, rng, args),
+            args=(
+                i + 1,
+                nconsumers,
+                available,
+                avro_schema,
+                kafka_config,
+                rng,
+                args,
+                shared_counter,
+                counter_lock,
+            ),
         )
         procs.append(proc)
         proc.start()
+
+    # Monitor progress in main process
+    last_count = 0
+    while any(proc.is_alive() for proc in procs):
+        with counter_lock:
+            current_count = shared_counter.value
+
+        # Update progress bar with delta
+        pbar_common.update(current_count - last_count)
+        last_count = current_count
+        time.sleep(0.1)  # Poll interval
+
+    # Final update
+    with counter_lock:
+        pbar_common.update(shared_counter.value - last_count)
+
+    pbar_common.close()
 
     for proc in procs:
         proc.join()
