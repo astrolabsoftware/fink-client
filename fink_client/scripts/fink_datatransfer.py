@@ -21,15 +21,16 @@ import io
 import argparse
 import psutil
 import json
+import time
 
-from tqdm import trange
+from tqdm import trange, tqdm
 
 import pyarrow.parquet as pq
 import fastavro
 import confluent_kafka
 
 import numpy as np
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, Value, Lock
 
 from fink_client.configuration import load_credentials
 
@@ -50,7 +51,17 @@ from fink_client.logger import get_fink_logger
 _LOG = get_fink_logger("Fink", "INFO")
 
 
-def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
+def poll(
+    process_id,
+    nconsumers,
+    queue,
+    schema,
+    kafka_config,
+    rng,
+    args,
+    shared_counter,
+    counter_lock,
+):
     """Poll data from Kafka servers
 
     Parameters
@@ -103,8 +114,7 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
                 unit="alerts",
                 disable=disable,
                 desc="Consumer {}".format(partition["partition"]),
-                bar_format="{desc}: {n:,} {unit} {bar} [{elapsed}<{remaining}, "
-                "{rate_fmt}{postfix}]",
+                bar_format="{desc}: {n:,} {unit} [{rate_fmt}{postfix}]",
             )
 
         if offset == initial:
@@ -181,6 +191,8 @@ def poll(process_id, nconsumers, queue, schema, kafka_config, rng, args):
 
                         poll_number += len(msgs)
                         pbar.update(len(msgs))
+                        with counter_lock:
+                            shared_counter.value += len(msgs)
 
                         if len(msgs) < args.batchsize:
                             queue.put({
@@ -354,26 +366,29 @@ and open the tab `Get your data` to retrieve the topic.
     }
 
     if args.restart_from_beginning:
-        total_lag, total_offset, lags = print_offsets(
+        offsets, lags = print_offsets(
             kafka_config,
             args.topic,
             args.maxtimeout,
             verbose=False,
             hide_empty_partition=False,
         )
-        args.total_lag = total_offset
+        # All offsets, commited or not
+        args.total_lag = sum(lags) + sum(offsets)
         args.total_offset = 0
         offsets = [0 for _ in range(args.number_partitions)]
     else:
-        total_lag, total_offset, lags = print_offsets(
+        offsets, lags = print_offsets(
             kafka_config, args.topic, args.maxtimeout, hide_empty_partition=False
         )
-        args.total_lag = total_lag
-        args.total_offset = total_offset
+        args.total_lag = sum(lags)
+        args.total_offset = sum(offsets)
         offsets = return_last_offsets(kafka_config, args.topic)
-        if total_lag == 0:
+        if args.total_lag == 0:
             _LOG.info("All alerts have been polled. Exiting.")
             sys.exit()
+
+    args.topic_size = args.total_lag + args.total_offset
 
     if not os.path.isdir(args.outdir):
         os.makedirs(args.outdir, exist_ok=True)
@@ -409,6 +424,19 @@ and open the tab `Get your data` to retrieve the topic.
             "status": 0,
         })
 
+    # Initialize shared counter
+    shared_counter = Value("i", 0)  # 'i' = signed integer
+    counter_lock = Lock()
+
+    # Create progress bar
+    pbar_common = tqdm(
+        position=0,
+        desc="Dowloading",
+        colour="#F5622E",
+        initial=args.total_offset,
+        total=args.topic_size,
+    )
+
     # Processes Creation
     random_state = 0
     rng = np.random.RandomState(random_state)
@@ -416,10 +444,37 @@ and open the tab `Get your data` to retrieve the topic.
     for i in range(nconsumers):
         proc = Process(
             target=poll,
-            args=(i, nconsumers, available, avro_schema, kafka_config, rng, args),
+            args=(
+                i + 1,
+                nconsumers,
+                available,
+                avro_schema,
+                kafka_config,
+                rng,
+                args,
+                shared_counter,
+                counter_lock,
+            ),
         )
         procs.append(proc)
         proc.start()
+
+    # Monitor progress in main process
+    last_count = 0
+    while any(proc.is_alive() for proc in procs):
+        with counter_lock:
+            current_count = shared_counter.value
+
+        # Update progress bar with delta
+        pbar_common.update(current_count - last_count)
+        last_count = current_count
+        time.sleep(0.1)  # Poll interval
+
+    # Final update
+    with counter_lock:
+        pbar_common.update(shared_counter.value - last_count)
+
+    pbar_common.close()
 
     for proc in procs:
         proc.join()
