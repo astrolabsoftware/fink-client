@@ -48,7 +48,7 @@ from fink_client.avro2arrow import avro_schema_to_arrow_schema
 
 from fink_client.logger import get_fink_logger
 
-_LOG = get_fink_logger("Fink", "INFO")
+_LOG = get_fink_logger("Fink", "WARNING")
 
 
 def poll(
