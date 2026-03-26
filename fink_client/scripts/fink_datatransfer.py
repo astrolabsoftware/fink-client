@@ -135,7 +135,7 @@ def poll(
                     # Decode the message
                     if msgs is not None:
                         if len(msgs) == 0:
-                            pbar.write(
+                            _LOG.info(
                                 "[{}] No alerts the last {} seconds ({} polled)... Have to exit(1)\n".format(
                                     process_id, args.maxtimeout, poll_number
                                 )
@@ -203,7 +203,7 @@ def poll(
                             })
                             break
                     else:
-                        pbar.write(
+                        _LOG.info(
                             "[{}] No alerts the last {} seconds ({} polled)\n".format(
                                 process_id, args.maxtimeout, poll_number
                             )
