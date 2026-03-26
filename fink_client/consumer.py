@@ -374,6 +374,8 @@ def return_offsets(
         Total number of messages committed across all partitions
     total_lag: int
         Remaining messages in the topic across all partitions.
+    lags: list
+        List of remaining messages per partition
     """
     time.sleep(waitfor)
     # Get the topic's partitions
@@ -419,6 +421,7 @@ def return_offsets(
     if verbose:
         print("%-50s  %9s  %9s" % ("Topic [Partition]", "Committed", "Lag"))
         print("=" * 72)
+    lags = []
     for partition in committed:
         # Get the partitions low and high watermark offsets.
         (lo, hi) = consumer.get_watermark_offsets(
@@ -443,6 +446,7 @@ def return_offsets(
         #
         total_offsets = total_offsets + partition.offset
         total_lag = total_lag + int(lag)
+        lags.append(int(lag))
 
         if verbose:
             if (hide_empty_partition and (offset != "-" or int(lag) > 0)) or (
@@ -463,7 +467,7 @@ def return_offsets(
         )
         print("-" * 72)
 
-    return total_offsets, total_lag
+    return total_offsets, total_lag, lags
 
 
 def return_last_offsets(kafka_config, topic):
@@ -533,12 +537,14 @@ def print_offsets(
         Total number of messages committed across all partitions
     total_lag: int
         Remaining messages in the topic across all partitions.
+    lags: list
+        List of remaining messages per partition
     """
     consumer = confluent_kafka.Consumer(kafka_config)
 
     topics = ["{}".format(topic)]
     consumer.subscribe(topics)
-    total_offset, total_lag = return_offsets(
+    total_offset, total_lag, lags = return_offsets(
         consumer,
         topic,
         timeout=maxtimeout,
@@ -555,7 +561,7 @@ def print_offsets(
         sys.exit()
     consumer.close()
 
-    return total_lag, total_offset
+    return total_lag, total_offset, lags
 
 
 def _get_kafka_config(config: dict) -> dict:
