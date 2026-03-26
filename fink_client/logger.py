@@ -38,17 +38,23 @@ def get_fink_logger(name: str = "test", log_level: str = "INFO") -> Logger:
     >>> log.info("Hi!")
     """
     # Format of the log message to be printed
-    FORMAT = "%(asctime)-15s "
-    FORMAT += "%(levelname)s "
-    FORMAT += "%(message)s"
-
-    # Date format
+    FORMAT = "%(asctime)-15s %(levelname)s %(message)s"
     DATEFORMAT = "%y/%m/%d %H:%M:%S"
 
-    logging.basicConfig(format=FORMAT, datefmt=DATEFORMAT)
     logger = logging.getLogger(name)
 
-    # Set the minimum log level
+    # Only add handler if one doesn't already exist (prevents duplicates)
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter(FORMAT, datefmt=DATEFORMAT)
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+
+    # Set the minimum log level on the logger
     logger.setLevel(log_level)
+
+    # Also set on handler to ensure it's not filtered there
+    if logger.handlers:
+        logger.handlers[0].setLevel(log_level)
 
     return logger

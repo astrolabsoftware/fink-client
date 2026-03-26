@@ -25,7 +25,7 @@ from astropy.time import Time
 from fink_client.tester import regular_unit_tests
 from fink_client.logger import get_fink_logger
 
-_LOG = get_fink_logger("Fink", "INFO")
+_LOG = get_fink_logger("Fink", "WARNING")
 
 
 def avro_to_arrow(avro_schema: Dict[str, Any], records: List[Dict[str, Any]]):
@@ -321,7 +321,7 @@ def create_partitioning(table, arrow_schema, partitionby, survey):
         if timecol in table.column_names:
             # Parse time column using astropy
             if "year" in table.column_names:
-                _LOG.warning("Partitioning columns already exist. Recreating...")
+                _LOG.info("Partitioning columns already exist. Recreating...")
                 table = table.drop(time_cols_in_table)
 
             table, arrow_schema = _add_date_partitions(table, timecol, format_timecol)
@@ -330,7 +330,7 @@ def create_partitioning(table, arrow_schema, partitionby, survey):
         elif timesection in table.column_names:
             # Extract time from nested struct, then parse
             if "year" in table.column_names:
-                _LOG.warning("Partitioning columns already exist. Recreating...")
+                _LOG.info("Partitioning columns already exist. Recreating...")
                 table = table.drop(time_cols_in_table)
             table, arrow_schema = _add_date_partitions_from_struct(
                 table, timesection, timecol, format_timecol
@@ -345,7 +345,7 @@ def create_partitioning(table, arrow_schema, partitionby, survey):
 
             if timecol in table.column_names:
                 if "year" in table.column_names:
-                    _LOG.warning("Partitioning columns already exist. Recreating...")
+                    _LOG.info("Partitioning columns already exist. Recreating...")
                     table = table.drop(time_cols_in_table)
                 table, arrow_schema = _add_date_partitions(
                     table, timecol, format_timecol
