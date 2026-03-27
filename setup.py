@@ -34,14 +34,14 @@ setuptools.setup(
     install_requires=requirements,
     packages=setuptools.find_packages(),
     entry_points={
-        'console_scripts': [
-            'fink_alert_viewer=fink_client.scripts.fink_alert_viewer:main',
-            'fink_consumer=fink_client.scripts.fink_consumer:main',
-            'fink_client_register=fink_client.scripts.fink_client_register:main',
-            'fink_datatransfer=fink_client.scripts.fink_datatransfer:main'
+        "console_scripts": [
+            "fink_alert_viewer=fink_client.scripts.fink_alert_viewer:main",
+            "fink_consumer=fink_client.scripts.fink_consumer:main",
+            "fink_client_register=fink_client.scripts.fink_client_register:main",
+            "fink_datatransfer=fink_client.scripts.fink_datatransfer:main",
         ]
     },
-    scripts=['bin/fink_client_test.sh'],
+    scripts=["bin/fink_client_test.sh"],
     classifiers=[
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
@@ -54,7 +54,7 @@ setuptools.setup(
         "Intended Audience :: Science/Research",
     ],
     project_urls={
-        'Documentation': "https://doc.lsst.fink-broker.org/en/latest/",
-        'Source': 'https://github.com/astrolabsoftware/fink-client'
+        "Documentation": "https://doc.lsst.fink-broker.org/en/latest/",
+        "Source": "https://github.com/astrolabsoftware/fink-client",
     },
 )

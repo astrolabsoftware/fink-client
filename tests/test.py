@@ -27,38 +27,40 @@ from fink_client.configuration import load_credentials
 
 
 class TestIntegration(unittest.TestCase):
+    """Base class for integration"""
 
     def setUp(self):
 
-        data_path = os.path.abspath(os.path.join(
-            os.path.dirname(__file__), 'data'))
-        schema_path = os.path.abspath(os.path.join(
-            os.path.dirname(__file__),
-            '../schemas/tests/distribution_schema_0p2.avsc'))
+        data_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "data"))
+        schema_path = os.path.abspath(
+            os.path.join(
+                os.path.dirname(__file__),
+                "../schemas/tests/distribution_schema_0p2.avsc",
+            )
+        )
 
         r = AlertReader(data_path)
         alerts = r.to_list()
 
         conf = load_credentials(survey="ztf", tmp=True)
 
-        kafka_servers = conf['servers']
-        p = confluent_kafka.Producer({
-            'bootstrap.servers': kafka_servers})
+        kafka_servers = conf["servers"]
+        p = confluent_kafka.Producer({"bootstrap.servers": kafka_servers})
 
         for alert in alerts:
             avro_data = encode_into_avro(alert, schema_path)
-            topic = get_legal_topic_name(alert['cdsxmatch'])
+            topic = get_legal_topic_name(alert["cdsxmatch"])
             p.produce(topic, avro_data)
         p.flush()
 
         # instantiate an AlertConsumer
         mytopics = conf["mytopics"]
 
-        myconfig = {
-            'bootstrap.servers': kafka_servers,
-            'group.id': conf['group_id']}
+        myconfig = {"bootstrap.servers": kafka_servers, "group.id": conf["group_id"]}
 
-        self.consumer = AlertConsumer(mytopics, survey="ztf", config=myconfig, schema_path=schema_path)
+        self.consumer = AlertConsumer(
+            mytopics, survey="ztf", config=myconfig, schema_path=schema_path
+        )
 
     def test_poll(self):
         topic, alert, key = self.consumer.poll()
@@ -72,7 +74,7 @@ class TestIntegration(unittest.TestCase):
 
     def test_topics(self):
         topics = self.consumer.available_topics()
-        self.assertTrue('rrlyr' in topics)
+        self.assertTrue("rrlyr" in topics)
 
     def test_broker_name(self):
         brokers = self.consumer.available_brokers()
@@ -83,6 +85,7 @@ class TestIntegration(unittest.TestCase):
 
 
 class TestComponents(unittest.TestCase):
+    """Base class for unit testing"""
 
     # def test_get_alert_schema(self):
     #     # download and check if a valid schema is downloaded
@@ -92,33 +95,35 @@ class TestComponents(unittest.TestCase):
 
     def test_get_kafka_config(self):
         from fink_client.consumer import _get_kafka_config
+
         myconfig = {
             "username": "Alice",
             "password": "Alice-secret",
-            "group.id": "test_group"
+            "group.id": "test_group",
         }
         kafka_config = _get_kafka_config(myconfig)
 
         valid_config = (
-            "security.protocol" in kafka_config and
-            "sasl.mechanism" in kafka_config and
-            "group.id" in kafka_config and
-            "bootstrap.servers" in kafka_config
+            "security.protocol" in kafka_config
+            and "sasl.mechanism" in kafka_config
+            and "group.id" in kafka_config
+            and "bootstrap.servers" in kafka_config
         )
 
         self.assertTrue(valid_config)
 
     def test_decode_avro_alert(self):
         from fink_client.consumer import _decode_avro_alert
+
         schema = {
-            'name': 'test',
-            'type': 'record',
-            'fields': [
-                {'name': 'name', 'type': 'string'},
-                {'name': 'fav_num', 'type': 'int'}
-            ]
+            "name": "test",
+            "type": "record",
+            "fields": [
+                {"name": "name", "type": "string"},
+                {"name": "fav_num", "type": "int"},
+            ],
         }
-        record = {u'name': u'Alice', u'fav_num': 63}
+        record = {"name": "Alice", "fav_num": 63}
 
         b = io.BytesIO()
         fastavro.schemaless_writer(b, schema, record)

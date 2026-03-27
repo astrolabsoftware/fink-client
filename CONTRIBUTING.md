@@ -35,7 +35,12 @@ Feel free to pick up one or another!
 
 Make sure the new code to be introduced is linted, formatted, documented and has been tested.
 Please include the corresponding unit test with your code, and do not hesitate
-to have a high verbosity in your comments ;-)
-We tend to reject large contributions without any comments or tests.
+to have a high verbosity in your comments ;-) For formatting and linting, we provide a wrapper. Just execute:
+
+```bash
+./lint.sh
+```
+
+and fix any messages left. We tend to reject large contributions without any comments or tests.
 Also make sure your new contribution does not break the current test suite
 (or explain why we did a mistake!).

@@ -53,6 +53,9 @@ unfixable = []
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
+# Ignore notebooks
+exclude = ["*.ipynb"]
+
 [format]
 # Like Black, use double quotes for strings.
 quote-style = "double"
@@ -79,6 +82,9 @@ docstring-code-format = false
 # This only has an effect when the `docstring-code-format` setting is
 # enabled.
 docstring-code-line-length = "dynamic"
+
+# Ignore notebooks
+exclude = ["*.ipynb"]
 
 [lint.pydocstyle]
 convention = "numpy"

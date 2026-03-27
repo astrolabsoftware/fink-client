@@ -62,17 +62,17 @@ import json
 from fink_broker.avroUtils import readschemafromavrofile
 
 # Load Parquet files containing alert data
-df = spark.read.format('parquet').load('sample.parquet/')
+df = spark.read.format("parquet").load("sample.parquet/")
 
 # Convert to Avro on disk
-df.write.format("avro").option('compression', 'uncompressed').save("sample.avro")
+df.write.format("avro").option("compression", "uncompressed").save("sample.avro")
 
 # Extract schema
-avro_schema = readschemafromavrofile('sample.avro/one_of_the_file.avro')
+avro_schema = readschemafromavrofile("sample.avro/one_of_the_file.avro")
 
 # Save the schema on disk
-with open('schema.avsc', 'w') as f:
-	json.dump(avro_schema, f, indent=2)
+with open("schema.avsc", "w") as f:
+    json.dump(avro_schema, f, indent=2)
 ```
 
 You can then use `sample.avro/` and `schema.avsc` to produce alerts.

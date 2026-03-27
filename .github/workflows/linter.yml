@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9", "3.10"]
+        python-version: ["3.12", "3.13"]
 
     steps:
     - uses: actions/checkout@v2
@@ -26,5 +26,5 @@ jobs:
         pip install ruff
     - name: utilities
       run: |
-        ruff check --statistics --preview fink_client
-        ruff format --check --preview fink_client
+        ruff check --statistics --preview .
+        ruff format --check --preview .
