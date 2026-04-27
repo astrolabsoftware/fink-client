@@ -30,7 +30,7 @@ setuptools.setup(
     description="Light-weight client to manipulate alerts from Fink",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://doc.lsst.fink-broker.org/en/latest/",
+    url="https://doc.lsst.fink-broker.org",
     install_requires=requirements,
     packages=setuptools.find_packages(),
     entry_points={
@@ -54,7 +54,7 @@ setuptools.setup(
         "Intended Audience :: Science/Research",
     ],
     project_urls={
-        "Documentation": "https://doc.lsst.fink-broker.org/en/latest/",
+        "Documentation": "https://doc.lsst.fink-broker.org/",
         "Source": "https://github.com/astrolabsoftware/fink-client",
     },
 )
