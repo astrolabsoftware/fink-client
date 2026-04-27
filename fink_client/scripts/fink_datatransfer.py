@@ -131,7 +131,13 @@ def poll(
             poll_number = initial
             try:
                 while poll_number < maxpoll:
-                    msgs = consumer.consume(args.batchsize, args.maxtimeout)
+                    msgs = []
+                    for _ in range(args.batchsize):
+                        msg = consumer.poll(args.maxtimeout)
+                        if msg is not None:
+                            msgs.append(msg)
+                        else:
+                            break
                     # Decode the message
                     if msgs is not None:
                         if len(msgs) == 0:
@@ -263,8 +269,8 @@ Default is None, that is no partitioning is applied (all parquet files in the `o
     parser.add_argument(
         "-batchsize",
         type=int,
-        default=1000,
-        help="Maximum number of alert within the `maxtimeout` (see conf). Default is 1000 alerts.",
+        default=100,
+        help="Maximum number of alert within the `maxtimeout` (see conf). Default is 100 alerts.",
     )
     parser.add_argument(
         "-nconsumers",
