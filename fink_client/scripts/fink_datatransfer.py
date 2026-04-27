@@ -131,7 +131,13 @@ def poll(
             poll_number = initial
             try:
                 while poll_number < maxpoll:
-                    msgs = consumer.consume(args.batchsize, args.maxtimeout)
+                    msgs = []
+                    for _ in range(args.batchsize):
+                        msg = consumer.poll(args.maxtimeout)
+                        if msg is not None:
+                            msgs.append(msg)
+                        else:
+                            break
                     # Decode the message
                     if msgs is not None:
                         if len(msgs) == 0:
