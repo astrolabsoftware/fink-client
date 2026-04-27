@@ -269,8 +269,8 @@ Default is None, that is no partitioning is applied (all parquet files in the `o
     parser.add_argument(
         "-batchsize",
         type=int,
-        default=1000,
-        help="Maximum number of alert within the `maxtimeout` (see conf). Default is 1000 alerts.",
+        default=100,
+        help="Maximum number of alert within the `maxtimeout` (see conf). Default is 100 alerts.",
     )
     parser.add_argument(
         "-nconsumers",
