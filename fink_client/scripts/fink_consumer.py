@@ -116,30 +116,16 @@ def main():
         help="Survey name among ztf or lsst. Note that each survey has its own configuration file.",
     )
     parser.add_argument(
-        "--display",
-        action="store_true",
-        help="If specified, print on screen information about incoming alert.",
-    )
-    parser.add_argument(
-        "--display_statistics",
-        action="store_true",
-        help="If specified, print on screen information about queues, and exit.",
-    )
-    parser.add_argument(
         "-limit",
         type=int,
         default=None,
         help="If specified, download only `limit` alerts. Default is None.",
     )
     parser.add_argument(
-        "--available_topics",
-        action="store_true",
-        help="If specified, print on screen information about available topics.",
-    )
-    parser.add_argument(
-        "--save",
-        action="store_true",
-        help="If specified, save alert data on disk (Avro). See also -outdir.",
+        "-start_at",
+        type=str,
+        default="",
+        help=r"If specified, reset offsets to 0 (`earliest`) or empty queue (`latest`).",
     )
     parser.add_argument(
         "-outdir",
@@ -154,15 +140,39 @@ def main():
         help="Avro schema to decode the incoming alerts. Default is None (version taken from each alert)",
     )
     parser.add_argument(
-        "--dump_schema",
+        "--available_topics",
         action="store_true",
-        help="If specified, save the schema on disk (json file)",
+        help="If specified, print on screen information about available topics, and exit.",
     )
     parser.add_argument(
-        "-start_at",
-        type=str,
-        default="",
-        help=r"If specified, reset offsets to 0 (`earliest`) or empty queue (`latest`).",
+        "--display_statistics",
+        action="store_true",
+        help="If specified, print on screen information about queues, and exit.",
+    )
+    parser.add_argument(
+        "--display",
+        action="store_true",
+        help="If specified, print on screen information about incoming alert.",
+    )
+    parser.add_argument(
+        "--save",
+        action="store_true",
+        help="If specified, save alert data on disk (Avro). See also -outdir.",
+    )
+    parser.add_argument(
+        "--telegram",
+        action="store_true",
+        help="If specified, redirect alerts on a Telegram channel.",
+    )
+    parser.add_argument(
+        "--slack",
+        action="store_true",
+        help="If specified, redirect alerts on a Slack channel.",
+    )
+    parser.add_argument(
+        "--dump_schema",
+        action="store_true",
+        help="If specified, save the schema on disk (json file) before polling.",
     )
     args = parser.parse_args(None)
 
@@ -244,25 +254,30 @@ def main():
     try:
         poll_number = 0
         while poll_number < maxpoll:
-            if args.save:
-                # Save alerts on disk
-                topic, alert, _ = consumer.poll_and_write(
-                    outdir=args.outdir, timeout=maxtimeout, overwrite=True
-                )
-            else:
-                # TODO: this is useless to get it and done nothing
-                # why not thinking about handler like Comet?
-                topic, alert, _ = consumer.poll(timeout=maxtimeout)
+            topic, alert, _ = consumer.poll(timeout=maxtimeout)
 
-            if topic is not None:
+            if alert is None:
+                if args.display:
+                    print("No alerts the last {} seconds".format(maxtimeout))
+            else:
                 poll_number += 1
                 is_mma = topic in mm_topic_names()
 
-            if args.display and topic is not None:
-                table, header = display_table(conf["survey"], topic, alert, is_mma)
-                print(tabulate(table, header, tablefmt="pretty"))
-            elif args.display:
-                print("No alerts the last {} seconds".format(maxtimeout))
+                if args.save:
+                    # Save alerts on disk
+                    store_alerts(outdir=args.outdir, overwrite=True)
+
+                if args.telegram:
+                    pass
+
+                if args.slack:
+                    pass
+
+                if args.display:
+                    # Display small table
+                    table, header = display_table(conf["survey"], topic, alert, is_mma)
+                    print(tabulate(table, header, tablefmt="pretty"))
+
     except KeyboardInterrupt:
         sys.stderr.write("%% Aborted by user\n")
     finally:
