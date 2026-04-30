@@ -18,6 +18,7 @@ import time
 from astropy.time import Time
 
 from fink_client.consumer import extract_id_from_lsst
+from fink_client.avro_utils import write_alert
 
 
 def display_alerts_as_table(survey, topic, alert, is_mma=False):
@@ -95,6 +96,23 @@ def display_alerts_as_table(survey, topic, alert, is_mma=False):
     return table, header
 
 
-def store_alerts():
+def store_alert(alert, schema, outdir, survey, is_mma, overwrite=True):
     """TBD"""
-    pass
+    if is_mma:
+        id1 = "objectId"
+        id2 = "triggerId"
+    elif survey == "ztf":
+        id1 = "objectId"
+        id2 = "candid"
+    elif survey == "lsst":
+        id1 = "diaSourceId"
+        id2 = None
+
+    write_alert(
+        alert,
+        schema,
+        outdir,
+        overwrite=overwrite,
+        id1=id1,
+        id2=id2,
+    )

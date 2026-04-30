@@ -24,7 +24,7 @@ from tabulate import tabulate
 
 from fink_client.consumer import AlertConsumer
 from fink_client.handlers import display_alerts_as_table
-from fink_client.handlers import store_alerts
+from fink_client.handlers import store_alert
 from fink_client.configuration import load_credentials
 from fink_client.configuration import mm_topic_names
 
@@ -189,8 +189,15 @@ def main():
                 is_mma = topic in mm_topic_names()
 
                 if args.save:
-                    # Save alerts on disk
-                    store_alerts(outdir=args.outdir, overwrite=True)
+                    # Save alert on disk
+                    store_alert(
+                        alert,
+                        consumer._parsed_schema,
+                        survey=args.survey,
+                        is_mma=is_mma,
+                        outdir=args.outdir,
+                        overwrite=True,
+                    )
 
                 if args.telegram:
                     pass
