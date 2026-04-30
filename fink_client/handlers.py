@@ -20,6 +20,9 @@ from tabulate import tabulate
 
 from fink_client.consumer import extract_id_from_lsst
 from fink_client.avro_utils import write_alert
+from fink_client.visualisation import extract_field
+
+from fink_utils.tg_bot.utils import get_curve, get_cutout, msg_handler_tg
 
 
 def display_alerts_as_table(survey, topic, alert, is_mma=False) -> None:
@@ -113,4 +116,74 @@ def store_alert(alert, schema, outdir, survey, is_mma, overwrite=True):
         overwrite=overwrite,
         id1=id1,
         id2=id2,
+    )
+
+
+def send_to_telegram(alert, survey, token):
+    """ """
+    if survey == "ztf":
+        curve_png = get_curve(
+            jd=extract_field(
+                alert, "jd", current="candidate", previous="prv_candidates"
+            ),
+            magpsf=extract_field(
+                alert, "magpsf", current="candidate", previous="prv_candidates"
+            ),
+            sigmapsf=extract_field(
+                alert, "sigmapsf", current="candidate", previous="prv_candidates"
+            ),
+            diffmaglim=extract_field(
+                alert, "diffmaglim", current="candidate", previous="prv_candidates"
+            ),
+            fid=extract_field(
+                alert, "fid", current="candidate", previous="prv_candidates"
+            ),
+            objectId=alert["objectId"],
+            origin="fields",
+        )
+
+        cutout = get_cutout(cutout=alert["cutoutScience"]["stampData"])
+
+        text = """
+    *Object ID*: [{}](https://ztf.fink-portal.org/{})
+        """.format(
+            alert["objectId"],
+            alert["objectId"],
+        )
+    elif survey == "lsst":
+        mjds = extract_field(
+            alert, "midpointMjdTai", current="diaSource", previous="prvDiaSources"
+        )
+        curve_png = get_curve(
+            jd=mjds,
+            magpsf=extract_field(
+                alert, "scienceFlux", current="diaSource", previous="prvDiaSources"
+            ),
+            sigmapsf=extract_field(
+                alert, "scienceFluxErr", current="diaSource", previous="prvDiaSources"
+            ),
+            diffmaglim=[None] * len(mjds),
+            fid=extract_field(
+                alert, "band", current="diaSource", previous="prvDiaSources"
+            ),
+            objectId=alert["diaSource"]["diaObjectId"],
+            origin="fields",
+            invert_yaxis=False,
+            ylabel="Science Flux [nJy]",
+        )
+
+        cutout = get_cutout(cutout=alert["cutoutScience"])
+
+        text = """
+    *Object ID*: [{}](https://lsst.fink-portal.org/{})
+        """.format(
+            alert["diaSource"]["diaObjectId"],
+            alert["diaSource"]["diaObjectId"],
+        )
+
+    msg_handler_tg(
+        [(text, curve_png, cutout)],
+        channel_id="@fink_client_bot_test",
+        init_msg="",
+        token=token,
     )

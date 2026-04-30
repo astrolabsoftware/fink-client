@@ -23,6 +23,7 @@ import argparse
 from fink_client.consumer import AlertConsumer
 from fink_client.handlers import display_alerts_as_table
 from fink_client.handlers import store_alert
+from fink_client.handlers import send_to_telegram
 from fink_client.configuration import load_credentials
 from fink_client.configuration import mm_topic_names
 
@@ -197,7 +198,11 @@ def main():
                     )
 
                 if args.telegram:
-                    pass
+                    token = conf["tg_tokens"].get(topic, None)
+                    if token is None:
+                        print("You need to have a token for the topic {}".format(topic))
+                        break
+                    send_to_telegram(alert, args.survey, token)
 
                 if args.slack:
                     pass
