@@ -19,91 +19,16 @@ import sys
 import os
 
 import argparse
-import time
 
-from astropy.time import Time
 from tabulate import tabulate
 
-from fink_client.consumer import AlertConsumer, extract_id_from_lsst
+from fink_client.consumer import AlertConsumer
+from fink_client.handlers import display_alerts_as_table
+from fink_client.handlers import store_alerts
 from fink_client.configuration import load_credentials
 from fink_client.configuration import mm_topic_names
 
 from fink_client.consumer import print_offsets
-
-
-def display_table(survey, topic, alert, is_mma=False):
-    """Display table based on input survey
-
-    Parameters
-    ----------
-    survey: str
-        lsst or ztf
-    topic: str
-        Topic name
-    alert: dict
-        Dictionary containing alert data
-    is_mma: bool, optional
-        If True, assumes MMA topics (ZTF only).
-
-    Returns
-    -------
-    table: list of list
-    header: list of str
-    """
-    utc = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
-    if survey == "ztf":
-        if is_mma:
-            table = [
-                [
-                    alert["objectId"],
-                    alert["fink_class"],
-                    topic,
-                    alert["rate"],
-                    alert["observatory"],
-                    alert["triggerId"],
-                ]
-            ]
-            header = [
-                "ObjectId",
-                "Classification",
-                "Topic",
-                "Rate (mag/day)",
-                "Observatory",
-                "Trigger ID",
-            ]
-        else:
-            table = [
-                [
-                    Time(alert["candidate"]["jd"], format="jd").iso,
-                    utc,
-                    topic,
-                    alert["objectId"],
-                    alert["cdsxmatch"],
-                    alert["candidate"]["magpsf"],
-                ],
-            ]
-            header = [
-                "Emitted at (UTC)",
-                "Received at (UTC)",
-                "Topic",
-                "objectId",
-                "Simbad",
-                "Magnitude",
-            ]
-    elif survey == "lsst":
-        id_value, id_name = extract_id_from_lsst(alert)
-        table = [
-            [
-                Time(
-                    alert["diaSource"]["midpointMjdTai"], format="mjd", scale="tai"
-                ).utc.iso,
-                utc,
-                topic,
-                id_value,
-            ]
-        ]
-        header = ["Emitted at (UTC)", "Received at (UTC)", "Topic", id_name]
-    return table, header
 
 
 def main():
@@ -275,7 +200,9 @@ def main():
 
                 if args.display:
                     # Display small table
-                    table, header = display_table(conf["survey"], topic, alert, is_mma)
+                    table, header = display_alerts_as_table(
+                        conf["survey"], topic, alert, is_mma
+                    )
                     print(tabulate(table, header, tablefmt="pretty"))
 
     except KeyboardInterrupt:
