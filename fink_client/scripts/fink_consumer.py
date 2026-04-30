@@ -20,8 +20,6 @@ import os
 
 import argparse
 
-from tabulate import tabulate
-
 from fink_client.consumer import AlertConsumer
 from fink_client.handlers import display_alerts_as_table
 from fink_client.handlers import store_alert
@@ -189,7 +187,6 @@ def main():
                 is_mma = topic in mm_topic_names()
 
                 if args.save:
-                    # Save alert on disk
                     store_alert(
                         alert,
                         consumer._parsed_schema,
@@ -206,11 +203,7 @@ def main():
                     pass
 
                 if args.display:
-                    # Display small table
-                    table, header = display_alerts_as_table(
-                        conf["survey"], topic, alert, is_mma
-                    )
-                    print(tabulate(table, header, tablefmt="pretty"))
+                    display_alerts_as_table(conf["survey"], topic, alert, is_mma)
 
     except KeyboardInterrupt:
         sys.stderr.write("%% Aborted by user\n")

@@ -16,12 +16,13 @@
 import time
 
 from astropy.time import Time
+from tabulate import tabulate
 
 from fink_client.consumer import extract_id_from_lsst
 from fink_client.avro_utils import write_alert
 
 
-def display_alerts_as_table(survey, topic, alert, is_mma=False):
+def display_alerts_as_table(survey, topic, alert, is_mma=False) -> None:
     """Display table based on input survey
 
     Parameters
@@ -35,10 +36,6 @@ def display_alerts_as_table(survey, topic, alert, is_mma=False):
     is_mma: bool, optional
         If True, assumes MMA topics (ZTF only).
 
-    Returns
-    -------
-    table: list of list
-    header: list of str
     """
     utc = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
     if survey == "ztf":
@@ -93,7 +90,8 @@ def display_alerts_as_table(survey, topic, alert, is_mma=False):
             ]
         ]
         header = ["Emitted at (UTC)", "Received at (UTC)", "Topic", id_name]
-    return table, header
+
+    print(tabulate(table, header, tablefmt="pretty"))
 
 
 def store_alert(alert, schema, outdir, survey, is_mma, overwrite=True):
