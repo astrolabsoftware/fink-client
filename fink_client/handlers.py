@@ -22,7 +22,7 @@ from fink_client.consumer import extract_id_from_lsst
 from fink_client.avro_utils import write_alert
 from fink_client.visualisation import extract_field
 
-from fink_utils.tg_bot.utils import get_curve, get_cutout, msg_handler_tg
+from fink_client.botlib import get_curve, get_cutout, msg_handler_tg
 
 
 def display_alerts_as_table(survey, topic, alert, is_mma=False) -> None:
@@ -144,12 +144,9 @@ def send_to_telegram(alert, survey, token):
 
         cutout = get_cutout(cutout=alert["cutoutScience"]["stampData"])
 
-        text = """
-    *Object ID*: [{}](https://ztf.fink-portal.org/{})
-        """.format(
-            alert["objectId"],
-            alert["objectId"],
-        )
+        text = f"""
+    *Object ID*: [{alert["objectId"]}](https://ztf.fink-portal.org/{alert["objectId"]})
+        """
     elif survey == "lsst":
         mjds = extract_field(
             alert, "midpointMjdTai", current="diaSource", previous="prvDiaSources"
@@ -174,12 +171,9 @@ def send_to_telegram(alert, survey, token):
 
         cutout = get_cutout(cutout=alert["cutoutScience"])
 
-        text = """
-    *Object ID*: [{}](https://lsst.fink-portal.org/{})
-        """.format(
-            alert["diaSource"]["diaObjectId"],
-            alert["diaSource"]["diaObjectId"],
-        )
+        text = f"""
+    *Object ID*: [{alert["diaSource"]["diaObjectId"]}](https://lsst.fink-portal.org/{alert["diaSource"]["diaObjectId"]})
+        """
 
     msg_handler_tg(
         [(text, curve_png, cutout)],
