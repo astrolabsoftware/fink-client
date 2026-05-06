@@ -38,6 +38,7 @@ dev = [
 version = {attr = "fink_client.__version__"}
 
 [project.scripts]
+finkctl = "fink_client.scripts.finkctl:cli"
 fink_consumer = "fink_client.scripts.fink_consumer:main"
 fink_datatransfer = "fink_client.scripts.fink_datatransfer:main"
 fink_client_register = "fink_client.scripts.fink_client_register:main"
