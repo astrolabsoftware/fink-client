@@ -19,91 +19,15 @@ import sys
 import os
 
 import argparse
-import time
 
-from astropy.time import Time
-from tabulate import tabulate
-
-from fink_client.consumer import AlertConsumer, extract_id_from_lsst
+from fink_client.consumer import AlertConsumer
+from fink_client.handlers import display_alerts_as_table
+from fink_client.handlers import store_alert
+from fink_client.handlers import send_to_telegram
 from fink_client.configuration import load_credentials
 from fink_client.configuration import mm_topic_names
 
 from fink_client.consumer import print_offsets
-
-
-def display_table(survey, topic, alert, is_mma=False):
-    """Display table based on input survey
-
-    Parameters
-    ----------
-    survey: str
-        lsst or ztf
-    topic: str
-        Topic name
-    alert: dict
-        Dictionary containing alert data
-    is_mma: bool, optional
-        If True, assumes MMA topics (ZTF only).
-
-    Returns
-    -------
-    table: list of list
-    header: list of str
-    """
-    utc = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
-    if survey == "ztf":
-        if is_mma:
-            table = [
-                [
-                    alert["objectId"],
-                    alert["fink_class"],
-                    topic,
-                    alert["rate"],
-                    alert["observatory"],
-                    alert["triggerId"],
-                ]
-            ]
-            header = [
-                "ObjectId",
-                "Classification",
-                "Topic",
-                "Rate (mag/day)",
-                "Observatory",
-                "Trigger ID",
-            ]
-        else:
-            table = [
-                [
-                    Time(alert["candidate"]["jd"], format="jd").iso,
-                    utc,
-                    topic,
-                    alert["objectId"],
-                    alert["cdsxmatch"],
-                    alert["candidate"]["magpsf"],
-                ],
-            ]
-            header = [
-                "Emitted at (UTC)",
-                "Received at (UTC)",
-                "Topic",
-                "objectId",
-                "Simbad",
-                "Magnitude",
-            ]
-    elif survey == "lsst":
-        id_value, id_name = extract_id_from_lsst(alert)
-        table = [
-            [
-                Time(
-                    alert["diaSource"]["midpointMjdTai"], format="mjd", scale="tai"
-                ).utc.iso,
-                utc,
-                topic,
-                id_value,
-            ]
-        ]
-        header = ["Emitted at (UTC)", "Received at (UTC)", "Topic", id_name]
-    return table, header
 
 
 def main():
@@ -116,30 +40,16 @@ def main():
         help="Survey name among ztf or lsst. Note that each survey has its own configuration file.",
     )
     parser.add_argument(
-        "--display",
-        action="store_true",
-        help="If specified, print on screen information about incoming alert.",
-    )
-    parser.add_argument(
-        "--display_statistics",
-        action="store_true",
-        help="If specified, print on screen information about queues, and exit.",
-    )
-    parser.add_argument(
         "-limit",
         type=int,
         default=None,
         help="If specified, download only `limit` alerts. Default is None.",
     )
     parser.add_argument(
-        "--available_topics",
-        action="store_true",
-        help="If specified, print on screen information about available topics.",
-    )
-    parser.add_argument(
-        "--save",
-        action="store_true",
-        help="If specified, save alert data on disk (Avro). See also -outdir.",
+        "-start_at",
+        type=str,
+        default="",
+        help=r"If specified, reset offsets to 0 (`earliest`) or empty queue (`latest`).",
     )
     parser.add_argument(
         "-outdir",
@@ -154,15 +64,39 @@ def main():
         help="Avro schema to decode the incoming alerts. Default is None (version taken from each alert)",
     )
     parser.add_argument(
-        "--dump_schema",
+        "--available_topics",
         action="store_true",
-        help="If specified, save the schema on disk (json file)",
+        help="If specified, print on screen information about available topics, and exit.",
     )
     parser.add_argument(
-        "-start_at",
-        type=str,
-        default="",
-        help=r"If specified, reset offsets to 0 (`earliest`) or empty queue (`latest`).",
+        "--display_statistics",
+        action="store_true",
+        help="If specified, print on screen information about queues, and exit.",
+    )
+    parser.add_argument(
+        "--display",
+        action="store_true",
+        help="If specified, print on screen information about incoming alert.",
+    )
+    parser.add_argument(
+        "--save",
+        action="store_true",
+        help="If specified, save alert data on disk (Avro). See also -outdir.",
+    )
+    parser.add_argument(
+        "--telegram",
+        action="store_true",
+        help="If specified, redirect alerts on a Telegram channel.",
+    )
+    parser.add_argument(
+        "--slack",
+        action="store_true",
+        help="If specified, redirect alerts on a Slack channel.",
+    )
+    parser.add_argument(
+        "--dump_schema",
+        action="store_true",
+        help="If specified, save the schema on disk (json file) before polling.",
     )
     args = parser.parse_args(None)
 
@@ -244,25 +178,38 @@ def main():
     try:
         poll_number = 0
         while poll_number < maxpoll:
-            if args.save:
-                # Save alerts on disk
-                topic, alert, _ = consumer.poll_and_write(
-                    outdir=args.outdir, timeout=maxtimeout, overwrite=True
-                )
-            else:
-                # TODO: this is useless to get it and done nothing
-                # why not thinking about handler like Comet?
-                topic, alert, _ = consumer.poll(timeout=maxtimeout)
+            topic, alert, _ = consumer.poll(timeout=maxtimeout)
 
-            if topic is not None:
+            if alert is None:
+                if args.display:
+                    print("No alerts the last {} seconds".format(maxtimeout))
+            else:
                 poll_number += 1
                 is_mma = topic in mm_topic_names()
 
-            if args.display and topic is not None:
-                table, header = display_table(conf["survey"], topic, alert, is_mma)
-                print(tabulate(table, header, tablefmt="pretty"))
-            elif args.display:
-                print("No alerts the last {} seconds".format(maxtimeout))
+                if args.save:
+                    store_alert(
+                        alert,
+                        consumer._parsed_schema,
+                        survey=args.survey,
+                        is_mma=is_mma,
+                        outdir=args.outdir,
+                        overwrite=True,
+                    )
+
+                if args.telegram:
+                    token = conf["tg_tokens"].get(topic, None)
+                    if token is None:
+                        print("You need to have a token for the topic {}".format(topic))
+                        break
+                    send_to_telegram(alert, args.survey, token)
+
+                if args.slack:
+                    pass
+
+                if args.display:
+                    display_alerts_as_table(conf["survey"], topic, alert, is_mma)
+
     except KeyboardInterrupt:
         sys.stderr.write("%% Aborted by user\n")
     finally:
