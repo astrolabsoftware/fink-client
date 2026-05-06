@@ -27,7 +27,7 @@ jobs:
     - name: Install Python dependencies
       run: |
         pip install --upgrade pip setuptools wheel
-        pip install .[all]
+        pip install -e .[all]
         echo "PYTHONPATH="${PYTHONPATH}:${SPARKLIB}:${FINK_CLIENT_HOME}"" >> $GITHUB_ENV
     - name: Check env
       run: |
