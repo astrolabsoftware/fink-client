@@ -2,7 +2,7 @@ import rich_click as click
 from tabulate import tabulate
 
 from fink_client.scripts.finkctl_register import register_
-from fink_client.configuration import load_credentials
+from fink_client.configuration import load_credentials, add_topic, remove_topic
 
 click.rich_click.THEME = "red1-nu"
 
@@ -75,12 +75,12 @@ def cli():
     epilog="More information at https://fink-broker.org/",
     no_args_is_help=True,
 )
-def register(survey, username, group_id, servers, log_level, maxtimeout, tmp):
+def register(survey, username, groupid, servers, log_level, maxtimeout, tmp):
     """Configure the client connection for the different services.
 
     You should run `register` for all surveys you are using.
     """
-    register_(survey, username, group_id, servers, topic, log_level, maxtimeout, tmp)
+    register_(survey, username, groupid, servers, log_level, maxtimeout, tmp)
 
 
 @cli.group(
@@ -120,8 +120,13 @@ def topic():
     help="Channel name in Telegram to redirect alerts to. The channel must exist.",
 )
 def subscribe(survey, name, telegram_token, telegram_channel):
-    """Subscribe to a new topic for the Livestream service"""
-    pass
+    """Subscribe to a new topic for the Livestream service
+
+    Examples
+    --------
+    $ finkctl topic subscribe -survey lsst -name fink_in_tns_lsst -telegram_token $TOKEN -telegram_channel "@fink_tns"
+    """
+    add_topic(survey, name, telegram_token, telegram_channel)
 
 
 @topic.command(
@@ -143,7 +148,7 @@ def subscribe(survey, name, telegram_token, telegram_channel):
 )
 def remove(survey, name):
     """Remove a topic for the Livestream service."""
-    pass
+    remove_topic(survey, name)
 
 
 @topic.command(
@@ -176,7 +181,7 @@ def list(survey):
         conf = load_credentials(survey=survey)
         config = {
             "bootstrap.servers": conf["servers"],
-            "group.id": conf["group_id"],
+            "group.id": conf["groupid"],
         }
         consumer = AlertConsumer(
             topics=[],

@@ -159,6 +159,41 @@ def load_credentials(survey: str, tmp: bool = False) -> dict:
     return creds
 
 
+def add_topic(survey: str, name: str, telegram_token, telegram_channel):
+    """ """
+    conf = load_credentials(survey)
+
+    out = {
+        name: {
+            "telegram": {
+                "token": telegram_token,
+                "channel": telegram_channel,
+            }
+        }
+    }
+
+    if conf.get("topics") is None:
+        conf["topics"] = out
+    elif isinstance(conf["topics"], dict):
+        conf["topics"].update(out)
+
+    write_credentials(conf)
+
+
+def remove_topic(survey: str, name: str):
+    """ """
+    conf = load_credentials(survey)
+
+    if name in conf.get("topics").keys():
+        _LOG.info(f"Removing {name} from the list of topics")
+        conf["topics"].pop(name)
+        write_credentials(conf)
+    else:
+        _LOG.warning(
+            f"{name} is not in your configuration. Check topics using: finkctl topic list -survey {survey}"
+        )
+
+
 def mm_topic_names():
     """Return list of topics with MMA schema"""
     out = [
