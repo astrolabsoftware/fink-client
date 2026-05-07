@@ -1,6 +1,8 @@
 import rich_click as click
+from tabulate import tabulate
 
 from fink_client.scripts.finkctl_register import register_
+from fink_client.configuration import load_credentials
 
 click.rich_click.THEME = "red1-nu"
 
@@ -146,7 +148,13 @@ def remove(survey, name):
 
 @topic.command(
     context_settings=CONTEXT_SETTINGS,
-    epilog="More information at https://fink-broker.org/",
+    epilog="""
+    More information at
+
+    - ZTF: https://doc.lsst.fink-broker.org/science/filters/
+
+    - LSST: https://doc.lsst.fink-broker.org/science/filters/
+    """,
     no_args_is_help=True,
 )
 @click.option(
@@ -155,16 +163,47 @@ def remove(survey, name):
     required=True,
     help="Survey name.",
 )
-@click.option(
-    "--available",
-    is_flag=True,
-    help="If specified, list all available topics",
-)
-@click.option(
-    "--subscribed",
-    is_flag=True,
-    help="If specified, list all subscribed topics",
-)
-def list(survey, available, subscribed):
+def list(survey):
     """List topics for the Livestream service."""
-    pass
+    # load user configuration
+    conf = load_credentials(survey=survey)
+
+    # TODO: Extract subscribed
+    if survey == "ztf":
+        from fink_client.consumer import AlertConsumer
+
+        # FIXME: Add endpoint like for LSST
+        conf = load_credentials(survey=survey)
+        config = {
+            "bootstrap.servers": conf["servers"],
+            "group.id": conf["group_id"],
+        }
+        consumer = AlertConsumer(
+            topics=[],
+            config=config,
+            survey=conf["survey"],
+            schema_path=None,
+            dump_schema=False,
+            on_assign=None,
+        )
+        topics = consumer.available_topics(service="livestream")
+        print(
+            tabulate(
+                [[i, "NO"] for i in topics],
+                [f"Fink/{survey.upper()} topics", "Subscribed"],
+                tablefmt="pretty",
+            )
+        )
+        consumer.close()
+    if survey == "lsst":
+        import requests
+
+        r = requests.get("https://api.lsst.fink-portal.org/api/v1/tags")
+        out = r.json()
+        print(
+            tabulate(
+                [["fink_" + k + "_lsst", v, "NO"] for k, v in out.items()],
+                [f"Fink/{survey.upper()} topics", "Description", "Subscribed"],
+                tablefmt="grid",
+            )
+        )
