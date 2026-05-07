@@ -55,9 +55,8 @@ def write_credentials(dict_file: dict, log_level: str = "WARN", tmp: bool = Fals
     ...   'survey': 'lsst',
     ...   'username': 'test',
     ...   'password': None,
-    ...   'mytopics': ['rrlyr'],
     ...   'servers': 'localhost:9093',
-    ...   'group_id': 'test_group',
+    ...   'groupid': 'test_group',
     ...   'maxtimeout': 10
     ... }
     >>> write_credentials(conf, log_level="WARN", tmp=True)
@@ -72,7 +71,7 @@ def write_credentials(dict_file: dict, log_level: str = "WARN", tmp: bool = Fals
     mandatory_keys = [
         "survey",
         "username",
-        "group_id",
+        "groupid",
         "servers",
     ]
     for k in mandatory_keys:
@@ -115,9 +114,8 @@ def load_credentials(survey: str, tmp: bool = False) -> dict:
     ...   'survey': 'lsst',
     ...   'username': 'test',
     ...   'password': None,
-    ...   'mytopics': ['rrlyr'],
     ...   'servers': 'localhost:9093',
-    ...   'group_id': 'test_group',
+    ...   'groupid': 'test_group',
     ...   'maxtimeout': 10
     ... }
     >>> write_credentials(conf_in, tmp=True)
