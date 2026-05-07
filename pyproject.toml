@@ -13,7 +13,7 @@ maintainers = [
 ]
 requires-python = ">=3.9"
 dependencies = [
-    "click>=8.1",
+    "rich-click>=1.9.7",
     "astropy>=6.1.7",
     "confluent-kafka>=2.14.0",
     "fastavro>=1.9.4,<2.0.0",
@@ -32,6 +32,11 @@ dev = [
     "coverage",
     "coveralls",
     "ruff",
+]
+# pin version to get 32bit binaries
+rpi0 = [
+    "contourpy<1.1",
+    "kiwisolver<1.4.8",
 ]
 
 [tool.setuptools.dynamic]
