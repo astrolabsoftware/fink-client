@@ -3,6 +3,7 @@ from tabulate import tabulate
 
 from fink_client.scripts.finkctl_register import register_
 from fink_client.scripts.finkctl_stream import stream_
+from fink_client.scripts.finkctl_transfer import transfer_
 
 from fink_client.configuration import load_credentials, add_topic, remove_topic
 
@@ -270,9 +271,9 @@ def list(survey):
 )
 @click.option(
     "-survey",
-    type=str,
+    type=click.Choice(["ztf", "lsst"]),
     required=True,
-    help="Survey name among ztf or lsst. Note that each survey has its own configuration file.",
+    help="Survey name.",
 )
 @click.option(
     "-limit",
@@ -365,9 +366,126 @@ def stream(
     epilog="More information at https://fink-broker.org/",
     no_args_is_help=True,
 )
-def transfer():
+@click.option(
+    "-survey",
+    type=click.Choice(["ztf", "lsst"]),
+    required=True,
+    help="Survey name.",
+)
+@click.option(
+    "-topic",
+    type=str,
+    required=True,
+    help="Topic name for the stream that contains the data.",
+)
+@click.option(
+    "-outdir",
+    type=str,
+    default=".",
+    help="Folder to store incoming alerts. It will be created if it does not exist.",
+)
+@click.option(
+    "-outformat",
+    type=click.Choice(["parquet", "avro"]),
+    default="parquet",
+    help="Output alert format. Default is parquet.",
+)
+@click.option(
+    "-partitionby",
+    type=click.Choice([None, "time", "finkclass", "tnsclass", "classId"]),
+    default=None,
+    help="""
+If specified, partition data when writing alerts on disk. Available options:
+
+- None: no partitioning (ztf and lsst)
+
+- time: year=YYYY/month=MM/day=DD (ztf and lsst)
+
+- finkclass: finkclass=CLASS (ztf only)
+
+- tnsclass: tnsclass=CLASS (ztf only)
+
+- classId: classId=CLASSID (ELASTiCC only)
+
+Default is None, that is no partitioning is applied (all parquet files in the `outdir` folder).
+""",
+)
+@click.option(
+    "-limit",
+    type=int,
+    default=None,
+    help="If specified, download only `limit` alerts from the stream, otherwise download all alerts.",
+)
+@click.option(
+    "-batchsize",
+    type=int,
+    default=100,
+    help="Maximum number of alert within the `maxtimeout` (see conf). Default is 100 alerts.",
+)
+@click.option(
+    "-nconsumers",
+    type=int,
+    default=-1,
+    help="Number of parallel consumer to use. Default (-1) is the number of logical CPUs in the system.",
+)
+@click.option(
+    "-maxtimeout",
+    type=float,
+    default=None,
+    help="Overwrite the default timeout (in seconds) from user configuration.",
+)
+@click.option(
+    "-number_partitions",
+    type=int,
+    default=10,
+    help="Number of partitions for the topic in the distant Kafka cluster. Do not change unless you know what your are doing. Default is 10 (Fink Kafka cluster)",
+)
+@click.option(
+    "--restart_from_beginning",
+    is_flag=True,
+    help="If specified, restart downloading from the 1st alert in the stream.",
+)
+@click.option(
+    "--dump_schemas",
+    is_flag=True,
+    help="If specified, save the avro & arrow schemas on disk (json file)",
+)
+@click.option(
+    "--verbose",
+    is_flag=True,
+    help="If specified, print on screen information about the consuming.",
+)
+def transfer(
+    survey,
+    topic,
+    limit,
+    outdir,
+    outformat,
+    partitionby,
+    batchsize,
+    nconsumers,
+    maxtimeout,
+    number_partitions,
+    restart_from_beginning,
+    dump_schemas,
+    verbose,
+):
     """Archive Fink streams from the Fink Data Transfer service."""
-    pass
+    transfer_(
+        survey,
+        topic,
+        limit,
+        outdir,
+        outformat,
+        partitionby,
+        batchsize,
+        nconsumers,
+        maxtimeout,
+        number_partitions,
+        restart_from_beginning,
+        dump_schemas,
+        verbose,
+    )
 
 
 @cli.command(

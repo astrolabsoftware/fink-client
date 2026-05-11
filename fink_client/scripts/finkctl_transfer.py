@@ -18,7 +18,6 @@
 import sys
 import os
 import io
-import argparse
 import psutil
 import json
 import time
@@ -53,7 +52,6 @@ _LOG = get_fink_logger("Fink", "WARNING")
 
 def poll(
     process_id,
-    nconsumers,
     queue,
     schema,
     kafka_config,
@@ -68,8 +66,6 @@ def poll(
     ----------
     process_id: int
         ID of the process used for multiprocessing
-    nconsumers: int
-        Number of consumers (cores) in parallel
     queue: Multiprocessing.Queue
         Shared queue between processes where are stocked partitions
         and the last offset of the partition
@@ -85,8 +81,7 @@ def poll(
     consumer = confluent_kafka.Consumer(kafka_config)
 
     # infinite loop
-    maxpoll = int(args.limit / nconsumers) if args.limit is not None else 1e10
-    disable = not args.verbose
+    maxpoll = int(args.limit / args.nconsumers) if args.limit is not None else 1e10
 
     poll_number = 0
     pbar = None
@@ -112,7 +107,7 @@ def poll(
                 initial=initial,
                 colour="#F5622E",
                 unit="alerts",
-                disable=disable,
+                disable=not args.verbose,
                 desc="Consumer {}".format(partition["partition"]),
                 bar_format="{desc}: {n:,} {unit} [{rate_fmt}{postfix}]",
             )
@@ -220,92 +215,37 @@ def poll(
     consumer.close()
 
 
-def main():
+def transfer_(
+    survey,
+    topic,
+    limit,
+    outdir,
+    outformat,
+    partitionby,
+    batchsize,
+    nconsumers_,
+    maxtimeout,
+    number_partitions,
+    restart_from_beginning,
+    dump_schemas,
+    verbose,
+):
     """ """
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "-survey",
-        type=str,
-        required=True,
-        help="Survey name among ztf or lsst. Note that each survey will have its own configuration file.",
-    )
-    parser.add_argument(
-        "-topic",
-        type=str,
-        required=True,
-        help="Topic name for the stream that contains the data.",
-    )
-    parser.add_argument(
-        "-limit",
-        type=int,
-        default=None,
-        help="If specified, download only `limit` alerts from the stream. Default is None, that is download all alerts.",
-    )
-    parser.add_argument(
-        "-outdir",
-        type=str,
-        default=".",
-        help="Folder to store incoming alerts. It will be created if it does not exist.",
-    )
-    parser.add_argument(
-        "-outformat",
-        type=str,
-        default="parquet",
-        help="Output alert format. Choose among: parquet, avro. Default is parquet.",
-    )
-    parser.add_argument(
-        "-partitionby",
-        type=str,
-        default=None,
-        help="""
-If specified, partition data when writing alerts on disk. Available options:
-- `time`: year=YYYY/month=MM/day=DD (ztf and lsst)
-- `finkclass`: finkclass=CLASS (ztf only)
-- `tnsclass`: tnsclass=CLASS (ztf only)
-- `classId`: classId=CLASSID (ELASTiCC only)
-Default is None, that is no partitioning is applied (all parquet files in the `outdir` folder).
-""",
-    )
-    parser.add_argument(
-        "-batchsize",
-        type=int,
-        default=100,
-        help="Maximum number of alert within the `maxtimeout` (see conf). Default is 100 alerts.",
-    )
-    parser.add_argument(
-        "-nconsumers",
-        type=int,
-        default=-1,
-        help="Number of parallel consumer to use. Default (-1) is the number of logical CPUs in the system.",
-    )
-    parser.add_argument(
-        "-maxtimeout",
-        type=float,
-        default=None,
-        help="Overwrite the default timeout (in seconds) from user configuration. Default is None.",
-    )
-    parser.add_argument(
-        "-number_partitions",
-        type=int,
-        default=10,
-        help="Number of partitions for the topic in the distant Kafka cluster. Do not change unless you know what your are doing. Default is 10 (Fink Kafka cluster)",
-    )
-    parser.add_argument(
-        "--restart_from_beginning",
-        action="store_true",
-        help="If specified, restart downloading from the 1st alert in the stream. Default is False.",
-    )
-    parser.add_argument(
-        "--dump_schemas",
-        action="store_true",
-        help="If specified, save the avro & arrow schemas on disk (json file)",
-    )
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="If specified, print on screen information about the consuming.",
-    )
-    args = parser.parse_args(None)
+    dict_args = {}
+    dict_args["survey"] = survey
+    dict_args["topic"] = topic
+    dict_args["limit"] = limit
+    dict_args["outdir"] = outdir
+    dict_args["outformat"] = outformat
+    dict_args["partitionby"] = partitionby
+    dict_args["batchsize"] = batchsize
+    dict_args["nconsumers"] = nconsumers_
+    dict_args["maxtimeout"] = maxtimeout
+    dict_args["restart_from_beginning"] = restart_from_beginning
+    dict_args["dump_schemas"] = dump_schemas
+    dict_args["verbose"] = verbose
+
+    args = type("args", (object,), dict_args)
 
     if args.partitionby is not None and args.partitionby not in [
         "time",
@@ -360,10 +300,10 @@ and open the tab `Get your data` to retrieve the topic.
         args.maxtimeout = conf["maxtimeout"]
 
     # Number of consumers to use
-    if args.nconsumers == -1:
-        nconsumers = psutil.cpu_count(logical=True)
+    if nconsumers_ == -1:
+        args.nconsumers = psutil.cpu_count(logical=True)
     else:
-        nconsumers = args.nconsumers
+        args.nconsumers = nconsumers_
 
     kafka_config = {
         "bootstrap.servers": conf["servers"],
@@ -382,7 +322,7 @@ and open the tab `Get your data` to retrieve the topic.
         # All offsets, commited or not
         args.total_lag = sum(lags) + sum(offsets)
         args.total_offset = 0
-        offsets = [0 for _ in range(args.number_partitions)]
+        offsets = [0 for _ in range(number_partitions)]
     else:
         offsets, lags = print_offsets(
             kafka_config, args.topic, args.maxtimeout, hide_empty_partition=False
@@ -447,12 +387,11 @@ and open the tab `Get your data` to retrieve the topic.
     random_state = 0
     rng = np.random.RandomState(random_state)
     procs = []
-    for i in range(nconsumers):
+    for procid in range(args.nconsumers):
         proc = Process(
             target=poll,
             args=(
-                i + 1,
-                nconsumers,
+                procid + 1,
                 available,
                 avro_schema,
                 kafka_config,
@@ -486,7 +425,3 @@ and open the tab `Get your data` to retrieve the topic.
         proc.join()
 
     print_offsets(kafka_config, args.topic, args.maxtimeout)
-
-
-if __name__ == "__main__":
-    main()
