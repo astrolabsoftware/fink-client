@@ -1,13 +1,6 @@
 import rich_click as click
-from tabulate import tabulate
 
-from fink_client.scripts.finkctl_register import register_
-from fink_client.scripts.finkctl_stream import stream_
-from fink_client.scripts.finkctl_transfer import transfer_
-
-from fink_client.configuration import load_credentials, add_topic, remove_topic
-
-click.rich_click.THEME = "red1-nu"
+click.rich_click.THEME = "red1-box"
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
@@ -130,6 +123,7 @@ def register(survey, username, groupid, servers, log_level, maxtimeout, tmp):
 
     You should run `register` for all surveys you are using.
     """
+    from fink_client.scripts.finkctl_register import register_
     register_(survey, username, groupid, servers, log_level, maxtimeout, tmp)
 
 
@@ -221,6 +215,7 @@ def remove(survey, name):
 def list(survey):
     """List topics for the Livestream service."""
     # load user configuration
+    from tabulate import tabulate
     conf = load_credentials(survey=survey)
 
     # TODO: Extract subscribed
@@ -346,6 +341,7 @@ def stream(
 
     The list of available topics can be seen from `finkctl topic list`.
     """
+    from fink_client.scripts.finkctl_stream import stream_
     stream_(
         survey,
         limit,
@@ -471,6 +467,7 @@ def transfer(
     verbose,
 ):
     """Archive Fink streams from the Fink Data Transfer service."""
+    from fink_client.scripts.finkctl_transfer import transfer_
     transfer_(
         survey,
         topic,
