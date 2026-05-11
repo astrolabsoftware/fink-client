@@ -492,4 +492,4 @@ def transfer(
 )
 def search():
     """Search for alerts in the Fink database."""
-    pass
+    click.echo("Not yet available")
