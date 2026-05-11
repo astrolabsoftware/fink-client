@@ -358,3 +358,23 @@ def stream(
         slack,
         dump_schema,
     )
+
+
+@cli.command(
+    context_settings=CONTEXT_SETTINGS,
+    epilog="More information at https://fink-broker.org/",
+    no_args_is_help=True,
+)
+def transfer():
+    """Archive Fink streams from the Fink Data Transfer service."""
+    pass
+
+
+@cli.command(
+    context_settings=CONTEXT_SETTINGS,
+    epilog="More information at https://fink-broker.org/",
+    no_args_is_help=True,
+)
+def search():
+    """Search for alerts in the Fink database."""
+    pass
