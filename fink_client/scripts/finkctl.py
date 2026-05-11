@@ -22,11 +22,11 @@ def cli():
     You can try using no args or --help/-h at the top level and also for
     specific subcommands. E.g. these are equivalent commands showing help in `register`
 
-    $ finkctl register
+    $ finkctl auth
 
-    $ finkctl register -h
+    $ finkctl auth -h
 
-    $ finkctl register --help
+    $ finkctl auth --help
     """
     pass
 
