@@ -119,7 +119,7 @@ def store_alert(alert, schema, outdir, survey, is_mma, overwrite=True):
     )
 
 
-def send_to_telegram(alert, survey, token):
+def send_to_telegram(alert, survey, token, channel):
     """ """
     if survey == "ztf":
         curve_png = get_curve(
@@ -177,7 +177,7 @@ def send_to_telegram(alert, survey, token):
 
     msg_handler_tg(
         [(text, curve_png, cutout)],
-        channel_id="@fink_client_bot_test",
+        channel_id=channel,
         init_msg="",
         token=token,
     )

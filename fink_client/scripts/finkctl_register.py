@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import click
 from fink_client.configuration import write_credentials
 from fink_client.configuration import load_credentials
 from fink_client.logger import get_fink_logger
@@ -21,16 +22,31 @@ from fink_client.logger import get_fink_logger
 _LOG = get_fink_logger()
 
 
-def register_(survey, username, group_id, servers, log_level, maxtimeout, tmp):
+def register_(survey, username, groupid, servers, log_level, maxtimeout, tmp):
     _LOG.setLevel(log_level)
 
-    config = {
-        "survey": survey,
-        "username": username,
-        "groupid": group_id,
-        "servers": servers,
-        "maxtimeout": maxtimeout,
-    }
+    # Read existing config is any
+    try:
+        config = load_credentials(survey=survey)
+        click.echo(f"Configuration file for {survey} exits. Continue? [yn]", nl=False)
+        c = click.getchar()
+        click.echo()
+        if c == "n":
+            click.echo("Aborting...")
+            return 0
+        elif c != "y":
+            click.echo("Invalid input. Choose between [y]es and [n]o.")
+            return 1
+    except OSError:
+        # File does not exist yet
+        config = {}
+        pass
+
+    config["survey"] = survey
+    config["username"] = username
+    config["groupid"] = groupid
+    config["servers"] = servers
+    config["maxtimeout"] = maxtimeout
 
     # Write credentials
     write_credentials(config, log_level, tmp)

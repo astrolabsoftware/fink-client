@@ -162,6 +162,9 @@ def load_credentials(survey: str, tmp: bool = False) -> dict:
 def add_topic(survey: str, name: str, telegram_token, telegram_channel):
     """ """
     conf = load_credentials(survey)
+    topics = conf.get("topics", {})
+    if topics.get(name, None) is not None:
+        _LOG.warning(f"{name} found in configuration. Overwriting it.")
 
     out = {
         name: {
