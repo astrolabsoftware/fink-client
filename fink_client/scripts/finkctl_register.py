@@ -28,15 +28,7 @@ def register_(survey, username, groupid, servers, log_level, maxtimeout, tmp):
     # Read existing config is any
     try:
         config = load_credentials(survey=survey)
-        click.echo(f"Configuration file for {survey} exits. Continue? [yn]", nl=False)
-        c = click.getchar()
-        click.echo()
-        if c == "n":
-            click.echo("Aborting...")
-            return 0
-        elif c != "y":
-            click.echo("Invalid input. Choose between [y]es and [n]o.")
-            return 1
+        click.confirm(f"Configuration file for {survey} exits.", abort=True)
     except OSError:
         # File does not exist yet
         config = {}
