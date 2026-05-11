@@ -29,7 +29,7 @@ from fink_client.configuration import mm_topic_names
 from fink_client.consumer import print_offsets
 
 
-def livestream_(
+def stream_(
     survey,
     limit,
     start_at,

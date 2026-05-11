@@ -2,7 +2,7 @@ import rich_click as click
 from tabulate import tabulate
 
 from fink_client.scripts.finkctl_register import register_
-from fink_client.scripts.finkctl_livestream import livestream_
+from fink_client.scripts.finkctl_stream import stream_
 
 from fink_client.configuration import load_credentials, add_topic, remove_topic
 
@@ -328,7 +328,7 @@ def list(survey):
     is_flag=True,
     help="If specified, save the schema on disk (json file) before polling.",
 )
-def livestream(
+def stream(
     survey,
     limit,
     start_at,
@@ -345,7 +345,7 @@ def livestream(
 
     The list of available topics can be seen from `finkctl topic list`.
     """
-    livestream_(
+    stream_(
         survey,
         limit,
         start_at,
