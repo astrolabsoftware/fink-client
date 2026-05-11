@@ -337,7 +337,7 @@ def stream(
     slack,
     dump_schema,
 ):
-    """Poll alerts from the Fink Livestream service
+    """Poll alerts from the Fink Livestream service and save or redirect alerts using Fink bots
 
     The list of available topics can be seen from `finkctl topic list`.
     """
