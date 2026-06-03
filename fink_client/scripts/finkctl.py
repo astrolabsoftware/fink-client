@@ -1,3 +1,24 @@
+#!/usr/bin/env python
+# Copyright 2026 AstroLab Software
+# Author: Julien Peloton
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""fink-client CLI"""
+
+from fink_client import __version__
+from fink_client.configuration import load_credentials
+from fink_client.configuration import add_topic
+from fink_client.configuration import remove_topic
 import rich_click as click
 
 click.rich_click.THEME = "red1-box"
@@ -9,19 +30,19 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     context_settings=CONTEXT_SETTINGS,
     epilog="More information at https://fink-broker.org/",
     no_args_is_help=True,
+    help="""Fink client to interact with various Fink services (version {}).
+
+    You can use no args or --help/-h at the top level and also for
+    specific subcommands to get help.
+
+    $ finkctl COMMAND 
+
+    $ finkctl COMMAND -h
+
+    $ finkctl COMMAND --help
+    """.format(__version__),
 )
 def cli():
-    """Fink client to interact with various Fink services.
-
-    You can try using no args or --help/-h at the top level and also for
-    specific subcommands. E.g. these are equivalent commands showing help in `register`
-
-    $ finkctl auth
-
-    $ finkctl auth -h
-
-    $ finkctl auth --help
-    """
     pass
 
 
@@ -124,6 +145,7 @@ def register(survey, username, groupid, servers, log_level, maxtimeout, tmp):
     You should run `register` for all surveys you are using.
     """
     from fink_client.scripts.finkctl_register import register_
+
     register_(survey, username, groupid, servers, log_level, maxtimeout, tmp)
 
 
@@ -216,6 +238,7 @@ def list(survey):
     """List topics for the Livestream service."""
     # load user configuration
     from tabulate import tabulate
+
     conf = load_credentials(survey=survey)
 
     # TODO: Extract subscribed
@@ -342,6 +365,7 @@ def stream(
     The list of available topics can be seen from `finkctl topic list`.
     """
     from fink_client.scripts.finkctl_stream import stream_
+
     stream_(
         survey,
         limit,
@@ -468,6 +492,7 @@ def transfer(
 ):
     """Archive Fink streams from the Fink Data Transfer service."""
     from fink_client.scripts.finkctl_transfer import transfer_
+
     transfer_(
         survey,
         topic,
