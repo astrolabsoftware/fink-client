@@ -170,21 +170,35 @@ def topic():
 @click.option(
     "-telegram_token",
     type=str,
-    help="Token to use to redirect to a Telegram channel.",
+    help="Token to use to redirect to a Telegram channel. Optional",
 )
 @click.option(
     "-telegram_channel",
     type=str,
-    help="Channel name in Telegram to redirect alerts to. The channel must exist.",
+    help="Channel name in Telegram to redirect alerts to. Optional.",
 )
-def subscribe(survey, name, telegram_token, telegram_channel):
+@click.option(
+    "-slack_token",
+    type=str,
+    help="Token to use to redirect to a Slack channel. Optional",
+)
+@click.option(
+    "-slack_channel",
+    type=str,
+    help="Channel name in Slack to redirect alerts to. Optional.",
+)
+def subscribe(
+    survey, name, telegram_token, telegram_channel, slack_token, slack_channel
+):
     """Subscribe to a new topic for the Livestream service
 
     Examples
     --------
     $ finkctl topic subscribe -survey lsst -name fink_in_tns_lsst -telegram_token $TOKEN -telegram_channel "@fink_tns"
     """
-    add_topic(survey, name, telegram_token, telegram_channel)
+    add_topic(
+        survey, name, telegram_token, telegram_channel, slack_token, slack_channel
+    )
 
 
 @topic.command(

@@ -159,26 +159,42 @@ def load_credentials(survey: str, tmp: bool = False) -> dict:
     return creds
 
 
-def add_topic(survey: str, name: str, telegram_token, telegram_channel):
+def add_topic(
+    survey: str,
+    name: str,
+    telegram_token: str = None,
+    telegram_channel: str = None,
+    slack_token: str = None,
+    slack_channel: str = None,
+) -> None:
     """ """
     conf = load_credentials(survey)
     topics = conf.get("topics", {})
     if topics.get(name, None) is not None:
         _LOG.warning(f"{name} found in configuration. Overwriting it.")
 
-    out = {
-        name: {
+    if topics == {}:
+        out = {name: {}}
+        conf["topics"] = out
+
+    if (telegram_token is not None) and (telegram_channel is not None):
+        tg = {
             "telegram": {
                 "token": telegram_token,
                 "channel": telegram_channel,
             }
         }
-    }
+        conf["topics"][name].update(tg)
 
-    if conf.get("topics") is None:
-        conf["topics"] = out
-    elif isinstance(conf["topics"], dict):
-        conf["topics"].update(out)
+    if (slack_token is not None) and (slack_channel is not None):
+        slack = {
+            "slack": {
+                "token": slack_token,
+                "channel": slack_channel,
+            }
+        }
+
+        conf["topics"][name].update(slack)
 
     write_credentials(conf)
 
