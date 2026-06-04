@@ -119,7 +119,7 @@ def store_alert(alert, schema, outdir, survey, is_mma, overwrite=True):
     )
 
 
-def send_to_telegram(alert, survey, token, channel):
+def send_to_telegram(alert, survey, topic, token, channel):
     """ """
     if survey == "ztf":
         curve_png = get_curve_ztf(
@@ -145,7 +145,8 @@ def send_to_telegram(alert, survey, token, channel):
         cutout = get_cutout(cutout=alert["cutoutScience"]["stampData"], gzipped=True)
 
         text = f"""
-    *Object ID*: [{alert["objectId"]}](https://ztf.fink-portal.org/{alert["objectId"]})
+*Object ID*: [{alert["objectId"]}](https://ztf.fink-portal.org/{alert["objectId"]})
+*Topic*: `{topic}`
         """
     elif survey == "lsst":
         mjds = extract_field(
@@ -171,7 +172,8 @@ def send_to_telegram(alert, survey, token, channel):
         cutout = get_cutout(cutout=alert["cutoutScience"], gzipped=False)
 
         text = f"""
-    *Object ID*: [{alert["diaSource"]["diaObjectId"]}](https://lsst.fink-portal.org/{alert["diaSource"]["diaObjectId"]})
+*Object ID*: [{alert["diaSource"]["diaObjectId"]}](https://lsst.fink-portal.org/{alert["diaSource"]["diaObjectId"]})
+*Topic*: `{topic}`
         """
 
     msg_handler_tg(

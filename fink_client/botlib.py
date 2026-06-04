@@ -202,7 +202,7 @@ def msg_handler_tg(
             files=files,
             timeout=timeout,
         )
-        status_check(res, header=channel_id)
+        status_check(res, header=channel_id, token=token)
         time.sleep(sleep_seconds)
 
 
@@ -311,6 +311,7 @@ def get_cutout(
     >>> assert isinstance(out, io.BytesIO)
     """
     if origin == "API":
+        # FIXME: Add LSST support
         assert ztf_id is not None
         r = requests.post(
             "https://api.ztf.fink-portal.org/api/v1/cutouts",
@@ -343,7 +344,7 @@ def get_cutout(
             with fits.open(io.BytesIO(cutout), ignore_missing_simple=True) as hdul:
                 img = hdul[0].data[::-1]
 
-        data = np.log(img)
+        data = np.nan_to_num(img)
         plt.axis("off")
         plt.imshow(data, cmap="PuBu_r")
         buf = io.BytesIO()

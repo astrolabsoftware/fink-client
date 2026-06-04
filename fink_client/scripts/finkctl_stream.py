@@ -153,7 +153,7 @@ def stream_(
                             )
                         )
                         break
-                    send_to_telegram(alert, survey, token, channel)
+                    send_to_telegram(alert, survey, topic, token, channel)
 
                 if slack:
                     pass
