@@ -293,6 +293,49 @@ def msg_handler_tg_cutouts(
         time.sleep(sleep_seconds)
 
 
+def msg_handler_slack(
+    slack_data,
+    channel_id,
+    init_msg=None,
+    timeout=25,
+    sleep_seconds=10,
+    parse_mode="markdown",
+    token=None,
+):
+    """Send `slack_data` to a slack channel
+
+    Notes
+    -----
+    The function sends notifications to the "channel_id" channel of Slack
+
+    Parameters
+    ----------
+    slack_data: list
+        List of tuples. Each item is a separate notification.
+        Content of the tuple:
+            text_data : str
+                Notification text
+            cutout : BytesIO stream or str
+                cutout image in png format, image url, or a list of these
+            curve : BytesIO stream
+                light curve picture
+    channel_id: string
+        Channel id in Slack
+    init_msg: str
+        Initial message
+    timeout: int
+        Timeout when sending message. Default is 25 seconds.
+    sleep_seconds: int
+        How many seconds to sleep between two messages to avoid
+        code 429 from the Slack API. Default is 10 seconds.
+
+    Returns
+    -------
+        None
+    """
+    pass
+
+
 def get_cutout(
     cutout=None,
     ztf_id=None,

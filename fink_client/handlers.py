@@ -21,9 +21,14 @@ from tabulate import tabulate
 
 from fink_client.consumer import extract_id_from_lsst
 from fink_client.avro_utils import write_alert
-from fink_client.visualisation import extract_field
 
-from fink_client.botlib import get_curve_ztf, get_curve_lsst, get_cutout, msg_handler_tg
+from fink_client.botlib import (
+    get_curve_ztf,
+    get_curve_lsst,
+    get_cutout,
+    msg_handler_tg,
+    msg_handler_slack,
+)
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -200,59 +205,40 @@ def send_to_slack(
 
     """
     if survey == "ztf":
-        curve_png = get_curve_ztf(
-            jd=extract_field(
-                alert, "jd", current="candidate", previous="prv_candidates"
-            ),
-            magpsf=extract_field(
-                alert, "magpsf", current="candidate", previous="prv_candidates"
-            ),
-            sigmapsf=extract_field(
-                alert, "sigmapsf", current="candidate", previous="prv_candidates"
-            ),
-            diffmaglim=extract_field(
-                alert, "diffmaglim", current="candidate", previous="prv_candidates"
-            ),
-            fid=extract_field(
-                alert, "fid", current="candidate", previous="prv_candidates"
-            ),
-            objectId=alert["objectId"],
-            origin="fields",
+        oid = alert["objectId"]
+        curve_png, status_code_curve = get_curve_ztf(alert, origin="alert")
+        cutout, status_code_cutout = get_cutout(
+            cutout=alert["cutoutScience"]["stampData"], gzipped=True
         )
 
-        cutout = get_cutout(cutout=alert["cutoutScience"]["stampData"], gzipped=True)
-
-        text = f"""
-*Object ID*: [{alert["objectId"]}](https://ztf.fink-portal.org/{alert["objectId"]})
-*Topic*: `{topic}`
-        """
     elif survey == "lsst":
-        mjds = extract_field(
-            alert, "midpointMjdTai", current="diaSource", previous="prvDiaSources"
-        )
-        curve_png = get_curve_lsst(
-            mjd=mjds,
-            psfflux=extract_field(
-                alert, "psfFlux", current="diaSource", previous="prvDiaSources"
-            ),
-            psffluxerr=extract_field(
-                alert, "psfFluxErr", current="diaSource", previous="prvDiaSources"
-            ),
-            bands=extract_field(
-                alert, "band", current="diaSource", previous="prvDiaSources"
-            ),
-            diaobjectid=alert["diaSource"]["diaObjectId"],
-            origin="fields",
-            invert_yaxis=True,
-            ylabel="Difference magnitude",
+        oid = alert["diaSource"]["diaObjectId"]
+        curve_png, status_code_curve = get_curve_lsst(
+            alert,
+            origin="alert",
         )
 
-        cutout = get_cutout(cutout=alert["cutoutScience"], gzipped=False)
+        cutout, status_code_cutout = get_cutout(
+            cutout=alert["cutoutScience"], gzipped=False
+        )
 
-        text = f"""
-*Object ID*: [{alert["diaSource"]["diaObjectId"]}](https://lsst.fink-portal.org/{alert["diaSource"]["diaObjectId"]})
+    text = f"""
+*Object ID*: [{oid}](https://{survey}.fink-portal.org/{oid})
 *Topic*: `{topic}`
-        """
+    """
+
+    if status_code_curve != 200:
+        _LOG.warning(
+            "Error {} when downloading lightcurve for object {}".format(
+                status_code_curve, oid
+            )
+        )
+    if status_code_cutout != 200:
+        _LOG.warning(
+            "Error {} when downloading cutout for object {}".format(
+                status_code_cutout, oid
+            )
+        )
 
     msg_handler_slack(
         [(text, curve_png, cutout)],
