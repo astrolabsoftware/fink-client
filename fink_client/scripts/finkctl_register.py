@@ -28,7 +28,7 @@ def register_(survey, username, groupid, servers, log_level, maxtimeout, tmp):
     # Read existing config is any
     try:
         config = load_credentials(survey=survey)
-        click.confirm(f"Configuration file for {survey} exits.", abort=True)
+        click.confirm(f"Configuration file for {survey} exits. Continuing?", abort=True)
     except OSError:
         # File does not exist yet
         config = {}
