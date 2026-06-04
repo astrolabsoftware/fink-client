@@ -21,6 +21,7 @@ from fink_client.configuration import add_topic
 from fink_client.configuration import remove_topic
 import rich_click as click
 
+
 click.rich_click.THEME = "red1-box"
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])

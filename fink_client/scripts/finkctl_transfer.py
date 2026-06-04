@@ -307,7 +307,7 @@ and open the tab `Get your data` to retrieve the topic.
 
     kafka_config = {
         "bootstrap.servers": conf["servers"],
-        "group.id": conf["group_id"],
+        "group.id": conf["groupid"],
         "auto.offset.reset": "earliest",
     }
 
