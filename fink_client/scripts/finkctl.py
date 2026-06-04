@@ -35,7 +35,7 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     You can use no args or --help/-h at the top level and also for
     specific subcommands to get help.
 
-    $ finkctl COMMAND 
+    $ finkctl COMMAND
 
     $ finkctl COMMAND -h
 
@@ -67,16 +67,7 @@ def auth():
     no_args_is_help=True,
 )
 def show(survey):
-    """Show current credentials.
-
-    If you see a wrong entry for credentials, you should run:
-
-    $ finkctl auth register
-
-    If you see a wrong entry for a topic, you should run:
-
-    $ finkctl topic subscribe
-    """
+    """Show current credentials."""
     (
         click.secho(
             "If you see a wrong entry for {groupid, username, servers, maxtimeout}, run:",
@@ -222,7 +213,7 @@ def remove(survey, name):
     epilog="""
     More information at
 
-    - ZTF: https://doc.lsst.fink-broker.org/science/filters/
+    - ZTF: https://doc.ztf.fink-broker.org/en/latest/broker/filters/
 
     - LSST: https://doc.lsst.fink-broker.org/science/filters/
     """,
@@ -275,7 +266,10 @@ def list(survey):
         out = r.json()
         print(
             tabulate(
-                [["fink_" + k + "_lsst", v, "NO"] for k, v in out.items()],
+                [
+                    ["fink_" + k + "_lsst", v["description"], "NO"]
+                    for k, v in out.items()
+                ],
                 [f"Fink/{survey.upper()} topics", "Description", "Subscribed"],
                 tablefmt="grid",
             )
@@ -402,7 +396,7 @@ def stream(
     "-outdir",
     type=str,
     default=".",
-    help="Folder to store incoming alerts. It will be created if it does not exist.",
+    help="Folder to store incoming alerts. It will be created if it does not exist. Default is current directory.",
 )
 @click.option(
     "-outformat",

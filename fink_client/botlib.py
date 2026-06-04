@@ -30,6 +30,23 @@ import matplotlib.pyplot as plt
 from fink_client.visualisation import extract_field
 
 COLORS_ZTF = {1: "#15284F", 2: "#F5622E"}
+LSST_BANDS = ["u", "g", "r", "i", "z", "y"]
+LSST_DEFAULT_FINK_COLORS = [
+    "#15284f",
+    "#626d84",
+    "#afb2b9",
+    "#dbbeb2",
+    "#e89070",
+    "#f5622e",
+]
+LSST_DEFAULT_FINK_MARKERS = {
+    "u": "o",  # Matplotlib 'o' -> Plotly 'circle'
+    "g": "<",
+    "r": ">",
+    "i": "s",  # Matplotlib 's' -> Plotly 'square'
+    "z": "*",  # Matplotlib '*' -> Plotly 'star'
+    "y": "p",  # Matplotlib 'p' -> Plotly 'pentagon'
+}
 
 
 def escape(text):
@@ -254,14 +271,17 @@ def msg_handler_tg_cutouts(
         time.sleep(sleep_seconds)
 
 
-def get_cutout(cutout=None, ztf_id=None, kind="Difference", origin="alert"):
+def get_cutout(
+    cutout=None, ztf_id=None, kind="Difference", origin="alert", gzipped=True
+):
     """Loads cutout image from alert packet or via Fink API
 
     Parameters
     ----------
     cutout: bytes, optional
-        Gzipped FITS file from alert packet. Only
-        used for origin=alert.
+        FITS file from alert packet. Only
+        used for origin=alert. If gzipped, use
+        gzipped=True.
     ztf_id : str, optional
         unique identifier for this object. Only
         used for origin=API.
@@ -269,6 +289,9 @@ def get_cutout(cutout=None, ztf_id=None, kind="Difference", origin="alert"):
         Science, Difference, or Template
     origin: str, optional
         Choose between `alert`[default], or API.
+    gzipped: bool
+        If True, assume the cutout is a gzipped FITS file.
+        Default is True.
 
     Returns
     -------
@@ -309,10 +332,15 @@ def get_cutout(cutout=None, ztf_id=None, kind="Difference", origin="alert"):
         assert cutout is not None
 
         # Unzip
-        with gzip.open(io.BytesIO(cutout), "rb") as fits_file:
-            with fits.open(
-                io.BytesIO(fits_file.read()), ignore_missing_simple=True
-            ) as hdul:
+        if gzipped:
+            with gzip.open(io.BytesIO(cutout), "rb") as fits_file:
+                with fits.open(
+                    io.BytesIO(fits_file.read()), ignore_missing_simple=True
+                ) as hdul:
+                    img = hdul[0].data[::-1]
+
+        else:
+            with fits.open(io.BytesIO(cutout), ignore_missing_simple=True) as hdul:
                 img = hdul[0].data[::-1]
 
         data = np.log(img)
@@ -328,7 +356,7 @@ def get_cutout(cutout=None, ztf_id=None, kind="Difference", origin="alert"):
     return buf
 
 
-def get_curve(
+def get_curve_ztf(
     alert=None,
     jd=None,
     magpsf=None,
@@ -551,3 +579,163 @@ def get_curve(
         plt.close()
 
     return buf
+
+
+def get_curve_lsst(
+    alert=None,
+    mjd=None,
+    psfflux=None,
+    psffluxerr=None,
+    bands=None,
+    diaobjectid=None,
+    origin="API",
+    ylabel="Difference magnitude",
+    title=None,
+    invert_yaxis=True,
+    vline=None,
+    hline=None,
+):
+    """Generate PNG lightcurve
+
+    Notes
+    -----
+    Based on `origin`, the other arguments are mandatory:
+    - origin=API: diaObjectId
+    - origin=alert: alert
+    - origin=fields: diaObjectId, mjd, psfFlux, psfFluxErr, band
+
+    Parameters
+    ----------
+    alert: dict, optional
+        alert packet containing `objectId`, `diaSource`, `prvDiaSource`
+    mjd: np.array, optional
+        Vector of times.
+    psfflux: np.array, optional
+        Vector of difference flux.
+    psffluxErr: np.array, optional
+        Vector of error on difference flux.
+    bands: np.array, optional
+        Vector of filter name.
+    diaobjectid : long
+        unique identifier for this object
+    origin: str, optional
+        Choose between `alert`, `API`[default], or `fields`.
+    ylabel: str
+        Label for y-axis. Default is `Difference magnitude`
+    title: str
+        Title for the plot. If None, `objectId` will be used.
+        Default is None.
+    invert_yaxis: bool
+        Invert the y-axis. Default is True.
+    vline: None or dictionary
+        If specified, a dictionary with the following structure:
+            {"x": float, "x_label": str}
+        where "x" is the x value for the vertical line, and
+        "x_label" is the label that will appear on the legend.
+        Default is None.
+    hline: None or dictionary
+        If specified, a dictionary with the following structure:
+            {"y": float, "y_label": str}
+        where "y" is the y value for the horizontal line, and
+        "y_label" is the label that will appear on the legend.
+        Default is None.
+
+    Returns
+    -------
+    out : BytesIO stream
+        light curve picture in units of difference MAG
+    """
+    if origin == "API":
+        # Unsupported for the moment
+        buf = io.BytesIO()
+        return buf
+    elif origin in ["alert", "fields"]:
+        if origin == "alert":
+            # extract current and historical data as one vector
+            psfflux = extract_field(
+                alert, "psfFlux", current="diaSource", previous="prvDiaSources"
+            )
+            psffluxerr = extract_field(
+                alert, "psfFluxErr", current="diaSource", previous="prvDiaSources"
+            )
+            bands = extract_field(
+                alert, "band", current="diaSource", previous="prvDiaSources"
+            )
+            mjd = extract_field(
+                alert, "midpointMjdTai", current="diaSource", previous="prvDiaSources"
+            )
+            diaobjectid = alert["diaObject"]["diaObjectId"]
+
+        if title is None:
+            title = diaobjectid
+
+        # Rescale dates
+        dates = np.array([i - mjd[-1] for i in mjd])
+
+        # work with arrays
+        bands = np.array(bands)
+        mag, magerr = flux_to_mag(np.array(psfflux), np.array(psffluxerr))
+
+        # loop over filters
+        plt.figure(num=1, figsize=(12, 4))
+
+        # Loop over each filter
+        for index, band_ in enumerate(LSST_BANDS):
+            maskBand = bands == band_
+            maskPos = magerr > 0
+            mask = maskBand * maskPos
+
+            # Skip if no data
+            if len(mask) == 0:
+                continue
+
+            plt.errorbar(
+                dates[mask],
+                mag[mask],
+                yerr=magerr[mask],
+                color=LSST_DEFAULT_FINK_COLORS[index],
+                marker=LSST_DEFAULT_FINK_MARKERS[band_],
+                ls="",
+                label="{}".format(band_),
+                mew=4,
+            )
+            plt.title(title)
+
+        if vline is not None:
+            plt.axvline(vline["x"], ls="--", color="black", label=vline["x_label"])
+
+        if hline is not None:
+            plt.axhline(hline["y"], ls="--", color="black", label=hline["y_label"])
+
+        plt.legend()
+        if invert_yaxis:
+            plt.gca().invert_yaxis()
+        plt.xlabel("Days to candidates")
+        plt.ylabel(ylabel)
+
+        buf = io.BytesIO()
+        plt.savefig(buf, format="png")
+        buf.seek(0)
+        plt.close()
+
+    return buf
+
+
+def flux_to_mag(flux, flux_err):
+    """Convert flux to magnitude (and errors)
+
+    Parameters
+    ----------
+    flux: array-like
+        Flux in nJy
+    flux_err: array-like
+        Flux error in nJy
+
+    Returns
+    -------
+    mag, mag_err: array-like
+    """
+    mag = 31.4 - 2.5 * np.log10(flux)
+    mag_err = 2.5 / np.log(10) * flux_err / flux
+
+    return mag, mag_err
