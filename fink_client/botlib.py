@@ -14,6 +14,7 @@
 # limitations under the License.
 """Part of these functionalities were initially taken from the Anomaly detection module"""
 
+import logging
 import os
 import io
 import time
@@ -26,8 +27,15 @@ from astropy.io import fits
 
 import matplotlib.pyplot as plt
 
-
 from fink_client.visualisation import extract_field
+
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+_LOG = logging.getLogger(__name__)
 
 COLORS_ZTF = {1: "#15284F", 2: "#F5622E"}
 LSST_BANDS = ["u", "g", "r", "i", "z", "y"]
@@ -294,7 +302,9 @@ def msg_handler_tg_cutouts(
 
 
 def msg_handler_slack(
-    slack_data,
+    text_data,
+    curve,
+    cutout,
     channel_id,
     init_msg=None,
     timeout=25,
@@ -310,15 +320,12 @@ def msg_handler_slack(
 
     Parameters
     ----------
-    slack_data: list
-        List of tuples. Each item is a separate notification.
-        Content of the tuple:
-            text_data : str
-                Notification text
-            cutout : BytesIO stream or str
-                cutout image in png format, image url, or a list of these
-            curve : BytesIO stream
-                light curve picture
+    text_data : str
+        Notification text
+    curve: BytesIO stream
+        light curve picture
+    cutout: BytesIO stream
+        cutout image in png format
     channel_id: string
         Channel id in Slack
     init_msg: str
@@ -333,7 +340,47 @@ def msg_handler_slack(
     -------
         None
     """
-    pass
+    slack_client = WebClient(token)
+    try:
+        curve.seek(0)
+        cutout.seek(0)
+        result = slack_client.files_upload_v2(
+            file_uploads=[
+                {"file": cutout, "title": "Difference cutout"},
+                {"file": curve, "title": "Light curve"},
+            ]
+        )
+        cutout_permalink = result["files"][0]["permalink"]
+        curve_permalink = result["files"][1]["permalink"]
+        time.sleep(2)
+    except (SlackApiError, AttributeError) as e:
+        if e.response["ok"] is False:
+            _LOG.warning("Cannot upload files to Slack: {}".format(e.response["error"]))
+        return 1
+
+    slack_data = f"""
+<{cutout_permalink}|{" "}>
+<{curve_permalink}|{" "}>
+{text_data}
+    """
+
+    try:
+        slack_client.chat_postMessage(
+            channel=channel_id,
+            text=slack_data,
+            blocks=[
+                {"type": "divider"},
+                {"type": "section", "text": {"type": "mrkdwn", "text": slack_data}},
+            ],
+        )
+    except SlackApiError as e:
+        if e.response["ok"] is False:
+            _LOG.warning(
+                "Cannot post message to Slack channel {}: {}".format(
+                    channel_id, e.response["error"]
+                )
+            )
+        return 1
 
 
 def get_cutout(

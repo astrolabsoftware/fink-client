@@ -23,6 +23,7 @@ from fink_client.consumer import AlertConsumer
 from fink_client.handlers import display_alerts_as_table
 from fink_client.handlers import store_alert
 from fink_client.handlers import send_to_telegram
+from fink_client.handlers import send_to_slack
 from fink_client.configuration import load_credentials
 from fink_client.configuration import mm_topic_names
 
@@ -141,12 +142,12 @@ def stream_(
                     ext = conf["topics"].get(topic, None)
                     if "telegram" not in ext:
                         print(f"""
-                        You should register telegram information for the topic {topic}:
+                        You should register Telegram information for the topic {topic}:
                         finkctl topic subscribe -survey lsst -name {topic} -telegram_token $TOKEN -telegram_channel $CHANNEL
                         """)
                     token = ext["telegram"].get("token", None)
                     channel = ext["telegram"].get("channel", None)
-                    if token is None or channel is None:
+                    if (token is None) or (channel is None):
                         print(
                             "Token or channel missing for Telegram for the topic {}. Please check credentials ".format(
                                 topic
@@ -156,7 +157,22 @@ def stream_(
                     send_to_telegram(alert, survey, topic, token, channel)
 
                 if slack:
-                    pass
+                    ext = conf["topics"].get(topic, None)
+                    if "slack" not in ext:
+                        print(f"""
+                        You should register Slack information for the topic {topic}:
+                        finkctl topic subscribe -survey lsst -name {topic} -slack_token $TOKEN -slack_channel $CHANNEL
+                        """)
+                    token = ext["slack"].get("token", None)
+                    channel = ext["slack"].get("channel", None)
+                    if (token is None) or (channel is None):
+                        print(
+                            "Token or channel missing for Slack for the topic {}. Please check credentials ".format(
+                                topic
+                            )
+                        )
+                        break
+                    send_to_slack(alert, survey, topic, token, channel)
 
                 if display:
                     display_alerts_as_table(conf["survey"], topic, alert, is_mma)

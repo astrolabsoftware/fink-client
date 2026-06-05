@@ -223,7 +223,7 @@ def send_to_slack(
         )
 
     text = f"""
-*Object ID*: [{oid}](https://{survey}.fink-portal.org/{oid})
+*Object ID*: https://{survey}.fink-portal.org/{oid}
 *Topic*: `{topic}`
     """
 
@@ -241,7 +241,9 @@ def send_to_slack(
         )
 
     msg_handler_slack(
-        [(text, curve_png, cutout)],
+        text,
+        curve_png,
+        cutout,
         channel_id=channel,
         init_msg="",
         token=token,

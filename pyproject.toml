@@ -20,6 +20,7 @@ dependencies = [
     "numpy>=1.23.5",
     "pandas>=1.3.5",
     "pyarrow>=9.0.0",
+    "slack_sdk",
     "matplotlib",
     "PyYAML",
     "tabulate",
