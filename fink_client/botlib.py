@@ -14,6 +14,7 @@
 # limitations under the License.
 """Part of these functionalities were initially taken from the Anomaly detection module"""
 
+import logging
 import os
 import io
 import time
@@ -26,10 +27,34 @@ from astropy.io import fits
 
 import matplotlib.pyplot as plt
 
-
 from fink_client.visualisation import extract_field
 
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+_LOG = logging.getLogger(__name__)
+
 COLORS_ZTF = {1: "#15284F", 2: "#F5622E"}
+LSST_BANDS = ["u", "g", "r", "i", "z", "y"]
+LSST_DEFAULT_FINK_COLORS = [
+    "#15284f",
+    "#626d84",
+    "#afb2b9",
+    "#dbbeb2",
+    "#e89070",
+    "#f5622e",
+]
+LSST_DEFAULT_FINK_MARKERS = {
+    "u": "o",  # Matplotlib 'o' -> Plotly 'circle'
+    "g": "<",
+    "r": ">",
+    "i": "s",  # Matplotlib 's' -> Plotly 'square'
+    "z": "*",  # Matplotlib '*' -> Plotly 'star'
+    "y": "p",  # Matplotlib 'p' -> Plotly 'pentagon'
+}
 
 
 def escape(text):
@@ -46,14 +71,31 @@ def escape(text):
     return re.sub(r"[_*[\]()~>#\+\-=|{}.!]", lambda x: "\\" + x.group(), text)
 
 
-def status_check(res, header, sleep=8, timeout=25, token=None):
-    """Checks whether the request was successful.
+def status_check(
+    res, header, channel=None, sleep=8, timeout=25, token=None, kind="telegram"
+):
+    """Checks whether the request was successful, and send
 
-    In case of an error, sends information about the error to the @fink_test telegram channel
+    In case of an error, sends information about the error to the telegram channel
 
     Parameters
     ----------
     res : Response object
+        Response from the HTTP request
+    header: str
+        Header message to send
+    channel: str
+        Telegram or Slack channel name
+    sleep: int, optional
+        Time to sleep after sending the message, in seconds.
+        Default is 8 seconds.
+    timeout: int, optional
+        Timeout for posting the message, in seconds.
+        Default is 25.
+    token: str
+        Bot token for Telegram or Slack
+    kind: str
+        telegram or slack
 
     Returns
     -------
@@ -61,19 +103,22 @@ def status_check(res, header, sleep=8, timeout=25, token=None):
             True : The request was successful
             False: The request was executed with an error
     """
-    if res.status_code != 200:
-        msg = """
-        {}
-        Content: {}
-        """.format(header, res.content)
-        url = "https://api.telegram.org/bot"
-        url += token or os.environ["FINK_TG_TOKEN"]
-        method = url + "/sendMessage"
-        time.sleep(sleep)
-        requests.post(
-            method, data={"chat_id": "@fink_bot_error", "text": msg}, timeout=timeout
-        )
-        return False
+    if (res.status_code != 200) and (channel is not None):
+        if kind == "telegram":
+            msg = """
+            {}
+            Content: {}
+            """.format(header, res.content)
+            url = "https://api.telegram.org/bot"
+            url += token or os.environ["FINK_TG_TOKEN"]
+            method = url + "/sendMessage"
+            time.sleep(sleep)
+            requests.post(
+                method, data={"chat_id": channel, "text": msg}, timeout=timeout
+            )
+            return False
+        elif kind == "slack":
+            pass
     return True
 
 
@@ -98,7 +143,7 @@ def send_simple_text_tg(text, channel_id, timeout=25, token=None):
             data={"chat_id": channel_id, "text": text, "parse_mode": "markdown"},
             timeout=timeout,
         )
-        status_check(res, header=channel_id)
+        status_check(res, channel=channel_id, header=channel_id, kind="telegram")
 
 
 def msg_handler_tg(
@@ -185,7 +230,9 @@ def msg_handler_tg(
             files=files,
             timeout=timeout,
         )
-        status_check(res, header=channel_id)
+        status_check(
+            res, channel=channel_id, header=channel_id, token=token, kind="telegram"
+        )
         time.sleep(sleep_seconds)
 
 
@@ -250,18 +297,108 @@ def msg_handler_tg_cutouts(
             files=files,
             timeout=timeout,
         )
-        status_check(res, header=channel_id)
+        status_check(res, channel=channel_id, header=channel_id, kind="telegram")
         time.sleep(sleep_seconds)
 
 
-def get_cutout(cutout=None, ztf_id=None, kind="Difference", origin="alert"):
+def msg_handler_slack(
+    text_data,
+    curve,
+    cutout,
+    channel_id,
+    init_msg=None,
+    timeout=25,
+    sleep_seconds=10,
+    parse_mode="markdown",
+    token=None,
+):
+    """Send `slack_data` to a slack channel
+
+    Notes
+    -----
+    The function sends notifications to the "channel_id" channel of Slack
+
+    Parameters
+    ----------
+    text_data : str
+        Notification text
+    curve: BytesIO stream
+        light curve picture
+    cutout: BytesIO stream
+        cutout image in png format
+    channel_id: string
+        Channel id in Slack
+    init_msg: str
+        Initial message
+    timeout: int
+        Timeout when sending message. Default is 25 seconds.
+    sleep_seconds: int
+        How many seconds to sleep between two messages to avoid
+        code 429 from the Slack API. Default is 10 seconds.
+
+    Returns
+    -------
+        None
+    """
+    slack_client = WebClient(token)
+    try:
+        curve.seek(0)
+        cutout.seek(0)
+        result = slack_client.files_upload_v2(
+            file_uploads=[
+                {"file": cutout, "title": "Difference cutout"},
+                {"file": curve, "title": "Light curve"},
+            ]
+        )
+        cutout_permalink = result["files"][0]["permalink"]
+        curve_permalink = result["files"][1]["permalink"]
+        time.sleep(2)
+    except (SlackApiError, AttributeError) as e:
+        if e.response["ok"] is False:
+            _LOG.warning("Cannot upload files to Slack: {}".format(e.response["error"]))
+        return 1
+
+    slack_data = f"""
+<{cutout_permalink}|{" "}>
+<{curve_permalink}|{" "}>
+{text_data}
+    """
+
+    try:
+        slack_client.chat_postMessage(
+            channel=channel_id,
+            text=slack_data,
+            blocks=[
+                {"type": "divider"},
+                {"type": "section", "text": {"type": "mrkdwn", "text": slack_data}},
+            ],
+        )
+    except SlackApiError as e:
+        if e.response["ok"] is False:
+            _LOG.warning(
+                "Cannot post message to Slack channel {}: {}".format(
+                    channel_id, e.response["error"]
+                )
+            )
+        return 1
+
+
+def get_cutout(
+    cutout=None,
+    ztf_id=None,
+    kind="Difference",
+    origin="alert",
+    gzipped=True,
+    channel_id=None,
+):
     """Loads cutout image from alert packet or via Fink API
 
     Parameters
     ----------
     cutout: bytes, optional
-        Gzipped FITS file from alert packet. Only
-        used for origin=alert.
+        FITS file from alert packet. Only
+        used for origin=alert. If gzipped, use
+        gzipped=True.
     ztf_id : str, optional
         unique identifier for this object. Only
         used for origin=API.
@@ -269,11 +406,16 @@ def get_cutout(cutout=None, ztf_id=None, kind="Difference", origin="alert"):
         Science, Difference, or Template
     origin: str, optional
         Choose between `alert`[default], or API.
+    gzipped: bool
+        If True, assume the cutout is a gzipped FITS file.
+        Default is True.
 
     Returns
     -------
     out : BytesIO stream
         cutout image in png format
+    status_code: int
+        HTTP status code. 200 by default for origin=alert.
 
     Examples
     --------
@@ -284,92 +426,67 @@ def get_cutout(cutout=None, ztf_id=None, kind="Difference", origin="alert"):
     From cutout
     >>> pdf = pd.read_parquet("../test_data/online/science/day=04/alert_samples.parquet")
     >>> cutout = pdf["cutoutTemplate"].apply(lambda x: x["stampData"]).to_numpy()[0]
-    >>> out = get_cutout(cutout, kind="Science")
-    >>> assert isinstance(out, io.BytesIO)
+    >>> out, status_code = get_cutout(cutout, kind="Science")
+    >>> assert isinstance(out, io.BytesIO), out
+    >>> assert status_code == 200
     """
     if origin == "API":
+        # FIXME: LSST support is missing
         assert ztf_id is not None
         r = requests.post(
             "https://api.ztf.fink-portal.org/api/v1/cutouts",
             json={"objectId": ztf_id, "kind": kind, "output-format": "array"},
             timeout=25,
         )
-        if not status_check(r, header=ztf_id):
-            return io.BytesIO()
-        data = np.log(
-            np.array(r.json()["b:cutout{}_stampData".format(kind)], dtype=float)
-        )
-        plt.axis("off")
-        plt.imshow(data, cmap="PuBu_r")
-        buf = io.BytesIO()
-        plt.savefig(buf, format="png", bbox_inches="tight", pad_inches=0)
-        buf.seek(0)
-        plt.close()
+        if r.status_code != 200:
+            return io.BytesIO(), r.status_code
+        img = np.array(r.json()["b:cutout{}_stampData".format(kind)], dtype=float)
     elif origin == "alert":
         assert cutout is not None
 
         # Unzip
-        with gzip.open(io.BytesIO(cutout), "rb") as fits_file:
-            with fits.open(
-                io.BytesIO(fits_file.read()), ignore_missing_simple=True
-            ) as hdul:
+        if gzipped:
+            with gzip.open(io.BytesIO(cutout), "rb") as fits_file:
+                with fits.open(
+                    io.BytesIO(fits_file.read()), ignore_missing_simple=True
+                ) as hdul:
+                    img = hdul[0].data[::-1]
+
+        else:
+            with fits.open(io.BytesIO(cutout), ignore_missing_simple=True) as hdul:
                 img = hdul[0].data[::-1]
 
-        data = np.log(img)
-        plt.axis("off")
-        plt.imshow(data, cmap="PuBu_r")
-        buf = io.BytesIO()
-        plt.savefig(buf, format="png", bbox_inches="tight", pad_inches=0)
-        buf.seek(0)
-        plt.close()
-    else:
-        buf = io.BytesIO()
+    data = np.nan_to_num(img)
+    plt.axis("off")
+    plt.imshow(data, cmap="PuBu_r")
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png", bbox_inches="tight", pad_inches=0)
+    buf.seek(0)
+    plt.close()
 
-    return buf
+    return buf, 200
 
 
-def get_curve(
+def get_curve_ztf(
     alert=None,
-    jd=None,
-    magpsf=None,
-    sigmapsf=None,
-    diffmaglim=None,
-    fid=None,
-    objectId=None,
     origin="API",
+    objectId=None,
     ylabel="Difference magnitude",
     title=None,
     invert_yaxis=True,
     vline=None,
     hline=None,
 ):
-    """Generate PNG lightcurve
-
-    Notes
-    -----
-    Based on `origin`, the other arguments are mandatory:
-    - origin=API: objectId
-    - origin=alert: alert
-    - origin=fields: objectId, jd, magpsf, sigmapsf, diffmaglim, fid
+    """Generate PNG lightcurve for ZTF
 
     Parameters
     ----------
     alert: dict, optional
         alert packet containing `objectId`, `candidate`, `prv_candidates`
-    jd: np.array, optional
-        Vector of times.
-    magpsf: np.array, optional
-        Vector of difference magnitudes.
-    sigmapsf: np.array, optional
-        Vector of error on difference magnitudes.
-    diffmaglim: np.array, optional
-        Vector of upper limits on magnitude.
-    fid: np.array, optional
-        Vector of filter ID.
-    objectId : str
-        unique identifier for this object
     origin: str, optional
-        Choose between `alert`, `API`[default], or `fields`.
+        Choose between `alert`, `API`[default]
+    objectId : str
+        unique identifier for this object. Only required for origin=API.
     ylabel: str
         Label for y-axis. Default is `Difference magnitude`
     title: str
@@ -394,6 +511,8 @@ def get_curve(
     -------
     out : BytesIO stream
         light curve picture
+    status_code: int
+        HTTP status code. 200 by default for origin=alert.
     """
     filter_dict = {1: "g band", 2: "r band"}
     if origin == "API":
@@ -407,8 +526,8 @@ def get_curve(
                 "withupperlim": "True",
             },
         )
-        if not status_check(r, header=objectId):
-            return None
+        if r.status_code != 200:
+            return io.BytesIO(), r.status_code
 
         # Format output in a DataFrame
         pdf = pd.read_json(io.BytesIO(r.content))
@@ -474,15 +593,22 @@ def get_curve(
         buf.seek(0)
         plt.close()
 
-    elif origin in ["alert", "fields"]:
-        if origin == "alert":
-            # extract current and historical data as one vector
-            magpsf = extract_field(alert, "magpsf")
-            sigmapsf = extract_field(alert, "sigmapsf")
-            diffmaglim = extract_field(alert, "diffmaglim")
-            fid = extract_field(alert, "fid")
-            jd = extract_field(alert, "jd")
-            objectId = alert["objectId"]
+    elif origin == "alert":
+        # extract current and historical data as one vector
+        magpsf = extract_field(
+            alert, "magpsf", current="candidate", previous="prv_candidates"
+        )
+        sigmapsf = extract_field(
+            alert, "sigmapsf", current="candidate", previous="prv_candidates"
+        )
+        diffmaglim = extract_field(
+            alert, "diffmaglim", current="candidate", previous="prv_candidates"
+        )
+        fid = extract_field(
+            alert, "fid", current="candidate", previous="prv_candidates"
+        )
+        jd = extract_field(alert, "jd", current="candidate", previous="prv_candidates")
+        objectId = alert["objectId"]
 
         if title is None:
             title = objectId
@@ -550,4 +676,143 @@ def get_curve(
         buf.seek(0)
         plt.close()
 
-    return buf
+    return buf, 200
+
+
+def get_curve_lsst(
+    alert=None,
+    origin="API",
+    ylabel="Difference magnitude",
+    title=None,
+    invert_yaxis=True,
+    vline=None,
+    hline=None,
+):
+    """Generate PNG lightcurve for LSST
+
+    Parameters
+    ----------
+    alert: dict, optional
+        alert packet containing `objectId`, `diaSource`, `prvDiaSource`
+    origin: str, optional
+        Choose between `alert`, `API`[default]
+    ylabel: str
+        Label for y-axis. Default is `Difference magnitude`
+    title: str
+        Title for the plot. If None, `objectId` will be used.
+        Default is None.
+    invert_yaxis: bool
+        Invert the y-axis. Default is True.
+    vline: None or dictionary
+        If specified, a dictionary with the following structure:
+            {"x": float, "x_label": str}
+        where "x" is the x value for the vertical line, and
+        "x_label" is the label that will appear on the legend.
+        Default is None.
+    hline: None or dictionary
+        If specified, a dictionary with the following structure:
+            {"y": float, "y_label": str}
+        where "y" is the y value for the horizontal line, and
+        "y_label" is the label that will appear on the legend.
+        Default is None.
+
+    Returns
+    -------
+    out : BytesIO stream
+        light curve picture in units of difference MAG
+    status_code: int
+        HTTP status code. 200 by default for origin=alert.
+    """
+    if origin == "API":
+        # Unsupported for the moment
+        buf = io.BytesIO()
+        return buf, 404
+    elif origin == "alert":
+        # extract current and historical data as one vector
+        psfflux = extract_field(
+            alert, "psfFlux", current="diaSource", previous="prvDiaSources"
+        )
+        psffluxerr = extract_field(
+            alert, "psfFluxErr", current="diaSource", previous="prvDiaSources"
+        )
+        bands = extract_field(
+            alert, "band", current="diaSource", previous="prvDiaSources"
+        )
+        mjd = extract_field(
+            alert, "midpointMjdTai", current="diaSource", previous="prvDiaSources"
+        )
+        diaobjectid = alert["diaObject"]["diaObjectId"]
+
+        if title is None:
+            title = diaobjectid
+
+        # Rescale dates
+        dates = np.array([i - mjd[-1] for i in mjd])
+
+        # work with arrays
+        bands = np.array(bands)
+        mag, magerr = flux_to_mag(np.array(psfflux), np.array(psffluxerr))
+
+        # loop over filters
+        plt.figure(num=1, figsize=(12, 4))
+
+        # Loop over each filter
+        for index, band_ in enumerate(LSST_BANDS):
+            maskBand = bands == band_
+            maskPos = magerr > 0
+            mask = maskBand * maskPos
+
+            # Skip if no data
+            if len(mask) == 0:
+                continue
+
+            plt.errorbar(
+                dates[mask],
+                mag[mask],
+                yerr=magerr[mask],
+                color=LSST_DEFAULT_FINK_COLORS[index],
+                marker=LSST_DEFAULT_FINK_MARKERS[band_],
+                ls="",
+                label="{}".format(band_),
+                mew=4,
+            )
+            plt.title(title)
+
+        if vline is not None:
+            plt.axvline(vline["x"], ls="--", color="black", label=vline["x_label"])
+
+        if hline is not None:
+            plt.axhline(hline["y"], ls="--", color="black", label=hline["y_label"])
+
+        plt.legend()
+        if invert_yaxis:
+            plt.gca().invert_yaxis()
+        plt.xlabel("Days to candidates")
+        plt.ylabel(ylabel)
+
+        buf = io.BytesIO()
+        plt.savefig(buf, format="png")
+        buf.seek(0)
+        plt.close()
+
+    return buf, 200
+
+
+def flux_to_mag(flux, flux_err):
+    """Convert flux to magnitude (and errors)
+
+    Parameters
+    ----------
+    flux: array-like
+        Flux in nJy
+    flux_err: array-like
+        Flux error in nJy
+
+    Returns
+    -------
+    mag, mag_err: array-like
+    """
+    mag = 31.4 - 2.5 * np.log10(flux)
+    mag_err = 2.5 / np.log(10) * flux_err / flux
+
+    return mag, mag_err

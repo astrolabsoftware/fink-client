@@ -55,9 +55,8 @@ def write_credentials(dict_file: dict, log_level: str = "WARN", tmp: bool = Fals
     ...   'survey': 'lsst',
     ...   'username': 'test',
     ...   'password': None,
-    ...   'mytopics': ['rrlyr'],
     ...   'servers': 'localhost:9093',
-    ...   'group_id': 'test_group',
+    ...   'groupid': 'test_group',
     ...   'maxtimeout': 10
     ... }
     >>> write_credentials(conf, log_level="WARN", tmp=True)
@@ -72,7 +71,7 @@ def write_credentials(dict_file: dict, log_level: str = "WARN", tmp: bool = Fals
     mandatory_keys = [
         "survey",
         "username",
-        "group_id",
+        "groupid",
         "servers",
     ]
     for k in mandatory_keys:
@@ -115,9 +114,8 @@ def load_credentials(survey: str, tmp: bool = False) -> dict:
     ...   'survey': 'lsst',
     ...   'username': 'test',
     ...   'password': None,
-    ...   'mytopics': ['rrlyr'],
     ...   'servers': 'localhost:9093',
-    ...   'group_id': 'test_group',
+    ...   'groupid': 'test_group',
     ...   'maxtimeout': 10
     ... }
     >>> write_credentials(conf_in, tmp=True)
@@ -159,6 +157,60 @@ def load_credentials(survey: str, tmp: bool = False) -> dict:
         creds = yaml.load(f, Loader=yaml.FullLoader)
 
     return creds
+
+
+def add_topic(
+    survey: str,
+    name: str,
+    telegram_token: str = None,
+    telegram_channel: str = None,
+    slack_token: str = None,
+    slack_channel: str = None,
+) -> None:
+    """ """
+    conf = load_credentials(survey)
+    topics = conf.get("topics", {})
+    if topics.get(name, None) is not None:
+        _LOG.warning(f"{name} found in configuration. Overwriting it.")
+
+    if topics == {}:
+        out = {name: {}}
+        conf["topics"] = out
+
+    if (telegram_token is not None) and (telegram_channel is not None):
+        tg = {
+            "telegram": {
+                "token": telegram_token,
+                "channel": telegram_channel,
+            }
+        }
+        conf["topics"][name].update(tg)
+
+    if (slack_token is not None) and (slack_channel is not None):
+        slack = {
+            "slack": {
+                "token": slack_token,
+                "channel": slack_channel,
+            }
+        }
+
+        conf["topics"][name].update(slack)
+
+    write_credentials(conf)
+
+
+def remove_topic(survey: str, name: str):
+    """ """
+    conf = load_credentials(survey)
+
+    if name in conf.get("topics").keys():
+        _LOG.info(f"Removing {name} from the list of topics")
+        conf["topics"].pop(name)
+        write_credentials(conf)
+    else:
+        _LOG.warning(
+            f"{name} is not in your configuration. Check topics using: finkctl topic list -survey {survey}"
+        )
 
 
 def mm_topic_names():
