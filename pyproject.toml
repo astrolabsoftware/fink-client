@@ -34,21 +34,12 @@ dev = [
     "coveralls",
     "ruff",
 ]
-# pin version to get 32bit binaries
-rpi0 = [
-    "contourpy<1.1",
-    "kiwisolver<1.4.8",
-]
 
 [tool.setuptools.dynamic]
 version = {attr = "fink_client.__version__"}
 
 [project.scripts]
 finkctl = "fink_client.scripts.finkctl:cli"
-fink_consumer = "fink_client.scripts.fink_consumer:main"
-fink_datatransfer = "fink_client.scripts.fink_datatransfer:main"
-fink_client_register = "fink_client.scripts.fink_client_register:main"
-fink_alert_viewer = "fink_client.scripts.fink_alert_viewer:main"
 
 [project.urls]
 Homepage = "https://github.com/astrolabsoftware/fink-client"
