@@ -54,9 +54,9 @@ class TestIntegration(unittest.TestCase):
         p.flush()
 
         # instantiate an AlertConsumer
-        mytopics = conf["mytopics"]
+        mytopics = list(conf["topics"].keys())
 
-        myconfig = {"bootstrap.servers": kafka_servers, "group.id": conf["group_id"]}
+        myconfig = {"bootstrap.servers": kafka_servers, "group.id": conf["groupid"]}
 
         self.consumer = AlertConsumer(
             mytopics, survey="ztf", config=myconfig, schema_path=schema_path
