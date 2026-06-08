@@ -29,7 +29,7 @@ TEST_DIR=${FINK_CLIENT_HOME}/tests
 # Fake credentials
 finkctl auth register -survey ztf -username test \
   -servers 'localhost:9092' \
-  -groupid test_group -maxtimeout 10 --tmp
+  -groupid test_group -maxtimeout 10
 
 finkctl topic subscribe -survey ztf -name rrlyr
 
