@@ -27,9 +27,11 @@ done
 TEST_DIR=${FINK_CLIENT_HOME}/tests
 
 # Fake credentials
-fink_client_register -survey ztf -username test -password None \
+finkctl auth register -survey ztf -username test \
   -servers 'localhost:9092' \
-  -mytopics rrlyr -group_id test_group -maxtimeout 10 --tmp
+  -groupid test_group -maxtimeout 10 --tmp
+
+finkctl topic subscribe -name rrlyr
 
 # start Kafka in docker container
 docker-compose -p integration_test -f ${TEST_DIR}/docker-compose-kafka.yml up -d
