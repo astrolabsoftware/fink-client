@@ -31,7 +31,7 @@ finkctl auth register -survey ztf -username test \
   -servers 'localhost:9092' \
   -groupid test_group -maxtimeout 10 --tmp
 
-finkctl topic subscribe -name rrlyr
+finkctl topic subscribe -survey ztf -name rrlyr
 
 # start Kafka in docker container
 docker-compose -p integration_test -f ${TEST_DIR}/docker-compose-kafka.yml up -d
