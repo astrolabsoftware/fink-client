@@ -42,7 +42,7 @@ class TestIntegration(unittest.TestCase):
         r = AlertReader(data_path)
         alerts = r.to_list()
 
-        conf = load_credentials(survey="ztf", tmp=True)
+        conf = load_credentials(survey="ztf")
 
         kafka_servers = conf["servers"]
         p = confluent_kafka.Producer({"bootstrap.servers": kafka_servers})
