@@ -29,6 +29,7 @@ import fastavro
 import confluent_kafka
 
 import numpy as np
+from types import SimpleNamespace
 from multiprocessing import Process, Queue, Value, Lock
 
 from fink_client.configuration import load_credentials
@@ -245,7 +246,7 @@ def transfer_(
     dict_args["dump_schemas"] = dump_schemas
     dict_args["verbose"] = verbose
 
-    args = type("args", (object,), dict_args)
+    args = SimpleNamespace(**dict_args)
 
     if args.partitionby is not None and args.partitionby not in [
         "time",
