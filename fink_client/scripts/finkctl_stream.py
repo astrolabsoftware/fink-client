@@ -25,7 +25,6 @@ from fink_client.handlers import store_alert
 from fink_client.handlers import send_to_telegram
 from fink_client.handlers import send_to_slack
 from fink_client.configuration import load_credentials
-from fink_client.configuration import mm_topic_names
 
 from fink_client.consumer import print_offsets
 
@@ -126,14 +125,12 @@ def stream_(
                     print("No alerts the last {} seconds".format(maxtimeout))
             else:
                 poll_number += 1
-                is_mma = topic in mm_topic_names()
 
                 if save:
                     store_alert(
                         alert,
                         consumer._parsed_schema,
                         survey=survey,
-                        is_mma=is_mma,
                         outdir=outdir,
                         overwrite=True,
                     )
@@ -175,7 +172,7 @@ def stream_(
                     send_to_slack(alert, survey, topic, token, channel)
 
                 if display:
-                    display_alerts_as_table(conf["survey"], topic, alert, is_mma)
+                    display_alerts_as_table(conf["survey"], topic, alert)
 
     except KeyboardInterrupt:
         sys.stderr.write("%% Aborted by user\n")
