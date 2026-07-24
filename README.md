@@ -21,9 +21,9 @@ Depending on the survey used, you will find documentation at:
 
 | Service | Documentation links |
 |-|-|
-| Livestream | [LSST](https://doc.lsst.fink-broker.org/services/livestream/) / [ZTF](https://doc.ztf.fink-broker.org/en/latest/services/livestream/) |
-| Data Transfer | [LSST](https://doc.lsst.fink-broker.org/services/data_transfer/) / [ZTF](https://doc.ztf.fink-broker.org/en/latest/services/data_transfer/) |
-| Xmatch | [LSST](https://doc.lsst.fink-broker.org/services/data_transfer/) (incl. in Data Transfer) / [ZTF](https://doc.ztf.fink-broker.org/en/latest/services/xmatch/) |
+| Livestream | [LSST](https://doc.lsst.fink-broker.org/services/livestream/) / [ZTF](https://doc.ztf.fink-broker.org/services/livestream/) |
+| Data Transfer | [LSST](https://doc.lsst.fink-broker.org/services/data_transfer/) / [ZTF](https://doc.ztf.fink-broker.org/services/data_transfer/) |
+| Xmatch | [LSST](https://doc.lsst.fink-broker.org/services/data_transfer/) (incl. in Data Transfer) / [ZTF](https://doc.ztf.fink-broker.org/services/xmatch/) |
 
 
 ## Registration
