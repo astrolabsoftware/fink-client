@@ -131,7 +131,7 @@ def load_credentials(survey: str, tmp: bool = False) -> dict:
       1. subscribe to one or more Fink streams at
         https://forms.gle/2td4jysT4e9pkf889
       2. run `fink_client_register` to register
-    See https://doc.lsst.fink-broker.org/en/latest/services/data_transfer/
+    See https://doc.lsst.fink-broker.org/services/data_transfer/
 
     """
     check_survey_exists(survey)
@@ -149,7 +149,7 @@ def load_credentials(survey: str, tmp: bool = False) -> dict:
           1. subscribe to one or more Fink streams at
             https://forms.gle/2td4jysT4e9pkf889
           2. run `fink_client_register` to register
-        See https://doc.{}.fink-broker.org/en/latest/services/data_transfer/
+        See https://doc.{}.fink-broker.org/services/data_transfer/
         """.format(survey, survey)
         raise IOError(msg)
 

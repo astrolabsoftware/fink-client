@@ -228,7 +228,7 @@ def remove(survey, name):
     epilog="""
     More information at
 
-    - ZTF: https://doc.ztf.fink-broker.org/en/latest/broker/filters/
+    - ZTF: https://doc.ztf.fink-broker.org/broker/filters/
 
     - LSST: https://doc.lsst.fink-broker.org/science/filters/
     """,
