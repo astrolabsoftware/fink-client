@@ -31,19 +31,7 @@ Depending on the survey used, you will find documentation at:
 In order to connect and poll alerts from Fink, you need to get your credentials:
 
 1. Subscribe to one or more Fink streams by filling this [form](https://forms.gle/2td4jysT4e9pkf889).
-2. After filling the form, we will send your credentials. Register them on your laptop by simply running:
-  ```
-  fink_client_register -survey SURVEY -username USERNAME -group_id GROUP_ID -servers SERVERS ...
-  ```
-
-Note that `SURVEY` is among `ztf` or `lsst`. In case of doubt, run `fink_client_register -h`. You can also inspect the configuration file on disk:
-
-```bash
-cat ~/.finkclient/ztf_credentials.yml
-cat ~/.finkclient/lsst_credentials.yml
-```
-
-Note for users migration from v9.x to v10.x: your credentials remain valid, but you have to register again via the command line to generate correct credential files.
+2. After filling the form, we will send your credentials. Register them on your machine following the [ZTF](https://doc.ztf.fink-broker.org/services/fink_client/) or [LSST](https://doc.lsst.fink-broker.org/services/fink_client/) documentation.
 
 ## Contributing
 
