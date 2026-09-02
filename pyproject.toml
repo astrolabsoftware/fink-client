@@ -26,6 +26,7 @@ dependencies = [
     "tabulate",
     "tqdm",
     "psutil",
+    "requests",
 ]
 
 [project.optional-dependencies]
