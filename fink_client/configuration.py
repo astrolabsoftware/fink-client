@@ -176,6 +176,8 @@ def add_topic(
     if topics == {}:
         out = {name: {}}
         conf["topics"] = out
+    else:
+        conf["topics"].update({name: {}})
 
     if (telegram_token is not None) and (telegram_channel is not None):
         tg = {
