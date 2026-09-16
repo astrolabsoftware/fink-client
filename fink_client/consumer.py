@@ -329,7 +329,7 @@ class AlertConsumer:
         elif service == "xmatch":
             return topics_xmatch
         else:
-            raise AssertionError("{} is not a valid service".fornmat(service))
+            raise AssertionError("{} is not a valid service".format(service))
 
     def available_brokers(self) -> dict:
         """Return available brokers

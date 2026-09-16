@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright 2023-2026 AstroLab Software
-# Author: Julien Peloton, Saikou Oumar BAH
+# Author: Julien Peloton, Saikou Oumar BAH, Farid MAMAN
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +13,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Kafka consumer to listen and archive Fink streams from the data transfer service"""
+"""Kafka consumer to listen and archive Fink streams from the data transfer service.
+
+Supports two modes, selected automatically from the topic name:
+
+  - Normal transfer  (topic starts with ``ftransfer_`` or ``fxmatch_``):
+    Reads schemaless Avro alerts and writes Parquet files, exactly like the
+    former ``fink_datatransfer`` command.
+
+  - AI transfer  (topic starts with ``fink_ai_``):
+    Reads JSON predictions from the output topic, joins them with the
+    original Avro alerts from the feed topic, and writes enriched Parquet
+    files with the same layout as a classic transfer. Credentials are
+    taken from the same ``finkctl auth register`` config — no need to
+    pass ``-servers`` explicitly.
+"""
 
 import sys
 import os
@@ -24,6 +38,7 @@ import time
 
 from tqdm import trange, tqdm
 
+import pyarrow as pa
 import pyarrow.parquet as pq
 import fastavro
 import confluent_kafka
@@ -49,6 +64,332 @@ from fink_client.avro2arrow import avro_schema_to_arrow_schema
 from fink_client.logger import get_fink_logger
 
 _LOG = get_fink_logger("Fink", "WARNING")
+
+_AI_TOPIC_PREFIX = "fink_ai_"
+_AI_FEED_PREFIX = "fink_ai_feed_"
+
+
+def _is_ai_topic(topic: str) -> bool:
+    """Return True if topic is an AI output topic (not a feed or pre topic)."""
+    return (
+        topic.startswith(_AI_TOPIC_PREFIX)
+        and not topic.startswith(_AI_FEED_PREFIX)
+        and "fink_ai_pre_" not in topic
+    )
+
+
+def _topic_exists(kafka_config: dict, topic: str, timeout: float) -> bool:
+    """Return True if `topic` exists on the broker, without raising."""
+    consumer = confluent_kafka.Consumer(kafka_config)
+    try:
+        metadata = consumer.list_topics(topic, timeout=timeout)
+        return metadata.topics[topic].error is None
+    except Exception:
+        return False
+    finally:
+        consumer.close()
+
+
+def _resolve_feed_topic(
+    kafka_config: dict, output_topic: str, survey: str, maxtimeout: float
+) -> str:
+    """Return the topic holding the original alerts for an AI output topic.
+
+    Tries `fink_ai_feed_<suffix>` first, falls back to `ftransfer_<survey>_
+    <suffix>` (K8S_ONLY_MODE portal deployments reuse that topic directly
+    instead of producing a dedicated feed).
+    """
+    candidate = output_topic.replace(_AI_TOPIC_PREFIX, _AI_FEED_PREFIX, 1)
+    if _topic_exists(kafka_config, candidate, maxtimeout):
+        return candidate
+
+    suffix = output_topic[len(_AI_TOPIC_PREFIX) :]
+    fallback = f"ftransfer_{survey}_{suffix}"
+    if _topic_exists(kafka_config, fallback, maxtimeout):
+        return fallback
+
+    return candidate
+
+
+def _get_ai_schema(kafka_config: dict, feed_topic: str, maxtimeout: float):
+    """Return parsed Avro schema for the feed topic (same helper as classic transfer)."""
+    return get_schema_from_stream(kafka_config, feed_topic, maxtimeout)
+
+
+def _read_predictions(
+    consumer: confluent_kafka.Consumer,
+    kafka_config: dict,
+    topic: str,
+    batchsize: int,
+    maxtimeout: float,
+    limit,
+    verbose: bool,
+) -> dict:
+    """Return dict candid → list of {model, prediction}. Caller owns `consumer` and commits it."""
+    results = {}
+    _, lags = print_offsets(
+        kafka_config, topic, maxtimeout, verbose=False, hide_empty_partition=False
+    )
+    total = sum(lags)
+    if total == 0:
+        if verbose:
+            print("No predictions found in output topic yet.")
+        return results
+
+    pbar = tqdm(
+        total=limit if limit else total,
+        desc="Predictions",
+        colour="#F5622E",
+        unit="alerts",
+        bar_format="{desc}: {n:,}/{total:,} {unit} [{rate_fmt}{postfix}]",
+        disable=not verbose,
+    )
+
+    consumer.subscribe([topic])
+    n = 0
+    while True:
+        msgs = consumer.consume(num_messages=batchsize, timeout=maxtimeout)
+        if not msgs:
+            break
+        for msg in msgs:
+            if msg.error():
+                continue
+            try:
+                rec = json.loads(msg.value())
+            except json.JSONDecodeError:
+                _LOG.warning("Skipped malformed message (offset %s)", msg.offset())
+                continue
+
+            source = rec.get("source") or {}
+            result = rec.get("result")
+
+            if isinstance(result, dict):
+                pred = result.get("predictions")
+            else:
+                pred = result
+            if isinstance(pred, list):
+                pred = pred[0] if pred else None
+
+            pred = float(pred) if pred is not None else float("nan")
+            candid = source.get("candid")
+            if candid is not None:
+                results.setdefault(int(candid), []).append({
+                    "model": str(rec.get("bridge") or ""),
+                    "prediction": pred,
+                })
+                n += 1
+                if pbar.total is not None and n >= pbar.total:
+                    pbar.total = n + batchsize
+                pbar.update(1)
+        if limit and n >= limit:
+            break
+    pbar.close()
+
+    return results
+
+
+def _read_alerts(
+    kafka_config: dict,
+    feed_topic: str,
+    predictions: dict,
+    batchsize: int,
+    maxtimeout: float,
+    verbose: bool,
+):
+    """Return (dict candid → raw nested alert record, parsed Avro schema)."""
+    alerts = {}
+
+    try:
+        _, lags = print_offsets(
+            kafka_config,
+            feed_topic,
+            maxtimeout,
+            verbose=False,
+            hide_empty_partition=False,
+        )
+    except confluent_kafka.KafkaException as e:
+        if verbose:
+            print(
+                f"Feed topic not found ({feed_topic}) — writing predictions only. ({e})"
+            )
+        return alerts, None
+    if sum(lags) == 0:
+        if verbose:
+            print(
+                f"Feed topic empty or not found ({feed_topic}) — writing predictions only."
+            )
+        return alerts, None
+
+    avro_schema = _get_ai_schema(kafka_config, feed_topic, maxtimeout)
+    if avro_schema is None and verbose:
+        print(f"WARNING: no schema in {feed_topic}_schema — alerts may not decode")
+
+    consumer = confluent_kafka.Consumer(kafka_config)
+    try:
+        consumer.subscribe([feed_topic])
+        needed = set(predictions.keys())
+        pbar = tqdm(
+            total=len(needed),
+            desc="Alerts     ",
+            colour="#F5622E",
+            unit="alerts",
+            bar_format="{desc}: {n:,}/{total:,} {unit} [{rate_fmt}{postfix}]",
+            disable=not verbose,
+        )
+        while needed:
+            msgs = consumer.consume(num_messages=batchsize, timeout=maxtimeout)
+            if not msgs:
+                break
+            for msg in msgs:
+                if msg.error():
+                    continue
+                try:
+                    if avro_schema is not None:
+                        rec = fastavro.schemaless_reader(
+                            io.BytesIO(msg.value()), avro_schema
+                        )
+                    else:
+                        recs = list(fastavro.reader(io.BytesIO(msg.value())))
+                        rec = recs[0] if recs else None
+                    if rec is None:
+                        continue
+                    candid = rec.get("candid")
+                    if candid is not None and int(candid) in needed:
+                        alerts[int(candid)] = rec
+                        needed.discard(int(candid))
+                        pbar.update(1)
+                except Exception as e:
+                    if verbose:
+                        _LOG.warning(
+                            "Skipped alert (topic=%s partition=%s offset=%s): %s",
+                            feed_topic,
+                            msg.partition(),
+                            msg.offset(),
+                            e,
+                        )
+                    continue
+            if not needed:
+                break
+        pbar.close()
+    finally:
+        consumer.close()
+
+    return alerts, avro_schema
+
+
+def _join_and_write_ai(predictions: dict, alerts: dict, avro_schema, args):
+    """Join predictions with alert fields and write Parquet, same layout as a classic datatransfer."""
+    if not predictions:
+        print("No predictions to write.")
+        return
+
+    candids = list(predictions.keys())
+
+    if avro_schema is not None:
+        records = []
+        for candid in candids:
+            rec = dict(alerts.get(candid) or {})
+            rec["candid"] = candid
+            records.append(rec)
+        table, arrow_schema = avro_to_arrow(avro_schema, records)
+    else:
+        table = pa.table({"candid": pa.array(candids, type=pa.int64())})
+        arrow_schema = table.schema
+
+    model_predictions = pa.array(
+        [predictions[c] for c in candids],
+        type=pa.list_(
+            pa.struct([("model", pa.string()), ("prediction", pa.float64())])
+        ),
+    )
+    table = table.append_column("model_predictions", model_predictions)
+    arrow_schema = table.schema
+    all_keys = arrow_schema.names
+
+    # Apply same partitioning as normal transfer if requested
+    partitioning = None
+    if args.partitionby is not None:
+        table, arrow_schema, partitioning = create_partitioning(
+            table=table,
+            arrow_schema=arrow_schema,
+            partitionby=args.partitionby,
+            survey=args.survey,
+        )
+
+    os.makedirs(args.outdir, exist_ok=True)
+    rng = np.random.RandomState(42)
+    pq.write_to_dataset(
+        table,
+        args.outdir,
+        schema=arrow_schema,
+        basename_template="part-0-{{i}}-{}.parquet".format(rng.randint(0, int(1e9))),
+        partition_cols=partitioning,
+        existing_data_behavior="overwrite_or_ignore",
+    )
+
+    if args.verbose:
+        print(f"\nDone — {len(candids):,} rows written to '{args.outdir}/'")
+        print(
+            f"Columns ({len(all_keys)}): {', '.join(all_keys[:10])}"
+            + (" ..." if len(all_keys) > 10 else "")
+        )
+        print("\nRead your results:")
+        print("  import pandas as pd")
+        print(f"  df = pd.read_parquet('{args.outdir}/', dtype_backend='pyarrow')")
+
+
+def _transfer_ai(args, conf):
+    """Retrieve AI inference results and join with original alerts.
+
+    Auto-commit is off: predictions only get committed after a successful
+    write, so a crash in between doesn't strand them as consumed-but-lost.
+    """
+    kafka_config = {
+        "bootstrap.servers": conf["servers"],
+        "group.id": conf.get("groupid") or conf.get("group_id"),
+        "auto.offset.reset": "earliest",
+        "enable.auto.commit": False,
+    }
+    feed_topic = _resolve_feed_topic(
+        kafka_config, args.topic, args.survey, args.maxtimeout
+    )
+
+    # Same partition table display as normal transfer
+    offsets, lags = print_offsets(
+        kafka_config, args.topic, args.maxtimeout, hide_empty_partition=False
+    )
+
+    # Same behavior as normal transfer: exit if already fully consumed
+    if sum(lags) == 0:
+        _LOG.info("All predictions have been polled. Exiting.")
+        sys.exit()
+
+    predictions_consumer = confluent_kafka.Consumer(kafka_config)
+    try:
+        predictions = _read_predictions(
+            predictions_consumer,
+            kafka_config,
+            args.topic,
+            args.batchsize,
+            args.maxtimeout,
+            args.limit,
+            args.verbose,
+        )
+        alerts, avro_schema = _read_alerts(
+            kafka_config,
+            feed_topic,
+            predictions,
+            args.batchsize,
+            args.maxtimeout,
+            args.verbose,
+        )
+        _join_and_write_ai(predictions, alerts, avro_schema, args)
+        predictions_consumer.commit(asynchronous=False)
+    finally:
+        predictions_consumer.close()
+
+    # Final state — same as normal transfer
+    print_offsets(kafka_config, args.topic, args.maxtimeout, hide_empty_partition=False)
 
 
 def poll(
@@ -277,10 +618,11 @@ def transfer_(
         )
         sys.exit()
 
-    if not (args.topic.startswith("ftransfer") or args.topic.startswith("fxmatch")):
+    valid_prefixes = ("ftransfer_", "fxmatch_", _AI_TOPIC_PREFIX)
+    if not args.topic.startswith(valid_prefixes):
         msg = """
 {} is not a valid topic name.
-Topic name must start with `ftransfer_` or `fxmatch_`.
+Topic name must start with `ftransfer_`, `fxmatch_`, or `fink_ai_`.
 Check the webpage on which you submit the job,
 and open the tab `Get your data` to retrieve the topic.
         """.format(args.topic)
@@ -292,13 +634,17 @@ and open the tab `Get your data` to retrieve the topic.
             args.outformat
         )
     )
-
     # load user configuration
     conf = load_credentials(survey=args.survey)
 
     # Time to wait before polling again if no alerts
     if args.maxtimeout is None:
         args.maxtimeout = conf["maxtimeout"]
+
+    # AI topics: delegate to the AI transfer path and return early
+    if _is_ai_topic(args.topic):
+        _transfer_ai(args, conf)
+        return
 
     # Number of consumers to use
     if nconsumers_ == -1:
@@ -308,7 +654,7 @@ and open the tab `Get your data` to retrieve the topic.
 
     kafka_config = {
         "bootstrap.servers": conf["servers"],
-        "group.id": conf["groupid"],
+        "group.id": conf.get("groupid") or conf.get("group_id"),
         "auto.offset.reset": "earliest",
     }
 
