@@ -420,7 +420,8 @@ def _add_date_partitions(table, timecol, format_timecol):
 
     # Add columns to table
     table = (
-        table.append_column("year", pa.array(years, type=pa.string()))
+        table
+        .append_column("year", pa.array(years, type=pa.string()))
         .append_column("month", pa.array(months, type=pa.string()))
         .append_column("day", pa.array(days, type=pa.string()))
     )
@@ -493,7 +494,8 @@ def _add_date_partitions_from_struct(table, timesection, timecol, format_timecol
 
     # Add columns to table
     table = (
-        table.append_column("year", pa.array(years, type=pa.string()))
+        table
+        .append_column("year", pa.array(years, type=pa.string()))
         .append_column("month", pa.array(months, type=pa.string()))
         .append_column("day", pa.array(days, type=pa.string()))
     )

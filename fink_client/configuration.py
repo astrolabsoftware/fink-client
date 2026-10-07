@@ -150,9 +150,7 @@ def load_credentials(survey: str, tmp: bool = False) -> dict:
             https://forms.gle/2td4jysT4e9pkf889
           2. run `fink_client_register` to register
         See https://doc.{}.fink-broker.org/services/data_transfer/
-        """.format(
-            survey, survey
-        )
+        """.format(survey, survey)
         raise IOError(msg)
 
     with open(path) as f:

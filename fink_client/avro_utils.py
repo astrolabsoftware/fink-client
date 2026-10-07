@@ -108,9 +108,7 @@ class AlertReader:
             Data path not understood: {}
             You must give an avro file with
             its extension (.avro or .avro.gz), or a folder with avro files.
-            """.format(
-                path
-            )
+            """.format(path)
             raise IOError(msg)
 
     def _read_single_alert(self, name: str = None) -> dict:
@@ -147,9 +145,7 @@ class AlertReader:
             msg = """
             Alert filename should end with `avro` or `avro.gz`.
             Currently trying to read: {}
-            """.format(
-                name
-            )
+            """.format(name)
             raise NotImplementedError(msg)
 
         with copen(name) as fo:
@@ -472,9 +468,7 @@ def _get_alert_schema(
             msg = """
             {} could not be downloaded. Check your internet connection, or the
             availability of the file at {}
-            """.format(
-                schema_name, os.path.join(base_url, tree)
-            )
+            """.format(schema_name, os.path.join(base_url, tree))
             print(msg)
 
     return fastavro.parse_schema(schema)

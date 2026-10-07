@@ -111,13 +111,11 @@ def _resolve_feed_topic(kafka_config: dict, output_topic: str, survey: str, time
     return None
 
 
-_PREDICTION_SCHEMA = pa.schema(
-    [
-        ("candid", pa.int64()),
-        ("model", pa.string()),
-        ("prediction", pa.float64()),
-    ]
-)
+_PREDICTION_SCHEMA = pa.schema([
+    ("candid", pa.int64()),
+    ("model", pa.string()),
+    ("prediction", pa.float64()),
+])
 _MODEL_PREDICTIONS = pa.field(
     "model_predictions",
     pa.list_(pa.struct([("model", pa.string()), ("prediction", pa.float64())])),
@@ -260,7 +258,8 @@ def _download(args, kafka_config, feed_topic, avro_schema, alerts, predictions):
         committed = prediction_consumer.committed(
             [
                 confluent_kafka.TopicPartition(args.topic, p)
-                for p in alert_consumer.list_topics(args.topic, timeout=args.maxtimeout)
+                for p in alert_consumer
+                .list_topics(args.topic, timeout=args.maxtimeout)
                 .topics[args.topic]
                 .partitions
             ],
@@ -339,7 +338,8 @@ def _join_chunk(table: pa.Table, grouped: pl.DataFrame, name: str, args) -> int:
     Returns the number of alerts written.
     """
     match = (
-        pl.from_arrow(table.select(["candid"]))
+        pl
+        .from_arrow(table.select(["candid"]))
         .with_row_index("row")
         .join(grouped, on="candid", how="inner", maintain_order="left")
     )
@@ -377,7 +377,8 @@ def _join(args, alerts: _Spool, predictions: _Spool) -> int:
     if not files:
         return 0
     grouped = (
-        pl.scan_parquet([os.path.join(predictions.path, f) for f in files])
+        pl
+        .scan_parquet([os.path.join(predictions.path, f) for f in files])
         .unique(["candid", "model"], keep="last")
         .group_by("candid")
         .agg(pl.struct("model", "prediction").alias("model_predictions"))
@@ -546,14 +547,12 @@ def poll(
             if partition["status"] < max_end_check:
                 # After max_end_check time if no alerts added,
                 # it is supposed finished
-                queue.put(
-                    {
-                        "partition": partition["partition"],
-                        "offset": partition["offset"],
-                        "status": partition["status"] + 1,
-                        "lag": partition["lag"],
-                    }
-                )
+                queue.put({
+                    "partition": partition["partition"],
+                    "offset": partition["offset"],
+                    "status": partition["status"] + 1,
+                    "lag": partition["lag"],
+                })
         else:
             poll_number = initial
             try:
@@ -576,14 +575,12 @@ def poll(
                             # Alerts can be added in the partition later
                             # putting it again in the queue
                             # changing the offset to continue where we stopped
-                            queue.put(
-                                {
-                                    "partition": partition["partition"],
-                                    "offset": poll_number,
-                                    "status": 0,
-                                    "lag": partition["lag"],
-                                }
-                            )
+                            queue.put({
+                                "partition": partition["partition"],
+                                "offset": poll_number,
+                                "status": 0,
+                                "lag": partition["lag"],
+                            })
                             break
 
                         records = [
@@ -630,14 +627,12 @@ def poll(
                             shared_counter.value += len(msgs)
 
                         if len(msgs) < args.batchsize:
-                            queue.put(
-                                {
-                                    "partition": partition["partition"],
-                                    "offset": poll_number,
-                                    "status": 0,
-                                    "lag": partition["lag"],
-                                }
-                            )
+                            queue.put({
+                                "partition": partition["partition"],
+                                "offset": poll_number,
+                                "status": 0,
+                                "lag": partition["lag"],
+                            })
                             break
                     else:
                         _LOG.info(
@@ -719,9 +714,7 @@ def transfer_(
 Topic name must start with `ftransfer_`, `fxmatch_`, or `fink_ai_`.
 Check the webpage on which you submit the job,
 and open the tab `Get your data` to retrieve the topic.
-        """.format(
-            args.topic
-        )
+        """.format(args.topic)
         _LOG.error(msg)
         sys.exit()
 
@@ -807,14 +800,12 @@ and open the tab `Get your data` to retrieve the topic.
     available = Queue()
     # Queue loading
     for key in range(nbpart):
-        available.put(
-            {
-                "partition": key,
-                "offset": offsets[key],
-                "lag": lags[key],
-                "status": 0,
-            }
-        )
+        available.put({
+            "partition": key,
+            "offset": offsets[key],
+            "lag": lags[key],
+            "status": 0,
+        })
 
     # Initialize shared counter
     shared_counter = Value("i", 0)  # 'i' = signed integer

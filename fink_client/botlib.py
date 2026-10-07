@@ -108,9 +108,7 @@ def status_check(
             msg = """
             {}
             Content: {}
-            """.format(
-                header, res.content
-            )
+            """.format(header, res.content)
             url = "https://api.telegram.org/bot"
             url += token or os.environ["FINK_TG_TOKEN"]
             method = url + "/sendMessage"
@@ -636,9 +634,9 @@ def get_curve_ztf(
                 continue
 
             # y data -- assume NaN (Spark style) and None (Pandas style) for missing values
-            maskNotNone = np.array(
-                [(i is not None) and ~np.isnan(i) for i in magpsf[mask]]
-            )
+            maskNotNone = np.array([
+                (i is not None) and ~np.isnan(i) for i in magpsf[mask]
+            ])
             plt.errorbar(
                 dates[mask][maskNotNone],
                 magpsf[mask][maskNotNone],
