@@ -47,7 +47,7 @@ def poll_single_alert(myconfig, topics) -> None:
 
 
 if __name__ == "__main__":
-    """ Poll the servers only once at a time """
+    """Poll the servers only once at a time"""
 
     # to fill
     myconfig = {"username": "", "bootstrap.servers": "", "group_id": ""}

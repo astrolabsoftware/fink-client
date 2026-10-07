@@ -507,7 +507,7 @@ def _add_date_partitions_from_struct(table, timesection, timecol, format_timecol
 
 
 if __name__ == "__main__":
-    """ Run the test suite """
+    """Run the test suite"""
 
     args = globals()
 

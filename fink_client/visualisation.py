@@ -192,6 +192,6 @@ def extract_field(alert: dict, field: str, current: str, previous: str) -> np.ar
 
 
 if __name__ == "__main__":
-    """ Run the test suite """
+    """Run the test suite"""
 
     regular_unit_tests()

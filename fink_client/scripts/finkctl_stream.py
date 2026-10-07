@@ -138,10 +138,12 @@ def stream_(
                 if telegram:
                     ext = conf["topics"].get(topic, None)
                     if "telegram" not in ext:
-                        print(f"""
+                        print(
+                            f"""
                         You should register Telegram information for the topic {topic}:
                         finkctl topic subscribe -survey lsst -name {topic} -telegram_token $TOKEN -telegram_channel $CHANNEL
-                        """)
+                        """
+                        )
                     token = ext["telegram"].get("token", None)
                     channel = ext["telegram"].get("channel", None)
                     if (token is None) or (channel is None):
@@ -156,10 +158,12 @@ def stream_(
                 if slack:
                     ext = conf["topics"].get(topic, None)
                     if "slack" not in ext:
-                        print(f"""
+                        print(
+                            f"""
                         You should register Slack information for the topic {topic}:
                         finkctl topic subscribe -survey lsst -name {topic} -slack_token $TOKEN -slack_channel $CHANNEL
-                        """)
+                        """
+                        )
                     token = ext["slack"].get("token", None)
                     channel = ext["slack"].get("channel", None)
                     if (token is None) or (channel is None):

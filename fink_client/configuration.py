@@ -227,6 +227,6 @@ def mm_topic_names():
 
 
 if __name__ == "__main__":
-    """ Run the test suite """
+    """Run the test suite"""
 
     regular_unit_tests(globals())

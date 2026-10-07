@@ -495,7 +495,7 @@ def _decode_avro_alert(avro_alert: io.IOBase, schema: dict) -> Any:
 
 
 if __name__ == "__main__":
-    """ Run the test suite """
+    """Run the test suite"""
 
     args = globals()
     args["avro_single_alert"] = "datatest/ZTF19acihgng.avro"
