@@ -14,13 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import yaml
-import os
+import pathlib
 
 from fink_client.logger import get_fink_logger
 from fink_client.tester import regular_unit_tests
 
 _LOG = get_fink_logger()
-_ROOTDIR = os.path.join(os.environ["HOME"], ".finkclient")
+_ROOTDIR = pathlib.Path.home() / ".finkclient"
 _CREDNAME = "{}_credentials.yml"
 
 
@@ -63,7 +63,7 @@ def write_credentials(dict_file: dict, log_level: str = "WARN", tmp: bool = Fals
     """
     _LOG.setLevel(log_level)
     if tmp:
-        ROOTDIR = "/tmp"
+        ROOTDIR = pathlib.PosixPath("/tmp")
     else:
         ROOTDIR = _ROOTDIR
 
@@ -80,10 +80,10 @@ def write_credentials(dict_file: dict, log_level: str = "WARN", tmp: bool = Fals
     check_survey_exists(dict_file["survey"])
 
     # Create the folder if it does not exist
-    os.makedirs(ROOTDIR, exist_ok=True)
+    pathlib.Path.mkdir(ROOTDIR, exist_ok=True)
 
     # Store data into yml file
-    with open(os.path.join(ROOTDIR, _CREDNAME.format(dict_file["survey"])), "w") as f:
+    with open(ROOTDIR / _CREDNAME.format(dict_file["survey"]), "w") as f:
         yaml.dump(dict_file, f)
 
     _LOG.info(
@@ -122,7 +122,7 @@ def load_credentials(survey: str, tmp: bool = False) -> dict:
     >>> conf_out = load_credentials(survey=conf_in["survey"], tmp=True)
 
     If, however the credentials do not exist yet
-    >>> os.remove('/tmp/lsst_credentials.yml')
+    >>> pathlib.Path.unlink(pathlib.Path('/tmp') / 'lsst_credentials.yml')
     >>> conf = load_credentials(survey="lsst", tmp=True) # doctest: +NORMALIZE_WHITESPACE, +ELLIPSIS
     Traceback (most recent call last):
      ...
@@ -136,13 +136,13 @@ def load_credentials(survey: str, tmp: bool = False) -> dict:
     """
     check_survey_exists(survey)
     if tmp:
-        ROOTDIR = "/tmp"
+        ROOTDIR = pathlib.PosixPath("/tmp")
     else:
         ROOTDIR = _ROOTDIR
 
-    path = os.path.join(ROOTDIR, _CREDNAME.format(survey))
+    path = ROOTDIR / _CREDNAME.format(survey)
 
-    if not os.path.exists(path):
+    if not pathlib.Path.exists(path):
         msg = """
         No credentials found for survey {}, did you register?
         To get your credentials, and use fink-client you need to:
