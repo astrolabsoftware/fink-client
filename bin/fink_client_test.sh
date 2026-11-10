@@ -34,13 +34,13 @@ finkctl auth register -survey ztf -username test \
 finkctl topic subscribe -survey ztf -name rrlyr
 
 # start Kafka in docker container
-docker-compose -p integration_test -f ${TEST_DIR}/docker-compose-kafka.yml up -d
+docker compose -p integration_test -f ${TEST_DIR}/docker-compose-kafka.yml up -d
 
 # run test module
 coverage run --rcfile=${FINK_CLIENT_HOME}/.coveragerc ${TEST_DIR}/test.py
 
 # shut down kafka container
-docker-compose -p integration_test -f ${TEST_DIR}/docker-compose-kafka.yml down
+docker compose -p integration_test -f ${TEST_DIR}/docker-compose-kafka.yml down
 
 # measure coverage
 coverage combine
