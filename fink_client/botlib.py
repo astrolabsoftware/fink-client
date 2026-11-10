@@ -634,9 +634,9 @@ def get_curve_ztf(
                 continue
 
             # y data -- assume NaN (Spark style) and None (Pandas style) for missing values
-            maskNotNone = np.array([
-                (i is not None) and ~np.isnan(i) for i in magpsf[mask]
-            ])
+            maskNotNone = np.array(
+                [(i is not None) and ~np.isnan(i) for i in magpsf[mask]]
+            )
             plt.errorbar(
                 dates[mask][maskNotNone],
                 magpsf[mask][maskNotNone],
